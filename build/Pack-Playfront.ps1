@@ -103,6 +103,30 @@ if (-not (Test-Path $propsPath)) { Fail "No se encuentra Directory.Build.props e
 $version = ([xml](Get-Content $propsPath)).Project.PropertyGroup.PlayfrontVersion | Where-Object { $_ }
 if ([string]::IsNullOrWhiteSpace($version)) { Fail 'No se pudo leer PlayfrontVersion de Directory.Build.props' }
 
+# --- Nada de ceros a la izquierda ------------------------------------------------------------------
+#  Comprobado el 2026-07-27 empaquetando de verdad: con PlayfrontVersion = 0.1.001, el .exe conserva
+#  "0.1.001" pero Velopack normaliza y genera "PlayfrontShell-0.1.1-full.nupkg". O sea que 0.1.001 y
+#  0.1.1 son LA MISMA version para el actualizador.
+#
+#  Por que se para aqui en vez de dejarlo pasar: el fallo no da ningun error. Si algun dia salen las
+#  dos, la app de quien tenga una NO se actualizara a la otra y no dira por que. Y mientras tanto,
+#  Ajustes mostraria un numero (0.1.001) distinto del de la release (0.1.1).
+#
+#  Numeracion del proyecto: se sube el tercer numero en cada entrega, sin tope y sin rellenar
+#  (0.1.1, 0.1.2 ... 0.1.87). Ordena bien sola: 0.1.10 va DESPUES de 0.1.9, la comparacion es
+#  numerica, no alfabetica. El del medio se sube cuando el cambio es gordo.
+if ($version -match '(^|\.)0\d') {
+    Fail @"
+La version '$version' lleva ceros a la izquierda, y eso rompe las actualizaciones.
+
+Velopack los borra: '$version' acabaria empaquetada como otra version distinta de la que pone
+Directory.Build.props, y dos numeros que parecen distintos serian el mismo para el actualizador.
+
+Quita los ceros de delante. Para muchas entregas seguidas basta con subir el tercer numero:
+0.1.1, 0.1.2, 0.1.3 ... 0.1.87  (no hay tope, y ordena bien sin rellenar).
+"@
+}
+
 Write-Host ''
 Write-Host "  Playfront $version  -  paquetes para repartir ($Runtime, $Configuration)" -ForegroundColor White
 Write-Host "  Salida: $Output"
