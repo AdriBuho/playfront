@@ -1,0 +1,101 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Playfront.App.Views.SystemUpdatesView"
+             Width="1920" Height="1080">
+    <!-- Pantalla "System Updates": se abre con A sobre la tarjeta "Updates" de la categoria System
+         de Ajustes, y se cierra con B (que devuelve a esa misma tarjeta). Pantalla COMPLETA, no un
+         panel dentro de Ajustes: no lleva ni barra lateral de categorias ni cabecera, igual que
+         "General Personalization". Se monta bajo demanda y se libera al salir.
+
+         Medida sobre la referencia del usuario (1405x790, factor 1920/1405 = 1.3665). La lista
+         resulto ser OTRA VEZ la misma que "General Personalization" (440x96, paso 114): medido da
+         441x98 y paso 114.8. Por eso se reusa el estilo pzTile y su anillo, para que las pantallas
+         queden alineadas al pixel cuando se pasa de una a otra. La unica diferencia respecto a
+         Personalization es que la lista arranca 8px mas abajo (273 en vez de 265), porque encima
+         lleva la etiqueta de seccion "Updates".
+
+         Colores verificados contra la referencia: fondo #201F1F, casilla #303030, seleccionada
+         #444444 - los mismos que ya usa el resto de Ajustes. La primera casilla es un caso nuevo:
+         esta DESACTIVADA (no es un boton, es un aviso de estado), con fondo #252525 y texto
+         apagado. -->
+    <Canvas Width="1920" Height="1080">
+        <Rectangle Width="1920" Height="1080" Fill="#201F1F" />
+
+        <!-- "System" en negrita y "Updates" en normal, dentro de un unico TextBlock con dos Runs
+             (no dos TextBlocks sueltos): asi el espacio entre las dos palabras lo coloca la propia
+             fuente, sin tener que medir a mano donde empieza la segunda. Misma posicion y tamaño
+             que el titulo de Personalization: medido aqui da x=112 y alto de mayuscula 45, que es
+             lo que produce ese mismo Left=106 / FontSize=46. -->
+        <TextBlock Canvas.Left="106" Canvas.Top="59" FontSize="46" Foreground="White">
+            <Run Text="System" FontWeight="Bold" />
+            <Run Text="Updates" />
+        </TextBlock>
+
+        <!-- Etiqueta de seccion, alineada con el borde izquierdo del texto de las casillas. -->
+        <TextBlock Canvas.Left="128" Canvas.Top="214" FontSize="28" Foreground="White" Text="Updates" />
+
+        <!-- Texto descriptivo del elemento enfocado. Arranca a la altura de la PRIMERA casilla
+             (no de la seleccionada): medido, su primera linea empieza en el mismo y que el borde
+             superior de "No console update available". Lo rellena el code-behind. -->
+        <TextBlock x:Name="UpdDescription" Canvas.Left="696" Canvas.Top="271" Width="450"
+                   FontSize="24" LineHeight="32" TextWrapping="Wrap" Foreground="White" />
+
+        <!-- Casilla 1: es el ESTADO de la actualizacion, y cambia sola. Al abrir la pantalla se
+             lanza una comprobacion; segun el resultado, esta casilla se enciende o se apaga:
+               - apagada (fondo #252525, texto gris): no hay nada que hacer -> el foco la salta.
+                 Es el caso de la referencia ("No console update available").
+               - encendida (fondo y texto normales): hay algo que pulsar (descargar / reiniciar).
+             El texto y los colores los pone el code-behind; los de aqui son solo el estado inicial
+             mientras se comprueba. -->
+        <Border Classes="pzTile" x:Name="UpdTile0" Canvas.Left="108" Canvas.Top="273" Background="#252525">
+            <!-- Ancho fijo + Wrap: algunos estados (sin conexion, o la app sin instalar) traen una
+                 frase que no cabe en una linea, y sin esto se corta a media palabra. Con 400 de
+                 ancho parte en dos lineas como mucho, que es lo que cabe en los 96 de alto. -->
+            <TextBlock x:Name="UpdStatusText" Text="Checking for updates…" Foreground="#606060"
+                       Width="400" TextWrapping="Wrap" HorizontalAlignment="Left" />
+        </Border>
+
+        <Border Classes="pzTile" x:Name="UpdTile1" Canvas.Left="108" Canvas.Top="387">
+            <TextBlock Text="Latest console update status" />
+        </Border>
+
+        <!-- Las dos casillas de interruptor llevan su casilla de verificacion pegada al borde
+             derecho (medido: 34x34, a 18px del borde). El TextBlock del check necesita Margin=0 y
+             su propio FontSize porque el estilo "Border.pzTile TextBlock" le meteria el margen
+             de 20,8 pensado para el texto de la casilla. -->
+        <Border Classes="pzTile" x:Name="UpdTile2" Canvas.Left="108" Canvas.Top="501">
+            <Grid>
+                <TextBlock Text="Keep my console up to date" />
+                <Border Width="34" Height="34" BorderBrush="White" BorderThickness="2" CornerRadius="2"
+                        HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,18,0">
+                    <TextBlock Text="&#xE73E;" FontFamily="Segoe Fluent Icons" FontSize="22" Margin="0"
+                               Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Esta casilla parte el texto en dos lineas en la referencia. El ancho fijo es lo que
+             fuerza el corte en el mismo sitio ("...up" / "to date"), medido en la captura. -->
+        <Border Classes="pzTile" x:Name="UpdTile3" Canvas.Left="108" Canvas.Top="615">
+            <Grid>
+                <!-- HorizontalAlignment=Left es imprescindible: al fijarle un ancho, dentro de un
+                     Grid el TextBlock se centraria y el texto saldria mas a la derecha que el de
+                     las demas casillas. -->
+                <TextBlock Text="Keep my games &amp; apps up to date" Width="320" TextWrapping="Wrap"
+                           HorizontalAlignment="Left" />
+                <Border Width="34" Height="34" BorderBrush="White" BorderThickness="2" CornerRadius="2"
+                        HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,18,0">
+                    <TextBlock Text="&#xE73E;" FontFamily="Segoe Fluent Icons" FontSize="22" Margin="0"
+                               Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Anillos: la casilla (440x96) inflada 8 por cada lado, igual que en el resto de Ajustes.
+             La primera tiene anillo porque puede recibir el foco cuando hay actualizacion. -->
+        <Border Classes="selectionRing" x:Name="UpdRing0" Canvas.Left="100" Canvas.Top="265" Width="456" Height="112" />
+        <Border Classes="selectionRing selected" x:Name="UpdRing1" Canvas.Left="100" Canvas.Top="379" Width="456" Height="112" />
+        <Border Classes="selectionRing" x:Name="UpdRing2" Canvas.Left="100" Canvas.Top="493" Width="456" Height="112" />
+        <Border Classes="selectionRing" x:Name="UpdRing3" Canvas.Left="100" Canvas.Top="607" Width="456" Height="112" />
+    </Canvas>
+</UserControl>

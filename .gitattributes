@@ -1,0 +1,35 @@
+# Finales de linea y tipos de fichero.
+#
+# Por que existe: sin este fichero, cada persona que clone el repositorio obtiene los
+# finales de linea que decida su configuracion de git. Un .cmd o un .ps1 con finales de
+# linea de Unix puede fallar al ejecutarse en Windows.
+
+# --- Scripts que ejecuta Windows: siempre con finales de linea de Windows ---
+*.cmd   text eol=crlf
+*.bat   text eol=crlf
+*.ps1   text eol=crlf
+*.psm1  text eol=crlf
+*.psd1  text eol=crlf
+
+# --- Texto normal: se normaliza al guardar y se entrega en el formato del sistema ---
+*.cs     text
+*.axaml  text
+*.csproj text
+*.slnx   text
+*.props  text
+*.md     text
+*.json   text
+
+# --- Binarios: git no debe convertir nada ni intentar mostrar diferencias de texto ---
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.svg   text
+*.ttf   binary
+*.otf   binary
+*.mp4   binary
+*.exe   binary
+*.dll   binary
+*.zip   binary

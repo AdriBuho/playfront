@@ -1,0 +1,50 @@
+[
+  {
+    "file": "apple-music.png",
+    "title": "Apple Music | Xbox",
+    "genre": "MUSIC",
+    "price": "Free",
+    "owned": false,
+    "rating": 3,
+    "votes": "347",
+    "description": "Get unlimited access to millions of songs and thousands of playlists, always ad-free. Listen across all your devices, online or off. Try it free for 1 month.",
+    "tint": "#582129"
+  },
+  {
+    "file": "youtube.png",
+    "title": "YouTube",
+    "genre": "ENTERTAINMENT",
+    "price": "Free",
+    "owned": false,
+    "rating": 2,
+    "votes": "2000",
+    "description": "Get the official YouTube app on TV.",
+    "tint": "#5A5D5C",
+    "publisher": "Google LLC",
+    "esrb": "TEEN",
+    "esrbNotes": "Users Interact, In-App Purchases"
+  },
+  {
+    "file": "dolby-access.png",
+    "title": "Dolby Access",
+    "genre": "ENTERTAINMENT",
+    "price": "Free",
+    "owned": false,
+    "rating": 4,
+    "votes": "2000",
+    "description": "Download Dolby Access to start your free trial of Dolby Atmos for Headphones or set up a Dolby Atmos device. Hear stunning detail, precision, and realism in your game...",
+    "tint": "#161A1C"
+  },
+  {
+    "file": "spotify-black.png",
+    "title": "Spotify Xbox – Music and Podcasts",
+    "genre": "MUSIC",
+    "price": "Free",
+    "owned": false,
+    "rating": 2,
+    "votes": "1524",
+    "friends": "15",
+    "description": "Soundtrack your gaming. Listen to music and podcasts for free",
+    "tint": "#242626"
+  }
+]

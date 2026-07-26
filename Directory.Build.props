@@ -1,0 +1,28 @@
+<Project>
+
+  <!-- Propiedades comunes a TODOS los proyectos del repositorio (MSBuild lo lee solo, sin
+       referenciarlo desde ningun sitio). Su razon de ser es el numero de version: la norma de
+       distribucion del proyecto exige que cada entrega lleve version visible, y tenerla en UN
+       solo sitio evita que la app, el servicio y el instalador digan cosas distintas.
+
+       Al cambiar PlayfrontVersion se actualizan de golpe:
+         - las propiedades del .exe que ve Windows (pestaña Detalles del Explorador),
+         - lo que devuelve PlayfrontVersion.Current en tiempo de ejecucion (src/Playfront.App/PlayfrontVersion.cs),
+         - lo que se escribe en el registro al arrancar (%LocalAppData%\Playfront\playfront.log),
+         - y la version que pondra el instalador cuando exista.
+
+       Criterio de numeracion: 0.x mientras Playfront no se haya entregado a nadie; se sube la segunda
+       cifra en cada entrega con cambios visibles y la tercera en correcciones. -->
+  <PropertyGroup>
+    <PlayfrontVersion>0.1.0</PlayfrontVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Version>$(PlayfrontVersion)</Version>
+    <Product>Playfront</Product>
+    <Company>Playfront</Company>
+    <Authors>Playfront</Authors>
+    <Copyright>Playfront</Copyright>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,31 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+## Rider / VS Code
+.idea/
+.vscode/
+
+## Salida de las compilaciones para repartir (se regenera cuando haga falta)
+dist/
+
+## OS
+Thumbs.db
+.DS_Store
+
+## Fondos y arte de juegos (Assets/Backgrounds/Games/): 62 ficheros, 416 MB.
+##
+## No van en el repositorio: se reparten como paquete aparte, colgado de una
+## release, y el instalador los descomprime en %ProgramData%\Playfront\Assets.
+## Las releases no tienen limite de tamano ni de descargas; el repositorio si
+## conviene mantenerlo pequeno, y 416 MB los pagaria solo quien clone el codigo.
+##
+## Consecuencia al compilar desde una copia limpia (por ejemplo en CI): estos
+## ficheros no estaran. build/Pack-Playfront.ps1 lo detecta y empaqueta el
+## programa igual; solo no genera el zip de assets.
+##
+## La app arranca y funciona SIN ellos (ver src/Playfront.App/AssetPaths.cs).
+src/Playfront.App/Assets/Backgrounds/Games/
