@@ -7,30 +7,28 @@ using Avalonia.Platform;
 namespace Playfront.App.Views;
 
 /// <summary>
-/// FICHA DE PRODUCTO de la Tienda: la pagina que se abre al pulsar A sobre una tarjeta de la pagina
-/// de categoria. Arte grande a la derecha, datos de la app a la izquierda, boton de instalar y
-/// bloque de clasificacion por edad abajo a la derecha.
+/// Store PRODUCT PAGE: opened by pressing A on a card in the category page. Large artwork on the
+/// right, app details on the left, install button and age-rating block bottom right.
 ///
-/// Todos los numeros de la pantalla estan medidos sobre la captura "youtube.png" del usuario; el
-/// detalle esta en el XAML.
+/// Every measurement on this screen is taken from a real Store capture; the detail lives in the XAML.
 ///
-/// Se monta bajo demanda y se libera al salir (arquitectura de rendimiento del proyecto).
+/// Built on demand and released on exit.
 /// </summary>
 public partial class StoreAppView : UserControl
 {
-    /// <summary>Se pide volver a la pagina de categoria (B).</summary>
+    /// <summary>Back to the category page was requested (B).</summary>
     public event Action? ExitRequested;
 
     /// <summary>
-    /// Se pulsa el boton principal (A sobre INSTALL/PLAY). MainWindow decide que hacer segun la app: para
-    /// YouTube, instalarla (si no lo estaba) y lanzarla. El valor es el fichero de arte que identifica la
-    /// app en apps.json.
+    /// The primary button was pressed (A on INSTALL/PLAY). MainWindow decides what that means per app;
+    /// for YouTube it installs it if needed and launches it. The value is the artwork file that
+    /// identifies the app in apps.json.
     /// </summary>
     public event Action<string>? ActionInvoked;
 
     private readonly string _art;
 
-    // Solo hay dos elementos navegables: el boton principal y el de la lista de deseos.
+    // Only two navigable elements: the primary button and the wishlist button.
     private const int ActionButton = 0;
     private const int WishButton = 1;
 
@@ -42,19 +40,18 @@ public partial class StoreAppView : UserControl
 
         _art = art;
 
-        // El arte se ve aqui a 701 px, mucho mas grande que en la tarjeta de la pagina de categoria.
-        // El fichero normal es de 300 px y ampliado se veia pixelado, asi que si existe una version
-        // "-large" (recortada de la captura de esta pagina, 514 px) se usa esa. Si no, la normal.
+        // Artwork is shown at 701 px here, far larger than on the category card. The normal file is
+        // 300 px and looked blocky scaled up, so a "-large" variant (514 px) is preferred when one
+        // exists. Otherwise the normal one.
         Art.Source = LoadArt(art?.Replace(".png", "-large.png")) ?? LoadArt(art);
 
-        // Los datos salen de apps.json (el mismo fichero que usa la pagina de categoria).
+        // Details come from apps.json, the same file the category page reads.
         StoreCategoryView.Apps.TryGetValue(art, out var info);
 
         TitleText.Text = info?.Title ?? string.Empty;
 
-        // Linea de editor: "<editor> ▪ <genero>". El genero va en la capital que trae apps.json
-        // (ahi esta en mayusculas porque la pagina de categoria lo pinta como pastilla), pero en la
-        // ficha se lee como palabra normal, asi que se pasa a "Entertainment".
+        // Publisher line: "<publisher> ▪ <genre>". apps.json stores the genre uppercased because the
+        // category page draws it as a pill; here it reads as a normal word, so it is title-cased.
         var genre = Capitalize(info?.Genre);
         var publisher = info?.Publisher;
         PublisherText.Text = string.IsNullOrEmpty(publisher)
@@ -63,20 +60,18 @@ public partial class StoreAppView : UserControl
 
         DescriptionText.Text = info?.Description ?? string.Empty;
 
-        // Boton principal. La segunda linea es el ESTADO de compra: en la captura de Xbox ponia "You
-        // own this" porque esa cuenta tenia la app; aqui las apps no son de nadie (el usuario pidio
-        // que todas las que ponian "Owned" pongan "Free"), asi que sale el precio.
+        // Primary button. The second line is the ownership state: the Xbox capture said "You own this"
+        // because that account had the app. Here nothing is owned, so the price shows instead.
         ActionText.Text = "INSTALL";
         ActionSubText.Text = info?.Owned == true ? "You own this" : info?.Price ?? string.Empty;
 
-        // Clasificacion por edad. Si la app no tiene captura de su ficha, el bloque entero no se
-        // pinta (mejor vacio que inventado).
+        // Age rating. Apps with no rating data leave the whole block unpainted - better empty than
+        // invented.
         var esrb = info?.Esrb;
         var hasRating = !string.IsNullOrEmpty(esrb);
         RatingLabel.Text = esrb ?? string.Empty;
         RatingNotes.Text = info?.EsrbNotes ?? string.Empty;
-        // El sello es una imagen (el oficial, recortado de la captura), no un dibujo: un fichero por
-        // clasificacion. De momento solo existe el de TEEN, que es el unico que hemos visto.
+        // The seal is an image, one file per rating, not something drawn. Only TEEN exists so far.
         RatingSeal.Source = hasRating ? LoadIcon($"esrb-{esrb!.ToLowerInvariant()}.png") : null;
         RatingSeal.IsVisible = RatingSeal.Source is not null;
         RatingRule.IsVisible = hasRating;
@@ -84,7 +79,7 @@ public partial class StoreAppView : UserControl
         UpdateSelection();
     }
 
-    // Iconos sueltos de la Tienda (el sello de edad, de momento).
+    // One-off Store icons (the rating seal, for now).
     private static Bitmap? LoadIcon(string file)
     {
         try
@@ -93,7 +88,7 @@ public partial class StoreAppView : UserControl
         }
         catch
         {
-            return null; // no tenemos ese sello: el bloque se queda sin el en vez de inventarlo
+            return null; // no seal for that rating: leave the block without one rather than invent it
         }
     }
 
@@ -110,12 +105,12 @@ public partial class StoreAppView : UserControl
         }
         catch
         {
-            return null; // sin arte: la caja se queda blanca, la pagina sigue funcionando
+            return null; // no artwork: the box stays blank and the page still works
         }
     }
 
-    // "ENTERTAINMENT" -> "Entertainment". En apps.json el genero esta en mayusculas porque la pagina
-    // de categoria lo pinta asi dentro de una pastilla; aqui es texto corrido.
+    // "ENTERTAINMENT" -> "Entertainment". apps.json holds the genre uppercased because the category
+    // page draws it that way inside a pill; here it is running text.
     private static string Capitalize(string? text)
     {
         if (string.IsNullOrEmpty(text))

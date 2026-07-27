@@ -4,22 +4,17 @@
              RequestedThemeVariant="Default">
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
-    <!-- Color de acento de Playfront: el verde de toda la app (bordes de seleccion, resaltes, halos).
-         Definido aqui una sola vez y referenciado desde el resto con {StaticResource ...}, en vez
-         de repetido a mano en cada sitio - antes estaba escrito literal en 8 puntos distintos, y
-         cambiarlo obligaba a acordarse de todos. Cuando llegue la pantalla "My color & theme" (que
-         deja elegir el color, como en Xbox), este es el punto por el que habra que entrar.
+    <!-- Accent colour: everything that marks selection (borders, rings, glows, highlights).
+         These are only the fallbacks. AccentTheme.Apply overwrites all three at startup with the
+         saved accent, which is why the rest of the XAML reads them through DynamicResource.
 
-         Valor medido pixel a pixel del verde de una Xbox real ("general
-         personalization.png", 2026-07-17): el nucleo del trazo de seleccion da (67,153,65) de
-         forma consistente. Se confirmo que la captura no desvia los colores comprobando que sus
-         zonas planas salen exactas (#201F1F, #303030, #444444), asi que el unico margen de error
-         posible era el remuestreo del trazo fino - descartado al ver dos pixeles contiguos con el
-         mismo R, o sea que al menos uno esta cubierto del todo por el trazo y lleva el color real.
+         #439941 is the green measured pixel by pixel off a real Xbox: the core of the selection
+         stroke reads (67,153,65) consistently. The flat areas of that same capture came out exact
+         (#201F1F, #303030, #444444), so the capture is not shifting colours.
 
-         AccentFadedBrush es el MISMO verde con alpha 0, no "Transparent": Transparent es blanco
-         con alpha 0, asi que animar una transicion entre el y el verde pasa por blanco a mitad de
-         camino en vez de desvanecerse (ver comentario en Border.outer). -->
+         AccentFadedBrush is the SAME colour with alpha 0, NOT "Transparent": Transparent is white
+         with alpha 0, so animating between the two passes through white halfway instead of fading
+         out (see the comment on Border.outer). -->
     <Application.Resources>
         <Color x:Key="AccentColor">#439941</Color>
         <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />

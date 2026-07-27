@@ -9,57 +9,57 @@ using Avalonia.Media.Transformation;
 
 namespace Playfront.App.Views;
 
-// Vista "My games & apps" (biblioteca). Recreada 1:1 de la captura de referencia; navegable con el mando.
+// "My games & apps" (library). Recreated 1:1 from the reference capture; controller-navigable.
 //
-// Dos estados de foco:
-//   - MENU: foco en la columna de categorias. La categoria enfocada lleva el resalte verde SOLIDO
-//     (LMenuHighlight). Al moverse arriba/abajo, el CONTENIDO de la derecha cambia SOLO a la categoria
-//     resaltada (titulo + panel): Games -> rejilla de juegos, Manage -> tarjetas de administrar; las
-//     otras 4 (Apps/Groups/Game history/Full library) aun no tienen diseño, muestran solo su titulo.
-//   - CONTENT: foco dentro del contenido. La categoria activa pasa al indicador de "abierta" (franja
-//     gris + barrita verde, LCategoryIndicator) y el elemento enfocado (juego o tarjeta) lleva el anillo.
+// Two focus states:
+//   - MENU: focus in the category column. The focused category gets the SOLID accent highlight
+//     (LMenuHighlight). Moving up/down switches the content on the right (title + panel) to that
+//     category: Games -> game grid, Manage -> management cards. The other four (Apps/Groups/Game
+//     history/Full library) have no design yet and show only their title.
+//   - CONTENT: focus inside the content. The active category switches to the "open" indicator (grey
+//     strip + accent bar, LCategoryIndicator) and the focused item (game or card) gets the ring.
 //
-// A/Derecha sobre una categoria CON contenido (Games o Manage) entra en el contenido; B/Izquierda(col 0)
-// vuelve al menu; B en el menu sale a la home.
+// A/Right on a category WITH content (Games or Manage) enters it; B or Left from column 0 returns to
+// the menu; B in the menu exits to Home.
 public partial class LibraryView : UserControl
 {
-    // La ventana escucha esto para volver a la home.
+    // The window listens to this to go back Home.
     public event Action? ExitRequested;
 
     private enum FocusArea { Menu, Content }
 
     private FocusArea _focus = FocusArea.Menu;
     private int _menuIndex;      // 0=Games,1=Apps,2=Groups,3=Game history,4=Full library,5=Manage
-    private int _contentIndex;   // dentro de la categoria activa: juego (Games 0..9) o tarjeta (Manage 0..8)
+    private int _contentIndex;   // within the active category: game (Games 0..9) or card (Manage 0..8)
 
     private const int GamesCat = 0;
     private const int ManageCat = 5;
 
-    // Nombre mostrado (titulo) de cada categoria. Texto en ingles (norma del proyecto).
+    // Display title of each category.
     private static readonly string[] CategoryNames = { "Games", "Apps", "Groups", "Game history", "Full library", "Manage" };
 
-    // Canvas.Top de cada categoria del menu (el resalte/indicador se desplaza a estas alturas). Los
-    // primeros cinco van seguidos; "Manage" cae mas abajo por el divisor.
+    // Canvas.Top of each menu category (the highlight/indicator slides to these). The first five are
+    // contiguous; "Manage" sits lower because of the divider.
     private static readonly double[] MenuRowTops = { 181, 255, 328, 402, 475, 592 };
 
-    // Rejilla de juegos (Games): 6 casillas arriba, 4 abajo.
+    // Games grid: 6 tiles on the top row, 4 on the bottom.
     private static readonly int[] GridRowLengths = { 6, 4 };
 
-    // Rejilla de tarjetas de Manage por filas (2 columnas; la ultima fila solo tiene la izquierda).
+    // Manage cards by row (2 columns; the last row has only the left one).
     private static readonly int[][] ManageGrid =
     {
         new[] { 0, 1 }, new[] { 2, 3 }, new[] { 4, 5 }, new[] { 6, 7 }, new[] { 8 },
     };
 
-    private Border[] _rings = null!;        // anillos de los juegos (Games)
-    private Border[] _labels = null!;       // etiquetas con el nombre del juego (Games)
-    private Border[] _manageRings = null!;  // anillos de las tarjetas (Manage)
+    private Border[] _rings = null!;        // game rings (Games)
+    private Border[] _labels = null!;       // game name labels (Games)
+    private Border[] _manageRings = null!;  // card rings (Manage)
 
     public LibraryView()
     {
         InitializeComponent();
 
-        // Nombre real de Playfront (igual que Home/Settings), no el de la captura de referencia.
+        // The real account name (same as Home/Settings), not the one from the reference capture.
         LibraryUserName.Text = Environment.UserName;
 
         _rings = new[] { LRing0, LRing1, LRing2, LRing3, LRing4, LRing5, LRing6, LRing7, LRing8, LRing9 };
@@ -70,17 +70,17 @@ public partial class LibraryView : UserControl
         UpdateVisuals();
     }
 
-    // Cuantos elementos navegables tiene la categoria activa (0 si no tiene contenido).
+    // How many navigable items the active category has (0 when it has no content).
     private int ContentCount => _menuIndex == GamesCat ? _rings.Length
         : _menuIndex == ManageCat ? _manageRings.Length : 0;
 
-    // ===== Medidor de almacenamiento (abajo-izquierda) =====
-    // Geometria del anillo (coincide con el XAML): centro y radio del trazo.
+    // ===== Storage meter (bottom left) =====
+    // Ring geometry, matching the XAML: stroke centre and radius.
     private const double RingCx = 330, RingCy = 993, RingR = 42.5;
 
-    // Rellena "available" (GB libres), el % del centro y el arco verde con el espacio LIBRE REAL del
-    // disco del sistema (donde esta Windows/los juegos). El arco = % libre; el resto (hueco) lo deja
-    // ver el track. Si por lo que sea no se puede leer el disco, se deja lo que haya en el XAML.
+    // Fills "available" (free GB), the centre percentage and the accent arc from the REAL free space on
+    // the system drive. The arc covers the free percentage; the remainder shows the track underneath.
+    // If the drive cannot be read, whatever the XAML holds is left alone.
     private void UpdateStorage()
     {
         try
@@ -96,7 +96,7 @@ public partial class LibraryView : UserControl
             double free = drive.AvailableFreeSpace;
             double total = drive.TotalSize;
             var percentFree = free / total * 100.0;
-            // GB "de Windows" = base 1024 (lo que ve el usuario en el Explorador), no base 10.
+            // "Windows GB" = base 1024, matching what Explorer shows, not base 10.
             var freeGiB = free / (1024.0 * 1024.0 * 1024.0);
 
             LStorageSize.Text = FormatSize(freeGiB);
@@ -105,7 +105,7 @@ public partial class LibraryView : UserControl
         }
         catch (Exception)
         {
-            // Best-effort: si falla la lectura del disco, se queda el placeholder del XAML.
+            // Best-effort: if the drive cannot be read, the XAML placeholder stays.
         }
     }
 
@@ -116,19 +116,18 @@ public partial class LibraryView : UserControl
             return (giB / 1024.0).ToString("0.00", CultureInfo.InvariantCulture) + " TB";
         }
 
-        // >=100 GB sin decimales (p.ej. "680 GB"); por debajo, un decimal (p.ej. "59.8 GB").
+        // >=100 GB with no decimals ("680 GB"); below that, one decimal ("59.8 GB").
         return giB.ToString(giB >= 100 ? "0" : "0.0", CultureInfo.InvariantCulture) + " GB";
     }
 
-    // Construye el arco del anillo para un porcentaje (0..100): el 0% esta ARRIBA (12 en punto, como en
-    // la captura) y el trazo se rellena en sentido HORARIO ese porcentaje; el hueco restante queda a la
-    // izquierda de arriba.
+    // Builds the ring arc for a percentage (0..100): 0% is at the TOP (12 o'clock, as in the capture)
+    // and the stroke fills CLOCKWISE by that percentage; the gap is left of top.
     private static Geometry BuildRingArc(double percent)
     {
-        percent = Math.Clamp(percent, 0.5, 99.9); // evita arcos degenerados (0% o 100% exactos)
+        percent = Math.Clamp(percent, 0.5, 99.9); // avoids degenerate arcs (exactly 0% or 100%)
         var sweep = percent / 100.0 * 360.0;
-        var (x1, y1) = ClockPoint(0);      // inicio: justo arriba (0%)
-        var (x2, y2) = ClockPoint(sweep);  // fin: tras avanzar 'sweep' en sentido horario
+        var (x1, y1) = ClockPoint(0);      // start: straight up (0%)
+        var (x2, y2) = ClockPoint(sweep);  // end: 'sweep' degrees clockwise
         var large = sweep > 180.0 ? 1 : 0;
         var inv = CultureInfo.InvariantCulture;
         var data = $"M{x1.ToString("0.##", inv)},{y1.ToString("0.##", inv)} " +
@@ -137,14 +136,14 @@ public partial class LibraryView : UserControl
         return Geometry.Parse(data);
     }
 
-    // Punto del anillo a un angulo de "reloj": 0=arriba, sentido horario.
+    // Point on the ring at a clock angle: 0 = top, clockwise.
     private static (double x, double y) ClockPoint(double aDeg)
     {
         var rad = aDeg * Math.PI / 180.0;
         return (RingCx + RingR * Math.Sin(rad), RingCy - RingR * Math.Cos(rad));
     }
 
-    // Enrutado del mando desde MainWindow.Move.
+    // Controller routing from MainWindow.Move.
     public void Move(GamepadButton button)
     {
         if (_focus == FocusArea.Menu)
@@ -167,7 +166,7 @@ public partial class LibraryView : UserControl
             case GamepadButton.Down when _menuIndex < MenuRowTops.Length - 1:
                 _menuIndex++;
                 break;
-            // Entrar en el contenido de la categoria resaltada, si tiene (Games o Manage).
+            // Enter the highlighted category's content, if it has any (Games or Manage).
             case GamepadButton.A when ContentCount > 0:
             case GamepadButton.Right when ContentCount > 0:
                 EnterContent();
@@ -182,7 +181,7 @@ public partial class LibraryView : UserControl
         UpdateVisuals();
     }
 
-    // Dentro del contenido: enruta segun la categoria activa.
+    // Inside the content: route by active category.
     private void MoveContent(GamepadButton button)
     {
         if (_menuIndex == GamesCat)
@@ -195,7 +194,7 @@ public partial class LibraryView : UserControl
         }
     }
 
-    // Navegacion de la rejilla de JUEGOS (6 arriba + 4 abajo).
+    // GAMES grid navigation (6 on top + 4 below).
     private void MoveGamesGrid(GamepadButton button)
     {
         var row = _contentIndex < GridRowLengths[0] ? 0 : 1;
@@ -206,7 +205,7 @@ public partial class LibraryView : UserControl
             case GamepadButton.Left when col > 0:
                 _contentIndex--;
                 break;
-            // Izquierda desde la primera columna: vuelve al menu (como en Xbox).
+            // Left from the first column returns to the menu, as on Xbox.
             case GamepadButton.Left:
             case GamepadButton.B:
                 ExitContent();
@@ -227,7 +226,7 @@ public partial class LibraryView : UserControl
         UpdateVisuals();
     }
 
-    // Navegacion de las tarjetas de MANAGE (2 columnas; la ultima fila solo tiene la izquierda).
+    // MANAGE cards navigation (2 columns; the last row has only the left one).
     private void MoveManageGrid(GamepadButton button)
     {
         var (row, col) = ManagePos(_contentIndex);
@@ -257,7 +256,7 @@ public partial class LibraryView : UserControl
         UpdateVisuals();
     }
 
-    // (fila, columna) de una tarjeta de Manage a partir de su indice.
+    // (row, column) of a Manage card from its index.
     private static (int row, int col) ManagePos(int card)
     {
         for (var r = 0; r < ManageGrid.Length; r++)
@@ -274,7 +273,7 @@ public partial class LibraryView : UserControl
         return (0, 0);
     }
 
-    // Entrar en el contenido de la categoria activa (primer elemento seleccionado).
+    // Enter the active category's content, selecting the first item.
     private void EnterContent()
     {
         _focus = FocusArea.Content;
@@ -282,7 +281,7 @@ public partial class LibraryView : UserControl
         UpdateVisuals();
     }
 
-    // Volver al menu (la categoria activa sigue resaltada).
+    // Back to the menu (the active category stays highlighted).
     private void ExitContent()
     {
         _focus = FocusArea.Menu;
@@ -293,20 +292,20 @@ public partial class LibraryView : UserControl
     {
         var inContent = _focus == FocusArea.Content;
 
-        // Contenido de la derecha: sigue a la categoria activa (Games / Manage / vacio), y el titulo.
+        // Right-hand content follows the active category (Games / Manage / empty), title included.
         LContentTitle.Text = CategoryNames[_menuIndex];
         LGamesContent.IsVisible = _menuIndex == GamesCat;
         LManageContent.IsVisible = _menuIndex == ManageCat;
 
-        // Resalte verde solido (foco en menu) vs indicador de "categoria abierta" (foco en contenido).
-        // Ambos se colocan en la fila de la categoria activa.
+        // Solid accent highlight (focus in menu) vs the "category open" indicator (focus in content).
+        // Both sit on the active category's row.
         var shift = TransformOperations.Parse($"translateY({MenuRowTops[_menuIndex] - MenuRowTops[0]}px)");
         LMenuHighlight.IsVisible = !inContent;
         LMenuHighlight.RenderTransform = shift;
         LCategoryIndicator.IsVisible = inContent;
         LCategoryIndicator.RenderTransform = shift;
 
-        // Anillos + etiquetas de JUEGO: solo el elemento enfocado, y solo con foco de contenido en Games.
+        // GAME rings and labels: only the focused item, and only with content focus in Games.
         var gamesFocus = inContent && _menuIndex == GamesCat;
         for (var i = 0; i < _rings.Length; i++)
         {
@@ -315,15 +314,15 @@ public partial class LibraryView : UserControl
             _labels[i].IsVisible = on;
         }
 
-        // Anillos de las TARJETAS de Manage: solo el enfocado, y solo con foco de contenido en Manage.
+        // Manage CARD rings: only the focused one, and only with content focus in Manage.
         var manageFocus = inContent && _menuIndex == ManageCat;
         for (var i = 0; i < _manageRings.Length; i++)
         {
             SetClass(_manageRings[i], "selected", manageFocus && i == _contentIndex);
         }
 
-        // Pistas de abajo-derecha: las acciones del juego (Manage game / More options) solo con un juego
-        // enfocado; en cualquier otro estado, "Search".
+        // Bottom-right hints: the game actions (Manage game / More options) only with a game focused;
+        // in any other state, "Search".
         LGridHints.IsVisible = gamesFocus;
         LSearchHint.IsVisible = !gamesFocus;
     }

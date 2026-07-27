@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk.Worker">
 
-  <!-- Servicio ayudante de Playfront: corre como SYSTEM (permisos totales), instalado una vez. Hace el
-       trabajo privilegiado que la interfaz (sin permisos) no puede: instalar Steam, y mas adelante
-       TDP/perfiles/mando. Mismo patron que la app de Xbox <-> el servicio GamingServices. La UI le
-       pide cosas por una tuberia con nombre segura (ver PipeServer.cs); solo verbos fijos y seguros.
-       TFM -windows para las APIs de servicio, ACL de tuberia y registro de Windows. -->
+  <!-- Playfront helper service: runs as SYSTEM (full rights), installed once. Does the privileged work
+       the unprivileged UI cannot: installing Steam today, TDP/profiles/controller later. Same pattern
+       as the Xbox app <-> the GamingServices service. The UI asks over a secured named pipe (see
+       PipeServer.cs); fixed, safe verbs only.
+       The -windows TFM is needed for the service APIs, pipe ACLs and the Windows registry. -->
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>

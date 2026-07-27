@@ -14,41 +14,38 @@ using Vortice.MediaFoundation;
 namespace Playfront.App.Video;
 
 /// <summary>
-/// Fondo de video decodificado por hardware (el chip de video dedicado de la GPU, via Media
-/// Foundation - el mismo sistema que usa la propia Xbox) y entregado a Avalonia sin copiar
-/// nunca los pixeles a memoria normal de CPU. Sustituye al reproductor por software anterior
-/// (que llegaba a usar ~60% de un nucleo de CPU sin parar); medido con este: ~23% de CPU y
-/// bastante menos RAM.
+/// Video background decoded in hardware (the GPU's dedicated video block, through Media Foundation)
+/// and handed to Avalonia without ever copying pixels back to CPU memory. Replaces the earlier
+/// software player, which sat at ~60% of a CPU core continuously; this one measures ~23% CPU and
+/// noticeably less RAM.
 ///
-/// Como funciona: se crean dos cosas D3D11 (el "lenguaje" con el que se habla con la tarjeta
-/// grafica) - un dispositivo con la decodificacion de video activada (que usa Media Foundation
-/// para descodificar cada fotograma directamente en la GPU) y una textura "de recurso
-/// compartido" marcada para que Avalonia pueda importarla y pintarla directamente. Cada
-/// fotograma nuevo se "dibuja" (no se copia byte a byte - los formatos de pixel de Media
-/// Foundation y de Avalonia no coinciden exactamente aunque son casi identicos) sobre esa
-/// textura compartida con un shader minimo, y un "mutex con llave" evita que Media Foundation
-/// y Avalonia intenten leer/escribir la textura a la vez.
+/// How it works: two D3D11 objects are created - a device with video decoding enabled (Media
+/// Foundation decodes each frame straight on the GPU) and a shared-resource texture flagged so
+/// Avalonia can import and draw it directly. Each new frame is DRAWN onto that shared texture with a
+/// minimal shader rather than copied byte for byte (Media Foundation's and Avalonia's pixel formats
+/// are near-identical but not the same name), and a keyed mutex stops Media Foundation and Avalonia
+/// reading/writing the texture at once.
 /// </summary>
 public sealed class HardwareVideoBackgroundControl : GpuCompositionControlBase
 {
     private readonly string _videoPath;
 
-    // Ruta del video que se QUIERE reproducir (la puede cambiar SetVideoSource desde el hilo de UI en
-    // cualquier momento, sin bloquear) y la que se esta reproduciendo AHORA (solo la toca el hilo de
-    // bombeo). Cuando difieren, el hilo de bombeo cambia el lector a la nueva, reutilizando el mismo
-    // dispositivo/textura/superficie - asi NO se crea y destruye un reproductor entero por cada cambio
-    // de fondo (eso bloqueaba la pagina). Vale para videos del mismo tamaño (todos 1920x1080).
+    // Path of the video that SHOULD play (SetVideoSource can change it from the UI thread at any time
+    // without blocking) and the one playing RIGHT NOW (touched only by the pump thread). When they
+    // differ, the pump thread switches the reader over, reusing the same device/texture/surface - so a
+    // whole player is NOT built and torn down per background change, which used to stall the page.
+    // Valid for videos of the same size (all are 1920x1080).
     private volatile string _requestedPath;
     private string? _activePath;
 
-    // Se pone a true al arrancar y cada vez que se cambia de video; cuando el hilo de bombeo entrega el
-    // PRIMER fotograma del video nuevo, dispara VideoReady (en el hilo de UI) y lo pone a false. Sirve
-    // para que quien use el control muestre el reproductor justo cuando ya se ve el fotograma nuevo (no
-    // antes, para que no se vea un instante el fotograma del video anterior).
+    // Set true at startup and on every video change; when the pump thread delivers the FIRST frame of
+    // the new video it raises VideoReady (on the UI thread) and clears it. Lets the caller reveal the
+    // player exactly when the new frame is on screen, not before - otherwise the previous video's last
+    // frame flashes.
     private volatile bool _firstFramePending;
 
-    /// <summary>Se dispara (en el hilo de UI) cuando ya se ha entregado el primer fotograma del video
-    /// actual - util para revelar el reproductor sin parpadeo tras un SetVideoSource.</summary>
+    /// <summary>Raised on the UI thread once the current video's first frame has been delivered -
+    /// used to reveal the player without a flash after SetVideoSource.</summary>
     public event Action? VideoReady;
 
     private ID3D11Device? _device;
@@ -63,12 +60,11 @@ public sealed class HardwareVideoBackgroundControl : GpuCompositionControlBase
     private ICompositionImportedGpuImage? _imported;
     private PlatformGraphicsExternalImageProperties _importedProps;
 
-    // "Blit" por shader en vez de copiar los bytes del fotograma directamente: Media Foundation
-    // entrega el fotograma en formato B8G8R8X8 (RGB sin canal alfa util) pero Avalonia solo sabe
-    // importar texturas compartidas en B8G8R8A8 (con alfa) - son identicos en memoria pero
-    // Direct3D no deja copiarlos directamente entre "nombres" de formato distintos (falla en
-    // silencio, sin excepcion, pantalla en negro). Dibujar con un shader en vez de copiar evita
-    // el problema y sigue siendo 100% trabajo de la GPU.
+    // Shader blit instead of copying the frame bytes: Media Foundation delivers B8G8R8X8 (RGB, no
+    // usable alpha) but Avalonia only imports shared textures as B8G8R8A8. They are identical in
+    // memory, yet Direct3D refuses a direct copy between differently named formats - and it fails
+    // SILENTLY, no exception, black screen. Drawing with a shader sidesteps that and stays entirely on
+    // the GPU.
     private ID3D11VertexShader? _blitVs;
     private ID3D11PixelShader? _blitPs;
     private ID3D11SamplerState? _blitSampler;
@@ -86,16 +82,16 @@ public sealed class HardwareVideoBackgroundControl : GpuCompositionControlBase
         _requestedPath = videoPath;
     }
 
-    // Cambia el video que se reproduce SIN recrear el control (reutiliza dispositivo/textura/superficie).
-    // El hilo de bombeo lo recoge en su siguiente vuelta y cambia el lector alli (en segundo plano, no
-    // bloquea la UI). Instantaneo desde el hilo de UI: solo asigna un campo.
+    // Changes the playing video WITHOUT recreating the control (device/texture/surface are reused).
+    // The pump thread picks it up on its next pass and switches the reader there, off the UI thread.
+    // Instant from the caller's side: it only assigns a field.
     public void SetVideoSource(string videoPath) => _requestedPath = videoPath;
 
-    // Pausa/reanuda la DECODIFICACION sin desmontar nada: el hilo de bombeo sigue vivo y Resume()
-    // reanuda al instante. Se usa cuando el video queda TAPADO por una pantalla opaca (Ajustes,
-    // Personalization): no se ve, asi que decodificarlo solo gastaria GPU y bateria. No confundir con
-    // descargar el video, que si desmonta el decodificador (eso se hace solo al perder el primer plano,
-    // p.ej. al entrar en un juego).
+    // Pauses/resumes DECODING without tearing anything down: the pump thread stays alive so Resume() is
+    // instant. Used when the video is covered by an opaque screen (Settings, Personalization) - it is
+    // not visible, so decoding it would only burn GPU and battery. Not to be confused with unloading
+    // the video, which does tear the decoder down and happens only on losing the foreground, such as
+    // entering a game.
     public void Pause() => _paused = true;
     public void Resume() => _paused = false;
 
@@ -103,7 +99,7 @@ public sealed class HardwareVideoBackgroundControl : GpuCompositionControlBase
         CompositionDrawingSurface surface, ICompositionGpuInterop interop)
     {
         if (!interop.SupportedImageHandleTypes.Contains(KnownPlatformGraphicsExternalImageHandleTypes.D3D11TextureGlobalSharedHandle))
-            return (false, "DXGI shared handle import no soportado por este backend grafico");
+            return (false, "DXGI shared handle import is not supported by this graphics backend");
 
         _interop = interop;
         _target = surface;
@@ -168,17 +164,15 @@ public sealed class HardwareVideoBackgroundControl : GpuCompositionControlBase
 
         float4 PSMain(VsOutput input) : SV_TARGET
         {
-            // Avalonia importa la textura compartida "boca abajo" respecto al convenio normal
-            // de Direct3D (fila 0 = arriba) - se invierte aqui la coordenada vertical al leer
-            // para compensarlo.
+            // Avalonia imports the shared texture flipped relative to the usual Direct3D convention
+            // (row 0 = top), so the vertical coordinate is inverted here on read to compensate.
             float2 uv = float2(input.uv.x, 1 - input.uv.y);
             return float4(srcTexture.Sample(srcSampler, uv).rgb, 1);
         }
         """;
 
-    // Crea un lector (source reader) de Media Foundation para un video, con salida RGB32 decodificada
-    // por hardware (via el device manager D3D ya creado). Se usa al arrancar y al cambiar de video en
-    // caliente desde el hilo de bombeo (ver PumpLoop).
+    // Creates a Media Foundation source reader for a video, with RGB32 output decoded in hardware
+    // through the D3D device manager. Used at startup and on hot video switches from the pump thread.
     private IMFSourceReader CreateReader(string path)
     {
         using var readerAttributes = MediaFactory.MFCreateAttributes(4);
@@ -244,9 +238,8 @@ public sealed class HardwareVideoBackgroundControl : GpuCompositionControlBase
             Format = PlatformGraphicsExternalImageFormat.B8G8R8A8UNorm
         };
 
-        // ImportImage exige el hilo de UI de Avalonia - por eso se hace aqui (en la
-        // inicializacion, que ya corre en ese hilo) en vez de la primera vez que hace falta
-        // desde el hilo de bombeo de video en segundo plano.
+        // ImportImage requires Avalonia's UI thread, hence doing it here during initialization (which
+        // already runs there) rather than on first need from the background pump thread.
         _imported = _interop!.ImportImage(
             new PlatformHandle(_sharedHandle, KnownPlatformGraphicsExternalImageHandleTypes.D3D11TextureGlobalSharedHandle),
             _importedProps);
@@ -262,9 +255,9 @@ public sealed class HardwareVideoBackgroundControl : GpuCompositionControlBase
         {
             try
             {
-                // Pausado (la home esta tapada por otra pantalla opaca): no se decodifica nada, solo se
-                // comprueba de vez en cuando si hay que reanudar o parar. Asi un video invisible no gasta
-                // GPU ni bateria. El hilo sigue vivo, por eso reanudar es instantaneo.
+                // Paused (Home is covered by an opaque screen): nothing is decoded, just an occasional
+                // check for resume or stop. An invisible video costs no GPU or battery. The thread stays
+                // alive, which is why resuming is instant.
                 if (_paused)
                 {
                     wasPaused = true;
@@ -273,17 +266,17 @@ public sealed class HardwareVideoBackgroundControl : GpuCompositionControlBase
                 }
                 if (wasPaused)
                 {
-                    // Al reanudar, re-anclar el ritmo: si no, intentaria "recuperar" de golpe todo el
-                    // tiempo pausado y haria un fast-forward. El video sigue donde se quedo (sin salto).
+                    // On resume, re-anchor the clock: otherwise it would try to make up all the paused
+                    // time at once and fast-forward. The video continues where it left off.
                     wasPaused = false;
                     firstSampleTimestamp = null;
                     clock.Restart();
                 }
 
-                // Cambio de video en caliente: si se ha pedido otro (SetVideoSource), se cambia el
-                // lector AQUI, en este hilo de fondo (abrir el nuevo archivo no bloquea la UI),
-                // reutilizando dispositivo/textura/superficie. Mientras se abre, la textura conserva el
-                // ultimo fotograma del anterior (se ve congelado unas decimas), luego fluye el nuevo.
+                // Hot video switch: if another one was requested (SetVideoSource), the reader is
+                // swapped HERE, on this background thread, so opening the new file does not block the
+                // UI. Device/texture/surface are reused. While it opens, the texture still holds the
+                // previous last frame (frozen for a few tenths), then the new one flows.
                 var requested = _requestedPath;
                 if (!string.Equals(requested, _activePath, StringComparison.Ordinal))
                 {
@@ -309,9 +302,9 @@ public sealed class HardwareVideoBackgroundControl : GpuCompositionControlBase
                 if (sample == null)
                     continue;
 
-                // Ritmo real del video: esperamos hasta que el reloj llegue a la marca de tiempo
-                // del fotograma, si no Media Foundation los da tan rapido como puede
-                // descodificar (mucho mas rapido que la reproduccion normal).
+                // Real playback pacing: wait until the clock reaches the frame's timestamp. Without
+                // this, Media Foundation hands frames over as fast as it can decode them, far faster
+                // than real time.
                 firstSampleTimestamp ??= timestamp;
                 var targetElapsedMs = (timestamp - firstSampleTimestamp.Value) / 10_000.0;
                 var waitMs = targetElapsedMs - clock.Elapsed.TotalMilliseconds;
@@ -354,26 +347,25 @@ public sealed class HardwareVideoBackgroundControl : GpuCompositionControlBase
 
                     _sharedMutex.ReleaseSync(1);
 
-                    // Si han pedido el apagado mientras descodificabamos/dibujabamos este fotograma
-                    // (que es la mayor parte del tiempo de cada frame), salimos AQUI, antes de la
-                    // entrega bloqueante a la UI de abajo. Esa entrega espera al hilo de UI; si el
-                    // apagado ya esta esperando a este hilo (Join de 2s), ambos se bloquearian
-                    // mutuamente hasta que expira ese cronometro. Cortar antes de entrar hace que el
-                    // apagado retorne en un fotograma en el caso comun.
+                    // If shutdown was requested while this frame was decoding/drawing (most of a
+                    // frame's time), bail out HERE, before the blocking hand-off below. That hand-off
+                    // waits on the UI thread; if shutdown is already waiting on this thread (a 2s
+                    // Join), the two would block each other until that timer expires. Cutting out
+                    // first makes shutdown return within a frame in the common case.
                     if (_stop)
                         break;
 
                     if (_target != null && _imported != null)
                     {
-                        // UpdateWithKeyedMutexAsync tambien exige el hilo de UI de Avalonia - no
-                        // se puede llamar directamente desde este hilo de bombeo en segundo plano.
+                        // UpdateWithKeyedMutexAsync also requires Avalonia's UI thread; it cannot be
+                        // called directly from this background pump thread.
                         Dispatcher.UIThread.InvokeAsync(() => _target.UpdateWithKeyedMutexAsync(_imported, 1, 0))
                             .GetAwaiter().GetResult();
                     }
 
-                    // Primer fotograma del video actual ya entregado -> avisar (el Post de VideoReady va
-                    // DESPUES del Post de presentacion de arriba, asi que cuando llegue, la superficie ya
-                    // muestra el fotograma nuevo).
+                    // First frame of the current video delivered -> notify. The VideoReady post is
+                    // queued AFTER the present above, so by the time it runs the surface already shows
+                    // the new frame.
                     if (_firstFramePending)
                     {
                         _firstFramePending = false;
@@ -383,20 +375,19 @@ public sealed class HardwareVideoBackgroundControl : GpuCompositionControlBase
             }
             catch (Exception)
             {
-                // Durante el APAGADO (_stop = true, control retirado de la pantalla) los recursos que
-                // usa este bucle -reader, textura compartida, superficie de Avalonia- se estan
-                // liberando en el hilo de UI, asi que aqui saltan excepciones (objeto ya liberado).
-                // Hay que capturarlas y salir del bucle limpiamente: una excepcion NO capturada en
-                // este hilo de fondo tumba TODA la app (asi se cerraba al quitar el video de preview
-                // al mover la seleccion o salir de "Dynamic backgrounds"). Antes el filtro
-                // "when (!_stop)" dejaba pasar la excepcion en ese caso, que es justo el que crashea.
+                // During SHUTDOWN (_stop = true, control removed from the screen) the resources this
+                // loop uses - reader, shared texture, Avalonia surface - are being freed on the UI
+                // thread, so disposed-object exceptions land here. They must be caught and the loop
+                // exited cleanly: an UNCAUGHT exception on this background thread takes the WHOLE app
+                // down, which is how it used to close when the preview video was dropped on moving the
+                // selection or leaving "Dynamic backgrounds". A "when (!_stop)" filter let the
+                // exception through in exactly the case that crashes.
                 if (_stop)
                 {
                     break;
                 }
 
-                // Fuera del apagado, un fallo puntual se reintenta tras una pausa (comportamiento de
-                // siempre).
+                // Outside shutdown, a one-off failure is retried after a short pause.
                 Thread.Sleep(50);
             }
         }
@@ -419,10 +410,10 @@ public sealed class HardwareVideoBackgroundControl : GpuCompositionControlBase
         _context?.Dispose();
         _device?.Dispose();
 
-        // "Apaga" Media Foundation, equilibrando el MFStartup() de la inicializacion (encender/apagar
-        // van contados: sin este, el contador solo sube en cada reproductor que se crea y nunca baja).
-        // Va el ULTIMO, cuando ya se han soltado el lector y el device manager (que son objetos de Media
-        // Foundation): apagar el motor con algo suyo aun vivo daria error.
+        // Balances the MFStartup() from initialization - the startup/shutdown pair is refcounted, so
+        // without this the count only ever climbs with each player created. Goes LAST, once the reader
+        // and the device manager (both Media Foundation objects) are released: shutting the engine down
+        // with one of its objects still alive errors out.
         MediaFactory.MFShutdown();
     }
 

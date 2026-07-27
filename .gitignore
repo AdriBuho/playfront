@@ -9,23 +9,23 @@ obj/
 .idea/
 .vscode/
 
-## Salida de las compilaciones para repartir (se regenera cuando haga falta)
+## Distributable build output (regenerated on demand)
 dist/
 
 ## OS
 Thumbs.db
 .DS_Store
 
-## Fondos y arte de juegos (Assets/Backgrounds/Games/): 62 ficheros, 416 MB.
+## Game backgrounds and artwork (Assets/Backgrounds/Games/): 62 files, 416 MB.
 ##
-## No van en el repositorio: se reparten como paquete aparte, colgado de una
-## release, y el instalador los descomprime en %ProgramData%\Playfront\Assets.
-## Las releases no tienen limite de tamano ni de descargas; el repositorio si
-## conviene mantenerlo pequeno, y 416 MB los pagaria solo quien clone el codigo.
+## Not in the repository: they ship as a separate package attached to a release, and
+## the installer unpacks them into %ProgramData%\Playfront\Assets. Releases have no
+## size or bandwidth limit; the repository is worth keeping small, and 416 MB would
+## be paid for only by whoever clones the code.
 ##
-## Consecuencia al compilar desde una copia limpia (por ejemplo en CI): estos
-## ficheros no estaran. build/Pack-Playfront.ps1 lo detecta y empaqueta el
-## programa igual; solo no genera el zip de assets.
+## Consequence when building from a clean checkout (CI, for example): these files will
+## not be there. build/Pack-Playfront.ps1 detects that and packages the program anyway,
+## just without the assets zip.
 ##
-## La app arranca y funciona SIN ellos (ver src/Playfront.App/AssetPaths.cs).
+## The app starts and works WITHOUT them (see src/Playfront.App/AssetPaths.cs).
 src/Playfront.App/Assets/Backgrounds/Games/

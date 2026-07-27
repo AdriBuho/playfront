@@ -197,7 +197,7 @@ if (Test-Path $heavyInStage) {
 
 Write-Ok "The app package is down to $(SizeMB $stage) MB"
 
-# --- 3. Empaquetar el programa con Velopack --------------------------------------------------------
+# --- 3. Package the program with Velopack ----------------------------------------------------------
 Write-Step "Packaging the program with Velopack (id '$packId')"
 & vpk pack `
     --packId      $packId `

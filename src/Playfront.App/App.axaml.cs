@@ -14,9 +14,9 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        // Aplica el color de acento guardado (o el verde por defecto) ANTES de crear la ventana,
-        // para que los recursos del tema (AccentBrush, *Shadow, ...) existan cuando el XAML los
-        // resuelva por DynamicResource - si no, habria un parpadeo sin halos al arrancar.
+        // Apply the saved accent (or the default green) BEFORE creating the window, so the theme
+        // resources (AccentBrush, *Shadow, ...) exist by the time XAML resolves them through
+        // DynamicResource - otherwise startup flashes once without the glows.
         AccentTheme.Apply(this, Color.Parse(AccentTheme.LoadSavedHex()));
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)

@@ -1,17 +1,16 @@
-# Finales de linea y tipos de fichero.
+# Line endings and file types.
 #
-# Por que existe: sin este fichero, cada persona que clone el repositorio obtiene los
-# finales de linea que decida su configuracion de git. Un .cmd o un .ps1 con finales de
-# linea de Unix puede fallar al ejecutarse en Windows.
+# Without this file every clone gets whatever line endings the local git config decides.
+# A .cmd or .ps1 with Unix line endings can fail to run on Windows.
 
-# --- Scripts que ejecuta Windows: siempre con finales de linea de Windows ---
+# --- Scripts Windows executes: always CRLF ---
 *.cmd   text eol=crlf
 *.bat   text eol=crlf
 *.ps1   text eol=crlf
 *.psm1  text eol=crlf
 *.psd1  text eol=crlf
 
-# --- Texto normal: se normaliza al guardar y se entrega en el formato del sistema ---
+# --- Normal text: normalized on commit, checked out in the platform format ---
 *.cs     text
 *.axaml  text
 *.csproj text
@@ -20,7 +19,7 @@
 *.md     text
 *.json   text
 
-# --- Binarios: git no debe convertir nada ni intentar mostrar diferencias de texto ---
+# --- Binaries: git must not convert them or try to diff them as text ---
 *.png   binary
 *.jpg   binary
 *.jpeg  binary

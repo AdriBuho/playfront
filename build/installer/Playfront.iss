@@ -1,31 +1,31 @@
 ; ===================================================================================================
-;  Instalador de Playfront
+;  Playfront installer
 ;
-;  Un solo .exe de pocos MB que se descarga y monta TODO lo que hace falta:
+;  A single few-MB .exe that downloads and sets up everything:
 ;
-;    1. La app          -> carpeta del usuario, SIN permisos de administrador
-;    2. El ayudante     -> Program Files + servicio de Windows, CON permisos
-;    3. Arte y videos   -> ProgramData, compartidos por todos los usuarios
+;    1. The app       -> user folder, NO administrator rights
+;    2. The helper    -> Program Files + Windows service, WITH administrator rights
+;    3. Artwork/video -> ProgramData, shared by every account
 ;
-;  POR QUE ESTA PARTIDO ASI (no es capricho):
+;  WHY IT IS SPLIT THIS WAY
 ;
-;  La app tiene que vivir en la carpeta del usuario para poder actualizarse SOLA y en silencio. Si
-;  viviera en Program Files, cada actualizacion pediria permisos de administrador. Es el mismo motivo
-;  por el que Chrome o Discord se instalan en la carpeta del usuario.
+;  The app must live in the user folder so it can update itself silently. From Program Files, every
+;  update would prompt for administrator rights. It is the same reason Chrome and Discord install into
+;  the user folder.
 ;
-;  Pero el ayudante hace el trabajo privilegiado (TDP, servicios, el registro de Windows) y tiene que
-;  ser un servicio del sistema. Eso si necesita permisos, una vez, al instalar.
+;  The helper does the privileged work (TDP, services, the Windows registry) and has to be a system
+;  service, which does need administrator rights - once, at install time.
 ;
-;  LA TRAMPA IMPORTANTE, y por que el codigo de abajo da rodeos:
+;  THE TRAP, and why the code below takes a detour:
 ;
-;  Este instalador corre ELEVADO. Si desde aqui lanzaramos el instalador de la app tal cual, la app
-;  acabaria en la carpeta del ADMINISTRADOR, no en la de quien esta usando el PC. En un equipo donde
-;  el usuario normal no es administrador, Playfront se instalaria en un perfil que nadie abre: la
-;  instalacion diria "correcto" y la app no aparecia por ningun lado.
+;  This installer runs ELEVATED. Launching the app's own installer from here directly would put the
+;  app in the ADMINISTRATOR's folder, not that of whoever is using the PC. On a machine where the
+;  everyday user is not an administrator, Playfront would install into a profile nobody opens: the
+;  install would report success and the app would be nowhere.
 ;
-;  Por eso la parte de la app se lanza con ExecAsOriginalUser (baja los permisos a los de quien
-;  ejecuto el instalador) Y ADEMAS a traves de cmd, para que sea ESE proceso quien resuelva
-;  %LOCALAPPDATA%. Resolverlo aqui daria la carpeta del administrador otra vez.
+;  So the app step runs through ExecAsOriginalUser, which drops back to the rights of whoever started
+;  the installer. The user's real folder is resolved by asking a process running as them (see
+;  GetOriginalUserLocalAppData); resolving it here would give the administrator's folder again.
 ; ===================================================================================================
 
 #define AppName        "Playfront"
@@ -33,7 +33,7 @@
 #define AppPublisher   "Playfront"
 #define AppUrl         "https://github.com/AdriBuho/playfront"
 
-; De donde se descarga todo. Al sacar una version nueva se cambia ReleaseTag y ya.
+; Where everything is downloaded from. Cutting a new version means changing ReleaseTag and nothing else.
 #define ReleaseTag     "v0.1.0"
 #define BaseUrl        "https://github.com/AdriBuho/playfront/releases/download/" + ReleaseTag
 
@@ -41,12 +41,12 @@
 #define HelperZipFile  "PlayfrontHelper.zip"
 #define AssetsZipFile  "PlayfrontAssets-Games.zip"
 
-; Sitio libre que hay que exigir: ~55 MB app + ~40 MB ayudante + ~416 MB assets, mas lo que ocupan
-; descomprimidos y el margen de la descarga temporal. Se redondea muy al alza a proposito.
+; Free space to demand: ~55 MB app + ~40 MB helper + ~416 MB assets, plus what they take unpacked and
+; headroom for the temporary download. Rounded well up on purpose.
 #define RequiredFreeMB 2048
 
 [Setup]
-; No cambiar AppId nunca: es lo que identifica esta instalacion para actualizarla o desinstalarla.
+; Never change AppId: it is what identifies this installation for upgrading and uninstalling.
 AppId={{7A5E6C41-9D3B-4F82-A0C7-1E5B8D24F930}
 AppName={#AppName}
 AppVersion={#AppVersion}
@@ -55,10 +55,10 @@ AppPublisherURL={#AppUrl}
 AppSupportURL={#AppUrl}
 VersionInfoVersion={#AppVersion}
 
-; Aqui va el AYUDANTE. La app no: esa va a la carpeta del usuario (ver el comentario de arriba).
+; This is where the HELPER goes. Not the app: that goes to the user folder (see the header).
 DefaultDirName={autopf}\Playfront
-; No se deja elegir carpeta: el servicio tiene que estar en un sitio fijo y protegido, y la app ni
-; siquiera se instala aqui. Dar a elegir seria mentir sobre lo que hace ese cuadro.
+; No folder choice: the service has to sit in a fixed, protected location, and the app is not even
+; installed here. Offering a choice would misrepresent what that box does.
 DisableDirPage=yes
 DisableProgramGroupPage=yes
 DisableReadyPage=no
@@ -66,7 +66,7 @@ DisableReadyPage=no
 PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-; Windows 10 1809 en adelante: es lo que necesita .NET 10 y lo que lleva cualquier Ally.
+; Windows 10 1809 and later: what .NET 10 needs, and what any Ally ships with.
 MinVersion=10.0.17763
 
 OutputBaseFilename=PlayfrontSetup
@@ -90,8 +90,8 @@ Name: "{commonappdata}\Playfront\Assets"
 var
   DownloadPage: TDownloadWizardPage;
   ShellSetupPath, HelperZipPath, AssetsZipPath: String;
-  // Evita descargar dos veces: en modo normal baja al pulsar "Instalar", y en modo silencioso
-  // (/SILENT, que es como lo llamara cualquier automatismo) no hay asistente y baja mas tarde.
+  // Prevents downloading twice: interactively it downloads when "Install" is pressed; in silent mode
+  // (/SILENT, how any automation invokes it) there is no wizard and it downloads later.
   FilesDownloaded: Boolean;
 
 function OnDownloadProgress(const Url, FileName: String; const Progress, ProgressMax: Int64): Boolean;
@@ -105,12 +105,12 @@ begin
     SetupMessage(msgPreparingDesc), @OnDownloadProgress);
 end;
 
-// Comprueba que hay sitio ANTES de descargar medio giga. Sin esto, el fallo aparece a mitad de la
-// descarga o, peor, al descomprimir, cuando ya se ha tocado el sistema.
+// Checks for space BEFORE downloading half a gigabyte. Without this the failure surfaces mid-download
+// or, worse, while unpacking, once the system has already been touched.
 //
-// Devuelve el motivo en texto, o '' si hay sitio. No enseña el aviso por su cuenta a proposito:
-// en una instalacion silenciosa un cuadro de dialogo dejaria el instalador esperando un clic que
-// nadie va a dar. Que lo enseñe quien llama, si procede.
+// Returns the reason as text, or '' when there is room. It deliberately does not show the message
+// itself: in a silent install a dialog would leave the installer waiting for a click nobody will
+// give. The caller shows it, if appropriate.
 function CheckFreeSpace(): String;
 var
   FreeBytes, TotalBytes: Int64;
@@ -128,10 +128,11 @@ begin
   end;
 end;
 
-// Descarga las tres piezas. Devuelve '' si fue bien, o el motivo del fallo en texto.
-// Se llama desde DOS sitios a proposito (ver FilesDownloaded): al pulsar "Instalar" cuando hay
-// asistente, y desde PrepareToInstall cuando se ejecuta en silencio. Si solo colgara del boton,
-// una instalacion con /SILENT no descargaria nada y montaria una instalacion a medias.
+// Downloads the three pieces. Returns '' on success, or the failure reason as text.
+//
+// Called from TWO places on purpose (see FilesDownloaded): from the "Install" button when there is a
+// wizard, and from PrepareToInstall when running silently. Hanging it off the button alone meant a
+// /SILENT install downloaded nothing and produced a half-built installation.
 function DownloadEverything(): String;
 begin
   Result := '';
@@ -152,7 +153,7 @@ begin
       AssetsZipPath  := ExpandConstant('{tmp}\{#AssetsZipFile}');
       FilesDownloaded := True;
     except
-      // Lo que falla casi siempre es la red. Se dice en claro en vez de soltar el error tecnico.
+      // What fails is almost always the network. Say so plainly instead of dumping the raw error.
       Result := 'The download failed.' + #13#10#13#10 + GetExceptionMessage + #13#10#13#10 +
                 'Check your internet connection and run this installer again.';
     end;
@@ -181,8 +182,8 @@ begin
   end;
 end;
 
-// Ultima red de seguridad antes de tocar el disco. Devolver texto aqui ABORTA la instalacion
-// limpiamente y lo enseña, en vez de dejar el sistema a medias.
+// Last safety net before touching the disk. Returning text here ABORTS the install cleanly and shows
+// the reason, rather than leaving the system half-built.
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   Result := CheckFreeSpace();
@@ -190,24 +191,22 @@ begin
     Result := DownloadEverything();
 end;
 
-// Descomprime con PowerShell y .NET en vez de con Expand-Archive: con 416 MB, Expand-Archive tarda
-// varios minutos y este metodo segundos. -ExecutionPolicy Bypass para que no dependa de la politica
-// de scripts de la maquina.
+// Unpacks through PowerShell and .NET rather than Expand-Archive: for 416 MB, Expand-Archive takes
+// minutes and this takes seconds. -ExecutionPolicy Bypass so it does not depend on the machine's
+// script policy.
 //
-// OJO CON LA VERSION DE POWERSHELL (esto ya rompio una vez, el 2026-07-27):
-// aqui corre el PowerShell que trae Windows (5.1, sobre .NET Framework), NO el 7. Y el 5.1 solo
-// tiene DOS versiones de ExtractToDirectory:
-//     (origen, destino)  y  (origen, destino, codificacion)
-// La de tres parametros con "sobrescribir" solo existe en PowerShell 7. Usarla aqui hacia que
-// fallara la descompresion entera sin decir por que. Por eso se llama con DOS parametros y se
-// vacia el destino a mano antes.
+// MIND THE POWERSHELL VERSION - this broke once already. What runs here is the PowerShell that ships
+// with Windows (5.1, on .NET Framework), NOT 7. And 5.1 only has TWO overloads of ExtractToDirectory:
+//     (source, destination)  and  (source, destination, encoding)
+// The three-argument one with "overwrite" exists only in PowerShell 7. Using it here made the whole
+// extraction fail without saying why. Hence two arguments, and emptying the destination by hand first.
 function ExtractZip(const ZipPath, DestDir: String): Boolean;
 var
   Cmd: String;
   ResultCode: Integer;
 begin
-  // Vaciar el destino primero: la version de dos parametros falla si ya hay un fichero con el
-  // mismo nombre dentro. Sin esto, reinstalar encima daria error.
+  // Empty the destination first: the two-argument overload fails if a file of the same name is
+  // already there. Without this, reinstalling over an existing install would error out.
   if DirExists(DestDir) then
     DelTree(DestDir, True, True, True);
 
@@ -219,20 +218,20 @@ begin
   Result := Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'), Cmd, '',
                  SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
 
-  // Queda en el registro del instalador (/LOG), que es donde se mira cuando algo falla en la
-  // maquina de otro y no se puede depurar en directo.
+  // Lands in the installer log (/LOG), which is what gets read when this fails on someone else's
+  // machine and there is no way to debug it live.
   if Result then
     Log('ExtractZip OK: ' + ZipPath + ' -> ' + DestDir)
   else
-    Log('ExtractZip FALLO (codigo ' + IntToStr(ResultCode) + '): ' + ZipPath + ' -> ' + DestDir);
+    Log('ExtractZip FAILED (code ' + IntToStr(ResultCode) + '): ' + ZipPath + ' -> ' + DestDir);
 end;
 
-// Averigua la carpeta de datos del usuario QUE LANZO el instalador, no la del administrador que
-// lo elevo. Se pregunta a un proceso lanzado con sus permisos ('echo %LOCALAPPDATA%') y se recoge
-// la respuesta por un fichero, porque Exec no devuelve la salida.
+// Resolves the data folder of the user WHO STARTED the installer, not that of the administrator who
+// elevated it. It asks a process running with their rights ('echo %LOCALAPPDATA%') and collects the
+// answer through a file, because Exec does not return output.
 //
-// Hace falta guardarla: al DESINSTALAR ya no se puede preguntar (ExecAsOriginalUser no existe en
-// esa fase), asi que la ruta se escribe en el registro aqui y se lee alli.
+// The result has to be stored: at UNINSTALL time it can no longer be asked for (ExecAsOriginalUser
+// does not exist in that phase), so the path is written to the registry here and read back there.
 function GetOriginalUserLocalAppData(): String;
 var
   TmpFile: String;
@@ -257,7 +256,7 @@ begin
   if CurStep <> ssPostInstall then
     Exit;
 
-  // --- 1. El ayudante: a Program Files y registrado como servicio -------------------------------
+  // --- 1. Helper: into Program Files, registered as a service -----------------------------------
   if not ExtractZip(HelperZipPath, ExpandConstant('{app}\Helper')) then
   begin
     MsgBox('Could not unpack the helper service.' + #13#10#13#10 +
@@ -266,7 +265,7 @@ begin
   end
   else
   begin
-    // El propio ejecutable se registra: '--install'. No hace falta sc.exe aqui.
+    // The executable registers itself with '--install'; no sc.exe needed here.
     HelperExe := ExpandConstant('{app}\Helper\Playfront.Helper.exe');
     if not (Exec(HelperExe, '--install', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0)) then
       MsgBox('The helper service could not be registered (code ' + IntToStr(ResultCode) + ').' + #13#10#13#10 +
@@ -274,28 +273,28 @@ begin
              mbError, MB_OK);
   end;
 
-  // --- 2. Arte y videos: compartidos por todos los usuarios --------------------------------------
-  // Si falla, la app arranca igual: se ve con huecos grises en vez de fondos. Se avisa y se sigue.
+  // --- 2. Artwork and video: shared by every account --------------------------------------------
+  // On failure the app still starts, showing grey placeholders instead of backgrounds. Warn and go on.
   if not ExtractZip(AssetsZipPath, ExpandConstant('{commonappdata}\Playfront\Assets')) then
     MsgBox('Could not unpack the artwork and videos.' + #13#10#13#10 +
            'Playfront will start and work normally, but game artwork will appear as empty placeholders.',
            mbInformation, MB_OK);
 
-  // --- 3. La app: a la carpeta del USUARIO, sin permisos -----------------------------------------
-  // Ver la explicacion de la cabecera: este instalador corre elevado, asi que hay que averiguar la
-  // carpeta del usuario de verdad y lanzar la instalacion con SUS permisos.
+  // --- 3. App: into the USER folder, without elevation -------------------------------------------
+  // See the header: this installer runs elevated, so the real user's folder has to be resolved and
+  // the install launched with THEIR rights.
   AppDir := GetOriginalUserLocalAppData();
   if AppDir = '' then
   begin
-    // Ultimo recurso: la carpeta de quien esta ejecutando esto. Es correcta cuando el usuario es
-    // administrador de su propio equipo, que es el caso normal en un PC de casa.
-    Log('No se pudo averiguar la carpeta del usuario original; se usa la del proceso actual.');
+    // Last resort: the folder of whoever is running this. Correct when the user is an administrator
+    // of their own machine, which is the normal case on a home PC.
+    Log('Could not resolve the original user folder; falling back to the current process one.');
     AppDir := ExpandConstant('{localappdata}');
   end;
   AppDir := AppDir + '\Programs\Playfront';
-  Log('Playfront se instalara en: ' + AppDir);
+  Log('Playfront will be installed to: ' + AppDir);
 
-  // Se guarda para poder desinstalar despues: en la desinstalacion ya no hay forma de averiguarla.
+  // Stored so the uninstaller can find it: by then there is no way left to resolve it.
   RegWriteStringValue(HKEY_LOCAL_MACHINE, 'Software\Playfront', 'AppPath', AppDir);
 
   if not (ExecAsOriginalUser(ShellSetupPath, '--silent --installto "' + AppDir + '"', '',
@@ -306,10 +305,9 @@ begin
 end;
 
 // ===================================================================================================
-//  DESINSTALACION
+//  UNINSTALL
 //
-//  Tiene que deshacer las TRES partes. La de la app se lanza otra vez como el usuario original: su
-//  desinstalador vive en su carpeta, no aqui.
+//  Has to undo all THREE parts. The app's own uninstaller lives in the user folder, not here.
 // ===================================================================================================
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
@@ -319,40 +317,40 @@ begin
   if CurUninstallStep <> usUninstall then
     Exit;
 
-  // 1. Servicio fuera (parar + dar de baja). Lo hace el propio ejecutable.
+  // 1. Service out (stop + deregister). The executable does it itself.
   HelperExe := ExpandConstant('{app}\Helper\Playfront.Helper.exe');
   if FileExists(HelperExe) then
     Exec(HelperExe, '--uninstall', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 
-  // 2. La app del usuario. Su propio desinstalador (Update.exe) se encarga.
+  // 2. The user's app, handled by its own uninstaller (Update.exe).
   //
-  // OJO, esto ya rompio una vez (2026-07-27): AQUI NO SE PUEDE USAR ExecAsOriginalUser. Inno no lo
-  // permite durante la desinstalacion y lanza un error fatal que ABORTA todo lo que venga despues
-  // -- se quedaban sin borrar la app, el arte y hasta el propio desinstalador. Por eso la ruta se
-  // guardo en el registro al instalar: aqui solo se lee y se ejecuta con Exec normal.
+  // ExecAsOriginalUser CANNOT BE USED HERE - this broke once already. Inno forbids it during
+  // uninstall and raises a fatal error that ABORTS everything after it, leaving the app, the artwork
+  // and even the uninstaller itself in place. Hence the path saved to the registry at install time:
+  // here it is only read back and run with a plain Exec.
   if RegQueryStringValue(HKEY_LOCAL_MACHINE, 'Software\Playfront', 'AppPath', AppDir) then
   begin
     Updater := AppDir + '\Update.exe';
     if FileExists(Updater) then
     begin
       if Exec(Updater, '--uninstall --silent', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-        Log('Desinstalada la app de ' + AppDir)
+        Log('Uninstalled the app from ' + AppDir)
       else
-        Log('No se pudo desinstalar la app de ' + AppDir);
+        Log('Could not uninstall the app from ' + AppDir);
     end;
   end
   else
-    Log('No hay ruta guardada de la app; no se desinstala (habra que quitarla a mano).');
+    Log('No stored app path; skipping (it will have to be removed by hand).');
 
   RegDeleteKeyIncludingSubkeys(HKEY_LOCAL_MACHINE, 'Software\Playfront');
 
-  // 3. Arte y videos.
+  // 3. Artwork and video.
   DelTree(ExpandConstant('{commonappdata}\Playfront\Assets'), True, True, True);
 
-  // 4. El ayudante. Hay que borrarlo a mano: sus ficheros los descomprimio el instalador, no los
-  //    puso Inno, asi que Inno no sabe que existen y dejaria la carpeta llena.
+  // 4. The helper. Deleted by hand: its files were unpacked by this script rather than laid down by
+  //    Inno, so Inno does not know they exist and would leave the folder full.
   DelTree(ExpandConstant('{app}\Helper'), True, True, True);
 
-  // OJO: NO se toca %LocalAppData%\Playfront. Ahi viven los ajustes del usuario y su sesion de
-  // YouTube, y borrarlos al desinstalar seria llevarse sus datos por delante.
+  // %LocalAppData%\Playfront is deliberately NOT touched: the user's settings and YouTube session
+  // live there, and wiping them on uninstall would take their data with it.
 end;

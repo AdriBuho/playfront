@@ -14,57 +14,56 @@ using Avalonia.Platform;
 namespace Playfront.App.Views;
 
 /// <summary>
-/// Pagina de CATEGORIA de la Tienda (la que se abre en Apps > "Music apps"): banner grande arriba y
-/// rejilla de tarjetas de app debajo.
+/// Store CATEGORY page (what Apps > "Music apps" opens): large banner on top, grid of app cards below.
 ///
-/// TODOS los numeros de esta pantalla (coordenadas, colores, tamanos de fuente) salen del estudio
-/// medido sobre la captura de referencia. Antes de mover
-/// un valor "porque se ve raro", conviene mirar ahi si esta medido y con que metodo.
+/// EVERY number on this screen - coordinates, colours, font sizes - is measured off the reference
+/// capture rather than eyeballed. Before nudging a value "because it looks off", assume it was
+/// measured.
 ///
-/// Se monta bajo demanda y se libera al salir (arquitectura de rendimiento del proyecto).
+/// Built on demand and released on exit.
 /// </summary>
 public partial class StoreCategoryView : UserControl
 {
-    /// <summary>Se pide volver a la Tienda (B).</summary>
+    /// <summary>Back to the Store was requested (B).</summary>
     public event Action? ExitRequested;
 
     /// <summary>
-    /// Se pide abrir la FICHA DE PRODUCTO de una app (A sobre una tarjeta). El valor es el nombre del
-    /// fichero de arte, que es como se identifica cada app en apps.json. Solo se dispara para las
-    /// tarjetas que tienen ficha; sobre las demas A no hace nada.
+    /// An app's PRODUCT PAGE was requested (A on a card). The value is the artwork file name, which is
+    /// how each app is keyed in apps.json. Only fires for cards that have data; A does nothing on the
+    /// rest.
     /// </summary>
     public event Action<string>? AppRequested;
 
-    // ===== Geometria de la rejilla (medida; ver estudio, seccion 3.3) =====
+    // ===== Grid geometry (measured) =====
     private const double GridLeft = 117;
     private const double GridTop = 583;
     private const double CardW = 256;
     private const double CardH = 352;
-    private const double ArtH = 256;   // el arte es cuadrado y full-bleed
+    private const double ArtH = 256;   // the artwork is square and full-bleed
     private const double FooterH = 96;
-    private const double PitchX = 287.3; // con 288 la sexta tarjeta se desviaria 4 px
+    private const double PitchX = 287.3; // at 288 the sixth card drifts 4 px off
     private const double PitchY = 384.3;
     private const int Cols = 6;
     private const int Rows = 2;
 
-    // Tinte del pie. El estudio dio #2D3234 al 67%; comparado el render con la captura, salia unos
-    // 3-4 niveles oscuro en toda la fila, asi que se aclara el tinte lo justo (mismo alfa).
+    // Footer tint. Measurement gave #2D3234 at 67%; rendered against the capture that came out 3-4
+    // levels dark across the whole row, so the tint is lightened just enough (same alpha).
     private static readonly IBrush FooterFill = new SolidColorBrush(Color.Parse("#AB313639"));
     private static readonly IBrush Placeholder = new SolidColorBrush(Color.Parse("#242A2D"));
 
-    // Ficha de una app, leida de Assets/Icons/Store/Apps/apps.json. Los textos son EXACTAMENTE los de
-    // la captura de referencia (la ficha que muestra la Store de XBOX), no los del
-    // catalogo de la Store de PC: son distintos -titulo, valoracion, numero de votos y descripcion no
-    // coinciden- y lo que se quiere es que salga igual que en la captura.
-    // "Tint" es el color con el que se tiñe TODA la pagina al enfocar esa app y "Band" el de las
-    // franjas laterales de la caja de arte; los dos salen del propio arte (media del PNG x 0,36 y
-    // x 0,26, regla medida).
-    // OJO: aqui solo esta Apple Music a proposito. Las fichas se van haciendo DE UNA EN UNA, cada una
-    // con su captura; no rellenar las demas por adelantado.
-    // Los tres ultimos campos (editor y clasificacion por edad) NO salen en esta pagina: son de la
-    // FICHA DE PRODUCTO (StoreAppView), que lee el mismo apps.json. Van aqui para no tener dos
-    // ficheros de datos con lo mismo. Opcionales: la app que no tenga captura de su ficha los deja
-    // vacios en vez de inventarselos.
+    // One app's data, read from Assets/Icons/Store/Apps/apps.json. The text is EXACTLY what the Xbox
+    // Store shows, not what the PC Store catalogue returns: title, rating, vote count and description
+    // all differ between the two, and this screen has to match the Xbox one.
+    //
+    // "Tint" is the colour the whole page takes when that app is focused; both it and the band colour
+    // derive from the artwork itself (PNG average x 0.36 and x 0.26).
+    //
+    // Entries are added ONE AT A TIME, each from its own capture - do not fill the rest in advance.
+    //
+    // The last three fields (publisher and age rating) are NOT used on this page: they belong to the
+    // PRODUCT PAGE (StoreAppView), which reads the same apps.json. They live here to avoid two data
+    // files holding the same thing. Optional: an app with no product-page data leaves them empty
+    // rather than having them invented.
     internal sealed record AppInfo(
         string File, string Title, string Genre, string Price, bool Owned,
         double Rating, string Votes, string Description, string Tint, string? Friends = null,
@@ -85,19 +84,19 @@ public partial class StoreCategoryView : UserControl
         }
         catch
         {
-            return new Dictionary<string, AppInfo>(); // sin fichas: la pagina sigue funcionando
+            return new Dictionary<string, AppInfo>(); // no data: the page still works
         }
     }
 
-    // Una tarjeta: el arte (fichero dentro de Assets/Icons/Store/Apps, o null si aun no lo tenemos)
-    // y la etiqueta del pie. La fila 2 y la 6a de la fila 1 quedan pendientes: la captura las corta
-    // o no son identificables, y ese arte se anadira mas adelante.
+    // One card: its artwork (a file under Assets/Icons/Store/Apps, or null when we do not have it yet)
+    // and the footer label. Row 2 and the 6th of row 1 are still pending: the capture crops them or
+    // they are not identifiable, so that artwork comes later.
     private sealed record Card(string? Art, string Label, bool Owned);
 
     private static readonly Card[] Row1 =
     {
-        // En la captura de la Store varias ponen "Owned" (de la cuenta de esa captura). Aqui van
-        // TODAS como "Free": sin tick y con el texto pegado al borde, como las otras.
+        // Several read "Owned" in the Store capture, from that account. Here they are ALL "Free": no
+        // tick, text against the edge, like the others.
         new("apple-music.png",  "Free",  false),
         new("youtube.png",      "Free",  false),
         new("dolby-access.png", "Free",  false),
@@ -106,8 +105,8 @@ public partial class StoreCategoryView : UserControl
         new(null,               "Free",  false),
     };
 
-    // ===== Foco =====
-    // 0 = banner; 1.. = tarjetas por filas (fila 1 = 1..6, fila 2 = 7..12).
+    // ===== Focus =====
+    // 0 = banner; 1.. = cards by row (row 1 = 1..6, row 2 = 7..12).
     private int _focus;
     private readonly List<Border> _cardRings = new();
     private readonly List<Border> _cardRingsInner = new();
@@ -138,12 +137,12 @@ public partial class StoreCategoryView : UserControl
         }
         catch
         {
-            return null; // si falta el fichero, la tarjeta se queda con su caja oscura
+            return null; // missing file: the card keeps its dark box
         }
     }
 
-    // Construye las 12 tarjetas. Cada una es: arte cuadrado full-bleed + pie translucido con su
-    // etiqueta, todo recortado por las esquinas redondeadas del contenedor.
+    // Builds the 12 cards: square full-bleed artwork plus a translucent footer with its label, all
+    // clipped by the container's rounded corners.
     private void BuildGrid()
     {
         for (var i = 0; i < Cols * Rows; i++)
@@ -154,10 +153,10 @@ public partial class StoreCategoryView : UserControl
             var y = GridTop + row * PitchY;
             var data = row == 0 ? Row1[col] : new Card(null, "Free", false);
 
-            // OJO: la tarjeta NO lleva fondo propio. El pie es TRANSLUCIDO y lo que tiene que
-            // transparentarse es el FONDO DE LA PAGINA (por eso en la referencia el pie se vuelve
-            // mas verde en las tarjetas de la derecha). Con un fondo opaco en la tarjeta, el pie se
-            // mezclaria con el y todas las tarjetas saldrian del mismo color.
+            // The card has NO background of its own. The footer is translucent and what has to show
+            // through is the PAGE background - which is why in the reference the footer grows greener
+            // towards the right. An opaque card background would blend with it and every footer would
+            // come out the same colour.
             var card = new Border
             {
                 Width = CardW,
@@ -186,15 +185,14 @@ public partial class StoreCategoryView : UserControl
             }
             else
             {
-                // Sin arte todavia (la 6a de la fila 1 y toda la fila 2: la captura las corta o no
-                // son identificables; ese arte se anadira mas adelante). Caja oscura SOLO en
-                // la zona del arte, no en toda la tarjeta, para no tapar el pie translucido.
+                // No artwork yet (the 6th of row 1 and all of row 2). Dark box over the ARTWORK area
+                // only, not the whole card, so the translucent footer is not covered.
                 var box = new Rectangle { Width = CardW, Height = ArtH, Fill = Placeholder };
                 inner.Children.Add(box);
             }
 
-            // Pie: tinte OSCURO translucido (#2D3234 al 67%), NO un velo blanco -> lo que se ve por
-            // detras es el fondo de la pagina, asi que el pie se vuelve mas verde hacia la derecha.
+            // Footer: translucent DARK tint (#2D3234 at 67%), NOT a white veil - what shows through is
+            // the page background, so the footer grows greener towards the right.
             var footer = new Border
             {
                 Width = CardW,
@@ -204,13 +202,13 @@ public partial class StoreCategoryView : UserControl
             Canvas.SetTop(footer, ArtH);
             inner.Children.Add(footer);
 
-            // Contenido del pie, colocado por coordenadas absolutas: centrarlo automaticamente lo
-            // dejaria ~4,7 px mas abajo de lo medido.
+            // Footer content placed at absolute coordinates: automatic centring lands it ~4.7 px lower
+            // than measured.
             var textLeft = data.Owned ? 54d : 16d;
             var label = new TextBlock
             {
                 Text = data.Label,
-                FontFamily = new FontFamily("Segoe UI"), // ver nota de la fuente en el XAML
+                FontFamily = new FontFamily("Segoe UI"), // see the font note in the XAML
                 FontSize = 24,
                 FontWeight = FontWeight.SemiBold,
                 Foreground = Brushes.White,
@@ -224,9 +222,8 @@ public partial class StoreCategoryView : UserControl
                 inner.Children.Add(BuildOwnedIcon(16, ArtH + 33));
             }
 
-            // Velo del ~8% de negro: en la Store las tarjetas NO enfocadas se ven al 92% de brillo
-            // (medido varias veces por separado para estar seguros). Asi no hay que tocar los PNG y el efecto es
-            // reversible al enfocar.
+            // ~8% black veil: in the Store, UNfocused cards sit at 92% brightness. Doing it this way
+            // leaves the PNGs untouched and the effect reverses on focus.
             var veil = new Border
             {
                 Width = CardW,
@@ -239,9 +236,9 @@ public partial class StoreCategoryView : UserControl
 
             GridHost.Children.Add(card);
 
-            // Anillo de foco de TARJETA. Medido en "apple music.png": es mas fino que el del banner
-            // (trazo verde ~3,4 y banda negra ~3,4, no 6 y 5), vuela 6-7 px sobre la tarjeta y sus
-            // radios van creciendo hacia fuera (7 el arte, 9 la banda, 13 el verde).
+            // CARD focus ring. Measured: thinner than the banner's (accent stroke ~3.4 and black band
+            // ~3.4, not 6 and 5), floats 6-7 px off the card, and its radii grow outwards (7 artwork,
+            // 9 band, 13 accent).
             var ringInner = new Border
             {
                 Width = CardW + 8,
@@ -270,8 +267,8 @@ public partial class StoreCategoryView : UserControl
         }
     }
 
-    // Icono de "Owned": aro fino con un tick dentro, del mismo grosor, blanco. Caja 24x24; el brazo
-    // largo sube a 45 grados exactos y su punta roza la cara interior del aro.
+    // "Owned" icon: thin white circle with a tick of the same weight inside. 24x24 box; the long arm
+    // rises at exactly 45 degrees and its tip grazes the inner face of the circle.
     private static Canvas BuildOwnedIcon(double left, double top)
     {
         var box = new Canvas { Width = 24, Height = 24 };
@@ -307,8 +304,7 @@ public partial class StoreCategoryView : UserControl
                 return;
             case GamepadButton.A when _focus > 0:
             {
-                // Solo abren ficha las tarjetas que tienen datos en apps.json (de momento, las que
-                // aparecen en las capturas de referencia). Sobre el resto, A no hace nada.
+                // Only cards with data in apps.json open a product page. A does nothing on the rest.
                 var card = CardAt(_focus - 1).Art;
                 if (card is not null && Apps.ContainsKey(card))
                 {
@@ -319,8 +315,8 @@ public partial class StoreCategoryView : UserControl
             }
 
             case GamepadButton.Down:
-                // Del banner se baja a la primera tarjeta de la fila 1; entre filas se mantiene la
-                // columna.
+                // Down from the banner lands on the first card of row 1; between rows the column is
+                // kept.
                 if (_focus == 0)
                 {
                     _focus = 1;
@@ -338,12 +334,12 @@ public partial class StoreCategoryView : UserControl
                 }
                 else if (_focus >= 1)
                 {
-                    _focus = 0; // vuelta al banner
+                    _focus = 0; // back to the banner
                 }
 
                 break;
             case GamepadButton.Left:
-                // Izquierda en la primera columna no hace nada (aqui no hay barra lateral).
+                // Left in the first column does nothing (there is no sidebar on this page).
                 if (_focus > 1 && (_focus - 1) % Cols != 0)
                 {
                     _focus--;
@@ -375,12 +371,12 @@ public partial class StoreCategoryView : UserControl
             var on = _focus == i + 1;
             _cardRings[i].Classes.Set("selected", on);
             _cardRingsInner[i].Classes.Set("selected", on);
-            _cardVeils[i].IsVisible = !on; // la tarjeta enfocada recupera su brillo completo
+            _cardVeils[i].IsVisible = !on; // the focused card gets its full brightness back
         }
 
-        // Cambio de estado del bloque de arriba: con el foco en el banner se ve el banner; con el
-        // foco en una tarjeta, el banner desaparece del todo (no se atenua: no esta) y en su sitio
-        // salen los datos de la app, los avisos de arriba a la derecha y el fondo teñido.
+        // Top block state: focus on the banner shows the banner; focus on a card removes the banner
+        // entirely (not dimmed - gone) and puts the app details, the top-right hints and the tinted
+        // background in its place.
         var art = onBanner ? null : CardAt(_focus - 1).Art;
         var info = art is not null && Apps.TryGetValue(art, out var found) ? found : null;
 
@@ -388,7 +384,7 @@ public partial class StoreCategoryView : UserControl
         DetailLayer.IsVisible = !onBanner;
         TopHints.IsVisible = !onBanner;
 
-        // El fondo es lo UNICO que no cambia de golpe: se funde (ver SetAmbient).
+        // The background is the ONLY thing that does not switch instantly: it cross-fades (SetAmbient).
         SetAmbient(info, art, onBanner);
 
         if (onBanner)
@@ -406,9 +402,9 @@ public partial class StoreCategoryView : UserControl
         return row == 0 ? Row1[col] : new Card(null, "Free", false);
     }
 
-    // Rellena el bloque de datos con la ficha de la app enfocada y tiñe el fondo con su color. Si de
-    // esa tarjeta no tenemos ficha todavia (las 6 que faltan), se deja el bloque en blanco y el fondo
-    // en un gris neutro, en vez de dejar puestos los datos de la anterior.
+    // Fills the detail block with the focused app's data and tints the background with its colour. For
+    // cards with no data yet, the block is left blank and the background neutral grey, rather than
+    // leaving the previous app's details on screen.
     private void ShowDetail(AppInfo? info, string? art)
     {
         DetailTitle.Text = info?.Title ?? string.Empty;
@@ -416,23 +412,22 @@ public partial class StoreCategoryView : UserControl
         GenreText.Text = info?.Genre ?? string.Empty;
         FriendsRow.IsVisible = !string.IsNullOrEmpty(info?.Friends);
         FriendsCount.Text = info?.Friends ?? string.Empty;
-        RatingVotes.Text = info?.Votes ?? string.Empty; // tal cual sale en la captura, sin formatear
+        RatingVotes.Text = info?.Votes ?? string.Empty; // verbatim from the capture, unformatted
         BuildStars(info?.Rating ?? 0);
 
-        // Linea de estado: "Owned" con su icono si la app ya es tuya; si no, el precio.
+        // Status line: "Owned" with its icon when the app is owned, otherwise the price.
         var owned = info?.Owned == true;
         OwnedIconHost.IsVisible = owned;
         OwnedIconHost.Children.Clear();
         if (owned)
         {
             var icon = BuildCheckIcon(35, 2.6);
-            // Medido en las capturas de Spotify y Dolby: el icono y el texto van centrados entre si
-            // (mismo centro vertical). El 7,5 sale de bajar 1,5 px el 9 que habia, que dejaba el icono
-            // un pelin mas bajo que la referencia.
+            // Measured: icon and text share a vertical centre. 7.5 rather than 9, which left the icon
+            // slightly low against the reference.
             Canvas.SetTop(icon, 7.5);
             OwnedIconHost.Children.Add(icon);
             DetailPrice.Text = "Owned";
-            Canvas.SetLeft(DetailPrice, 160); // deja sitio al icono (hueco medido de 12)
+            Canvas.SetLeft(DetailPrice, 160); // room for the icon (measured 12 px gap)
         }
         else
         {
@@ -440,27 +435,27 @@ public partial class StoreCategoryView : UserControl
             Canvas.SetLeft(DetailPrice, 114);
         }
 
-        // La linea de estado va debajo de la ULTIMA linea de descripcion, no a una altura fija: con
-        // una sola linea sube 49 px respecto a dos (medido comparando las dos fichas).
+        // The status line sits under the LAST line of the description, not at a fixed height: with one
+        // line it rises 49 px compared to two.
         var lines = string.IsNullOrEmpty(info?.Description) ? 0 : DescriptionLines(info.Description);
         Canvas.SetTop(StatusRow, 300 + Math.Max(0, lines - 1) * 35 + 38);
 
-        // De las apps cuya ficha aun no se ha hecho no se enseña media pantalla: se ocultan las
-        // pastillas y la caja de arte, y el fondo se queda neutro. Se iran haciendo de una en una.
+        // Apps without data do not get half a screen: pills and artwork box are hidden and the
+        // background stays neutral.
         PillRow.IsVisible = info is not null;
         DetailArtBox.IsVisible = info is not null;
 
         var bitmap = LoadArt(art);
         DetailArt.Source = bitmap;
-        DetailArtBlur.Source = bitmap; // relleno de las franjas: el mismo arte, desenfocado
+        DetailArtBlur.Source = bitmap; // side bands are the same artwork, blurred
     }
 
-    // ===== Fondo ambiente con FUNDIDO entre apps =====
-    // Dos capas identicas: la de abajo (_ambBase) esta siempre al 100% con el fondo que se ve ahora, y
-    // la de arriba (_ambTop) entra de 0 a 100 con el fondo nuevo. Al llegar otro cambio se dan por
-    // terminados los papeles (se intercambian) y empieza un fundido nuevo. Se hace asi -y no apagando
-    // una mientras se enciende la otra- porque durante ese cruce las dos serian semitransparentes a la
-    // vez y asomaria el fondo morado de la pagina por debajo.
+    // ===== Ambient background, cross-faded between apps =====
+    // Two identical layers: the bottom one (_ambBase) is always at 100% with the background currently
+    // on screen, and the top one (_ambTop) fades 0 -> 100 with the new one. On the next change the
+    // roles swap and a fresh fade starts. Done this way - rather than fading one out while fading the
+    // other in - because during that crossover both would be semi-transparent at once and the page's
+    // purple background would show through.
     private sealed record AmbientLayers(Canvas Root, Rectangle Fill, Image Art);
 
     private AmbientLayers? _ambBase, _ambTop;
@@ -471,7 +466,7 @@ public partial class StoreCategoryView : UserControl
         _ambBase ??= new AmbientLayers(AmbientA, AmbientFillA, AmbientArtA);
         _ambTop ??= new AmbientLayers(AmbientB, AmbientFillB, AmbientArtB);
 
-        // En el banner no hay fondo de app: se funde a la nada y se deja ver el de la pagina.
+        // On the banner there is no app background: fade to nothing and let the page's show.
         if (onBanner)
         {
             AmbientHost.Opacity = 0;
@@ -480,7 +475,7 @@ public partial class StoreCategoryView : UserControl
         }
 
         (_ambBase, _ambTop) = (_ambTop, _ambBase);
-        SetOpacityNow(_ambBase.Root, 1); // lo que hubiera a medias se da por terminado
+        SetOpacityNow(_ambBase.Root, 1); // any fade in flight is finished off here
         SetOpacityNow(_ambTop.Root, 0);
         _ambBase.Root.ZIndex = 0;
         _ambTop.Root.ZIndex = 1;
@@ -489,29 +484,29 @@ public partial class StoreCategoryView : UserControl
 
         if (_ambientShown)
         {
-            _ambTop.Root.Opacity = 1; // fundido de la app anterior a la nueva
+            _ambTop.Root.Opacity = 1; // cross-fade from the previous app to the new one
         }
         else
         {
-            SetOpacityNow(_ambTop.Root, 1); // veniamos del banner: el fundido lo hace el contenedor
+            SetOpacityNow(_ambTop.Root, 1); // coming from the banner: the host does the fade
         }
 
         AmbientHost.Opacity = 1;
         _ambientShown = true;
     }
 
-    // Pinta una de las dos capas con el fondo de una app: color plano MEDIDO en su captura (no
-    // calculado) + el arte ampliado y desenfocado, centrado en la tarjeta enfocada, que es lo que hace
-    // la Store de verdad.
+    // Paints one of the two layers with an app's background: flat colour MEASURED from its capture (not
+    // computed) plus the artwork blown up and blurred, centred on the focused card, which is what the
+    // real Store does.
     private void FillAmbient(AmbientLayers layer, AppInfo? info, string? art)
     {
         layer.Fill.Fill = new SolidColorBrush(Color.Parse(info?.Tint ?? "#2A2A2A"));
 
-        // La mancha: el arte YA OSCURECIDO (fichero *-ambient.png). Medido en la captura: su centro en
-        // X coincide con el centro del arte de esa tarjeta. No es una mancha pequeña: cubre TODA la
-        // pantalla. Con arte uniforme (YouTube, blanco) el fondo sale plano y solo asoma el logo cerca
-        // de su tarjeta; con arte que varia (Dolby, degradado teal-azul-morado) el fondo entero varia
-        // igual que el arte, que es justo lo que se mide en esas capturas.
+        // The wash is the PRE-DARKENED artwork (*-ambient.png). Measured: its X centre lines up with
+        // the centre of that card's artwork. It is not a small blob - it covers the WHOLE screen. With
+        // uniform artwork (YouTube, white) the background comes out flat and only the logo shows near
+        // its card; with varied artwork (Dolby's teal-blue-purple gradient) the whole background varies
+        // the same way the artwork does, which is exactly what those captures show.
         var ambient = LoadArt(art?.Replace(".png", "-ambient.png"));
         layer.Art.Source = ambient;
         layer.Art.IsVisible = ambient is not null;
@@ -527,8 +522,8 @@ public partial class StoreCategoryView : UserControl
         }
     }
 
-    // Cambia la opacidad SIN fundido (anulando la transicion un instante), para colocar el estado de
-    // partida de una capa antes de animarla.
+    // Sets opacity WITHOUT a fade (suppressing the transition for an instant), to place a layer's
+    // starting state before animating it.
     private static void SetOpacityNow(Control control, double value)
     {
         var transitions = control.Transitions;
@@ -537,8 +532,8 @@ public partial class StoreCategoryView : UserControl
         control.Transitions = transitions;
     }
 
-    // Cuantas lineas ocupa la descripcion con el ancho del bloque. Se mide de verdad (no se estima
-    // por numero de caracteres) para que la linea de estado caiga donde toca.
+    // How many lines the description takes at the block's width. Really measured, not estimated from
+    // character count, so the status line lands where it should.
     private int DescriptionLines(string text)
     {
         DetailDescription.Text = text;
@@ -546,7 +541,7 @@ public partial class StoreCategoryView : UserControl
         return Math.Max(1, (int)Math.Round(DetailDescription.DesiredSize.Height / 35));
     }
 
-    // Icono de circulo con tick, el mismo de los pies de las tarjetas pero mas grande.
+    // Circle-with-tick icon, the same one as the card footers but larger.
     private static Canvas BuildCheckIcon(double size, double stroke)
     {
         var k = size / 24.0;
@@ -575,8 +570,8 @@ public partial class StoreCategoryView : UserControl
         return box;
     }
 
-    // Las 5 estrellas de la valoracion: rellenas las que marque la nota, de contorno el resto.
-    // Medido: caja 23x22, paso 24, la rellena blanca solida y la vacia de trazo ~2.
+    // The 5 rating stars: filled up to the score, outlined for the rest.
+    // Measured: 23x22 box, 24 pitch, filled ones solid white and empty ones ~2 stroke.
     private void BuildStars(double rating)
     {
         StarHost.Children.Clear();

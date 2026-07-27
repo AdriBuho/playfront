@@ -11,14 +11,14 @@ public enum GamepadButton
     Right,
     A,
     B,
-    LB, // bumper izquierdo (Left Shoulder)
-    RB, // bumper derecho (Right Shoulder)
+    LB, // Left Shoulder
+    RB, // Right Shoulder
     X,
     Y,
     Start,
-    Back, // el boton "View"/Select del mando
-    LT,   // gatillo izquierdo (Left Trigger, analogico)
-    RT,   // gatillo derecho (Right Trigger, analogico)
+    Back, // the "View"/Select button
+    LT,   // Left Trigger (analog)
+    RT,   // Right Trigger (analog)
 }
 
 public sealed class GamepadPoller
@@ -34,51 +34,50 @@ public sealed class GamepadPoller
     private const ushort ButtonLB = 0x0100; // Left Shoulder
     private const ushort ButtonRB = 0x0200; // Right Shoulder
     private const ushort ButtonStart = 0x0010;
-    private const ushort ButtonBack = 0x0020; // boton View/Select
+    private const ushort ButtonBack = 0x0020; // View/Select button
 
-    // "Mantener" B: numero de sondeos (Poll cada ~50 ms) que hay que tener B pulsado para que cuente como
-    // MANTENIDO en vez de toque. 16 x 50 ms = 800 ms. Se usa, p.ej., para salir de la pantalla de YouTube
-    // (toque de B = atras; mantenido = salir). El evento se dispara UNA vez por pulsacion larga.
+    // Hold-B: how many polls (Poll runs every ~50 ms) B must stay down to count as HELD rather than a
+    // tap. 16 x 50 ms = 800 ms. Used, for instance, to leave the YouTube screen (tap B = back, hold =
+    // exit). The event fires ONCE per long press.
     private const int BHoldPolls = 16;
     private int _bHeldPolls;
     private bool _bHoldFired;
 
-    // El stick se trata como si fueran botones de cruceta: si se inclina más allá
-    // de este umbral en un eje, cuenta como "pulsado" en esa dirección.
+    // The stick is treated as D-pad buttons: tilted past this threshold on an axis counts as that
+    // direction being pressed.
     private const short StickThreshold = 16000;
 
-    // Los gatillos son analogicos (0..255). A partir de este apriete cuentan como "pulsado". 64 (~25%)
-    // pide un tiron claro para evitar disparos accidentales, sin tener que apretarlos a fondo.
+    // Triggers are analog (0..255); past this pull they count as pressed. 64 (~25%) demands a deliberate
+    // pull to avoid accidental fires, without needing them bottomed out.
     private const byte TriggerThreshold = 64;
     private bool _prevLT;
     private bool _prevRT;
 
     private ushort _previousButtons;
 
-    // Auto-repeticion con ACELERACION al mantener una direccion pulsada (cruceta/stick). Se cuenta en
-    // "sondeos" (Poll se llama cada 50 ms). Al mantener: 1er toque instantaneo, luego nada durante el
-    // retardo (~350 ms), y despues repite acelerando: el intervalo entre repeticiones se acorta cada
-    // vez (lento -> rapido) hasta el minimo, para pasar los fondos deprisa pero de forma suave. A/B NO
-    // repiten (solo flanco de subida).
-    private const int HoldDelayPolls = 7;      // ~350 ms mantenido antes de empezar a repetir
-    private const int RepeatStartPolls = 5;    // 1er intervalo de repeticion (~250 ms)
-    private const int RepeatMinPolls = 1;      // intervalo minimo (~50 ms = mas rapido)
-    private GamepadButton? _repeatButton;      // direccion que se esta manteniendo (o null)
-    private int _repeatPolls;                  // sondeos desde que se pulso la direccion
-    private int _repeatInterval;               // intervalo actual (va bajando = acelera)
-    private int _repeatNextPoll;               // sondeo en el que toca la proxima repeticion
+    // ACCELERATING auto-repeat while a direction is held (D-pad/stick), counted in polls (Poll runs
+    // every 50 ms). On hold: the first press fires instantly, then nothing for the delay (~350 ms),
+    // then repeats that speed up - the gap shrinks each time down to the minimum, so long lists move
+    // fast but smoothly. A/B do NOT repeat (rising edge only).
+    private const int HoldDelayPolls = 7;      // ~350 ms held before repeating starts
+    private const int RepeatStartPolls = 5;    // first repeat interval (~250 ms)
+    private const int RepeatMinPolls = 1;      // floor (~50 ms = fastest)
+    private GamepadButton? _repeatButton;      // direction currently held (or null)
+    private int _repeatPolls;                  // polls since the direction went down
+    private int _repeatInterval;               // current interval (shrinks = accelerates)
+    private int _repeatNextPoll;               // poll at which the next repeat is due
 
     public bool IsConnected { get; private set; }
 
-    // Si la auto-repeticion con aceleracion esta activa. Por defecto NO (las pantallas normales siguen
-    // como antes: un movimiento por pulsacion). Se enciende solo donde interesa pasar muchos elementos
-    // rapido (la pantalla de "Dynamic backgrounds"). Lo controla MainWindow al entrar/salir de ella.
+    // Whether accelerating auto-repeat is active. Off by default: normal screens move one step per
+    // press. Turned on only where paging through many items fast matters ("Dynamic backgrounds");
+    // MainWindow toggles it on entering and leaving that screen.
     public bool RepeatEnabled { get; set; }
 
     public event Action<GamepadButton>? ButtonPressed;
 
-    // B MANTENIDO (~800 ms). Distinto de ButtonPressed(B), que es el TOQUE (flanco de subida). Lo usa la
-    // pantalla de YouTube: toque = atras, mantenido = salir.
+    // B HELD (~800 ms). Distinct from ButtonPressed(B), which is the TAP (rising edge). Used by the
+    // YouTube screen: tap = back, hold = exit.
     public event Action? BHeld;
 
     public void Poll()
@@ -104,11 +103,11 @@ public sealed class GamepadPoller
         if (state.Gamepad.sThumbLX < -StickThreshold) buttons |= DPadLeft;
         if (state.Gamepad.sThumbLX > StickThreshold) buttons |= DPadRight;
 
-        // Solo dispara en el flanco de subida (botón que no estaba pulsado y ahora sí),
-        // si no, mantener el botón pulsado movería la selección en cada sondeo.
+        // Rising edge only (was up, is now down); otherwise holding a button would move the selection
+        // on every poll.
         var pressedNow = (ushort)(buttons & ~_previousButtons);
 
-        // Botones (no direcciones): solo flanco de subida (sin auto-repeat).
+        // Buttons (not directions): rising edge only, no auto-repeat.
         if ((pressedNow & ButtonA) != 0) ButtonPressed?.Invoke(GamepadButton.A);
         if ((pressedNow & ButtonB) != 0) ButtonPressed?.Invoke(GamepadButton.B);
         if ((pressedNow & ButtonX) != 0) ButtonPressed?.Invoke(GamepadButton.X);
@@ -118,8 +117,8 @@ public sealed class GamepadPoller
         if ((pressedNow & ButtonStart) != 0) ButtonPressed?.Invoke(GamepadButton.Start);
         if ((pressedNow & ButtonBack) != 0) ButtonPressed?.Invoke(GamepadButton.Back);
 
-        // Gatillos (analogicos): cuentan como boton al superar el umbral; solo flanco de subida (un
-        // disparo por tiron), como A/B.
+        // Triggers (analog): count as a button past the threshold; rising edge only (one fire per
+        // pull), like A/B.
         var ltDown = state.Gamepad.bLeftTrigger > TriggerThreshold;
         var rtDown = state.Gamepad.bRightTrigger > TriggerThreshold;
         if (ltDown && !_prevLT) ButtonPressed?.Invoke(GamepadButton.LT);
@@ -127,7 +126,7 @@ public sealed class GamepadPoller
         _prevLT = ltDown;
         _prevRT = rtDown;
 
-        // B MANTENIDO: cuenta sondeos con B pulsado; al pasar el umbral, dispara BHeld una sola vez.
+        // B HELD: counts polls with B down; past the threshold, fires BHeld exactly once.
         if ((buttons & ButtonB) != 0)
         {
             _bHeldPolls++;
@@ -143,7 +142,7 @@ public sealed class GamepadPoller
             _bHoldFired = false;
         }
 
-        // Direcciones: flanco de subida + auto-repeticion con aceleracion al mantener.
+        // Directions: rising edge, plus accelerating auto-repeat while held.
         HandleDirections(buttons, pressedNow);
 
         _previousButtons = buttons;
@@ -151,7 +150,7 @@ public sealed class GamepadPoller
 
     private void HandleDirections(ushort buttons, ushort pressedNow)
     {
-        // ¿Se acaba de pulsar una direccion? -> dispararla y (re)arrancar el auto-repeat con ella.
+        // Direction just pressed: fire it and (re)start auto-repeat on it.
         var justPressed = DirectionOf(pressedNow);
         if (justPressed is { } jp)
         {
@@ -163,12 +162,12 @@ public sealed class GamepadPoller
             return;
         }
 
-        // ¿Sigue mantenida la direccion que estaba repitiendo? (solo repite donde esta habilitado)
+        // Is the repeating direction still held? (repeat only where it is enabled)
         if (_repeatButton is { } rb)
         {
             if (!RepeatEnabled || (buttons & MaskOf(rb)) == 0)
             {
-                _repeatButton = null; // soltada, o auto-repeat deshabilitado
+                _repeatButton = null; // released, or auto-repeat disabled
                 return;
             }
 
@@ -177,12 +176,12 @@ public sealed class GamepadPoller
             {
                 ButtonPressed?.Invoke(rb);
                 _repeatNextPoll = _repeatPolls + _repeatInterval;
-                _repeatInterval = Math.Max(RepeatMinPolls, _repeatInterval - 1); // acelera
+                _repeatInterval = Math.Max(RepeatMinPolls, _repeatInterval - 1); // accelerate
             }
         }
     }
 
-    // Primera direccion presente en la mascara (o null). Solo cruceta/stick, no A/B.
+    // First direction present in the mask (or null). D-pad/stick only, not A/B.
     private static GamepadButton? DirectionOf(ushort mask)
     {
         if ((mask & DPadUp) != 0) return GamepadButton.Up;

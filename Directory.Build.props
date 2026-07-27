@@ -1,25 +1,22 @@
 <Project>
 
-  <!-- Propiedades comunes a TODOS los proyectos del repositorio (MSBuild lo lee solo, sin
-       referenciarlo desde ningun sitio). Su razon de ser es el numero de version: la norma de
-       distribucion del proyecto exige que cada entrega lleve version visible, y tenerla en UN
-       solo sitio evita que la app, el servicio y el instalador digan cosas distintas.
+  <!-- Properties shared by EVERY project in the repository (MSBuild picks this file up on its own,
+       nothing references it). It exists for the version number: every release has to carry a visible
+       version, and keeping it in ONE place stops the app, the service and the installer disagreeing.
 
-       Al cambiar PlayfrontVersion se actualizan de golpe:
-         - las propiedades del .exe que ve Windows (pestaña Detalles del Explorador),
-         - lo que devuelve PlayfrontVersion.Current en tiempo de ejecucion (src/Playfront.App/PlayfrontVersion.cs),
-         - lo que se escribe en el registro al arrancar (%LocalAppData%\Playfront\playfront.log),
-         - y la version que pondra el instalador cuando exista.
+       Changing PlayfrontVersion updates, in one go:
+         - the .exe properties Windows shows (Explorer's Details tab),
+         - what PlayfrontVersion.Current returns at runtime (src/Playfront.App/PlayfrontVersion.cs),
+         - what gets written to the log on startup (%LocalAppData%\Playfront\playfront.log),
+         - and the version the installer stamps.
 
-       CRITERIO DE NUMERACION (fijado por el usuario el 2026-07-27, al empezar a publicar releases):
-       se sube LA TERCERA cifra en cada entrega: 0.1.1, 0.1.2, 0.1.3 ... 0.1.87. No hay tope, y la
-       idea es sacar muchas entregas pequenas, incluso a diario. La segunda cifra se sube solo cuando
-       el cambio es gordo (0.2.0).
+       NUMBERING: bump the THIRD digit per release - 0.1.1, 0.1.2, 0.1.3 ... 0.1.87. No ceiling; the
+       plan is many small releases, possibly daily. The second digit only moves for a big change (0.2.0).
 
-       NUNCA con ceros a la izquierda ("0.1.001"). Comprobado empaquetando: el .exe conserva el texto
-       pero Velopack lo normaliza a 0.1.1, asi que 0.1.001 y 0.1.1 serian LA MISMA version para el
-       actualizador, sin dar ningun error. build/Pack-Playfront.ps1 se niega a empaquetar si los ve.
-       No hacen falta para ordenar: 0.1.10 va despues de 0.1.9, la comparacion es numerica. -->
+       NEVER pad with leading zeros ("0.1.001"). Verified by packaging: the .exe keeps the literal text
+       but Velopack normalizes it to 0.1.1, so 0.1.001 and 0.1.1 would be THE SAME version to the
+       updater, with no error raised. build/Pack-Playfront.ps1 refuses to package when it sees them.
+       They are not needed for ordering either: 0.1.10 sorts after 0.1.9, the comparison is numeric. -->
   <PropertyGroup>
     <PlayfrontVersion>0.1.0</PlayfrontVersion>
   </PropertyGroup>

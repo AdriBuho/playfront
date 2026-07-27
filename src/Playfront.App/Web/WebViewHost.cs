@@ -10,38 +10,38 @@ using Microsoft.Web.WebView2.Core;
 namespace Playfront.App.Web;
 
 /// <summary>
-/// Aloja un navegador WebView2 (el motor de Edge, ya instalado en la maquina) dentro de la interfaz de
-/// Playfront, para cargar apps web tipo consola (de momento, la interfaz de TV de YouTube: youtube.com/tv).
+/// Hosts a WebView2 browser (the Edge engine, already present on the machine) inside the Playfront UI,
+/// for console-style web apps - today the YouTube TV interface (youtube.com/tv).
 ///
-/// Es un <see cref="NativeControlHost"/>: WebView2 es una VENTANA NATIVA de Windows, no un dibujo de
-/// Avalonia. Avalonia crea una ventana hija y aqui, encima de ella, se monta el controlador de WebView2.
-/// Consecuencia conocida ("airspace"): esta vista se dibuja SIEMPRE por encima de lo que pinte Avalonia,
-/// asi que la pantalla de YouTube va a pantalla completa sin nada de Playfront superpuesto (ver PLAN-youtube).
+/// This is a <see cref="NativeControlHost"/>: WebView2 is a NATIVE Windows window, not something
+/// Avalonia draws. Avalonia creates a child window and the WebView2 controller is mounted on top of it.
+/// Known consequence ("airspace"): this view ALWAYS draws above anything Avalonia paints, so the
+/// YouTube screen is full-screen with no Playfront chrome over it.
 ///
-/// El mando NO llega solo a la pagina (la interfaz Leanback se maneja con flechas+Enter, no con la
-/// Gamepad API): Playfront traduce el mando a teclas y las inyecta con <see cref="SendKey"/>, que llama a un
-/// ayudante de JavaScript pre-inyectado en la pagina.
+/// The controller does not reach the page on its own (the Leanback UI is driven with arrows+Enter, not
+/// the Gamepad API): Playfront maps the controller to keys and injects them through
+/// <see cref="SendKey"/>, which calls a JavaScript helper pre-injected into the page.
 ///
-/// Ciclo de vida acorde a la norma de rendimiento de Playfront: <see cref="Suspend"/> al perder el foco
-/// (juego en primer plano) y liberacion completa en <see cref="Dispose"/> al salir de la pantalla.
+/// Lifecycle: <see cref="Suspend"/> when focus is lost (a game came to the foreground) and a full
+/// release in <see cref="DestroyNativeControlCore"/> when leaving the screen.
 /// </summary>
 public sealed class WebViewHost : NativeControlHost
 {
-    // User-agent de consola: hace que YouTube sirva la interfaz de TV (Leanback) en vez de la web normal.
-    // Cobalt 19 a proposito (evita que YouTube asuma DRM Widevine, que WebView2 no trae). Ver PLAN-youtube.
+    // Console user-agent: makes YouTube serve the TV (Leanback) interface instead of the normal site.
+    // Cobalt 19 on purpose - it stops YouTube assuming Widevine DRM, which WebView2 does not carry.
     private const string UserAgent =
         "Mozilla/5.0 (PS4; Leanback Shell) Cobalt/19.lts.0-qa; compatible; Playfront/1.0";
 
     private readonly string _url;
     private readonly string _profileFolder;
 
-    // Ayudante JS pre-inyectado: Playfront lo llama con __playfrontKey(code) para simular una pulsacion de tecla
-    // (keydown+keyup) que la interfaz Leanback entiende. Es el metodo fiable (no enviar WM_KEYDOWN al HWND).
-    // OJO: cada evento se lanza UNA sola vez, y solo sobre 'document'. Lanzarlo tambien sobre
-    // document.activeElement (como se hacia antes) lo duplicaba: la interfaz Leanback escucha en
-    // 'document', y el evento del activeElement, al propagarse (bubbles), volvia a llegar a 'document'
-    // -> cada pulsacion contaba DOBLE y bajaba/subia dos categorias. document.dispatchEvent con
-    // bubbles:true ya alcanza a los listeners de 'document' y 'window', que es donde escucha Leanback.
+    // Pre-injected JS helper, called as __playfrontKey(code) to synthesize a keypress (keydown+keyup)
+    // the Leanback UI understands. This is the reliable route; posting WM_KEYDOWN to the HWND is not.
+    //
+    // Each event is dispatched ONCE, and only on 'document'. Dispatching on document.activeElement as
+    // well duplicates it: Leanback listens on 'document', and the activeElement event bubbles back up
+    // to 'document' too, so every press counted TWICE and moved two rows. document.dispatchEvent with
+    // bubbles:true already reaches the 'document' and 'window' listeners, which is where Leanback sits.
     private const string InjectScript = @"
         window.__playfrontKey = function (code) {
             ['keydown','keyup'].forEach(function (type) {
@@ -54,7 +54,7 @@ public sealed class WebViewHost : NativeControlHost
     private IntPtr _hwnd;
     private bool _disposed;
 
-    /// <summary>Se dispara si el navegador no se puede inicializar (p.ej. falta el runtime de WebView2).</summary>
+    /// <summary>Raised when the browser cannot initialize (typically the WebView2 runtime is missing).</summary>
     public event Action<string>? InitFailed;
 
     public WebViewHost(string url, string profileFolder)
@@ -62,16 +62,16 @@ public sealed class WebViewHost : NativeControlHost
         _url = url;
         _profileFolder = profileFolder;
 
-        // Cada vez que Avalonia recoloca/redimensiona esta vista, ajustar el tamano del navegador para
-        // que llene el hueco (la ventana entera, en el caso de YouTube).
+        // Whenever Avalonia moves or resizes this view, resize the browser to fill it (the whole window
+        // in the YouTube case).
         this.GetObservable(BoundsProperty).Subscribe(new AnonymousObserver<Rect>(_ => UpdateBounds()));
     }
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
-        var handle = base.CreateNativeControlCore(parent); // Avalonia crea la ventana hija (HWND)
+        var handle = base.CreateNativeControlCore(parent); // Avalonia creates the child window (HWND)
         _hwnd = handle.Handle;
-        _ = InitializeAsync(); // arranca la creacion del navegador (async); continua en el hilo de UI
+        _ = InitializeAsync(); // starts browser creation async; continues on the UI thread
         return handle;
     }
 
@@ -79,8 +79,8 @@ public sealed class WebViewHost : NativeControlHost
     {
         try
         {
-            // userDataFolder = donde viven cookies y sesion (login persistente). NUNCA se borra en
-            // limpiezas: borrarlo = re-emparejar la cuenta.
+            // userDataFolder holds cookies and session (persistent login). NEVER wipe it in cleanups:
+            // deleting it means signing in again.
             var env = await CoreWebView2Environment.CreateAsync(
                 browserExecutableFolder: null,
                 userDataFolder: _profileFolder,
@@ -88,7 +88,7 @@ public sealed class WebViewHost : NativeControlHost
 
             if (_disposed)
             {
-                return; // se salio de la pantalla antes de que el navegador terminara de crearse
+                return; // left the screen before the browser finished being created
             }
 
             _controller = await env.CreateCoreWebView2ControllerAsync(_hwnd);
@@ -101,11 +101,11 @@ public sealed class WebViewHost : NativeControlHost
 
             var core = _controller.CoreWebView2;
 
-            // UA ANTES de navegar (aplica a todas las peticiones del control por igual).
+            // UA BEFORE navigating - it applies to every request the control makes.
             core.Settings.UserAgent = UserAgent;
 
-            // Ajustes de "kiosco": nada de menus, teclas del navegador, devtools, zoom ni barras. Esto es
-            // una app a pantalla completa manejada con mando, no un navegador.
+            // Kiosk settings: no menus, browser accelerator keys, devtools, zoom or bars. This is a
+            // full-screen controller-driven app, not a browser.
             var s = core.Settings;
             s.AreDefaultContextMenusEnabled = false;
             s.AreBrowserAcceleratorKeysEnabled = false;
@@ -115,10 +115,9 @@ public sealed class WebViewHost : NativeControlHost
             s.IsPinchZoomEnabled = false;
             s.IsSwipeNavigationEnabled = false;
 
-            // MICROFONO: YouTube-TV pide permiso de microfono al abrir la busqueda (busqueda por voz).
-            // Por defecto WebView2 lo PREGUNTA cada vez con un aviso. Como Playfront es una app tipo consola,
-            // se concede automaticamente: sin aviso, y la busqueda por voz queda disponible. Otros
-            // permisos (camara, ubicacion, notificaciones...) se dejan con el comportamiento por defecto.
+            // YouTube-TV asks for microphone access when search opens (voice search), and WebView2
+            // prompts for it every time by default. Granted automatically so no prompt appears and voice
+            // search works. Every other permission (camera, location, notifications) keeps the default.
             core.PermissionRequested += (_, e) =>
             {
                 if (e.PermissionKind == CoreWebView2PermissionKind.Microphone)
@@ -136,12 +135,12 @@ public sealed class WebViewHost : NativeControlHost
         }
         catch (Exception e)
         {
-            // Lo mas comun: falta el runtime de WebView2. Playfront lo instalaria via el ayudante (futuro).
+            // Usually the WebView2 runtime is missing; installing it is a job for the helper service.
             Dispatcher.UIThread.Post(() => InitFailed?.Invoke(e.Message));
         }
     }
 
-    // Ajusta el rectangulo del navegador al tamano real (en pixeles fisicos) de la ventana hija.
+    // Matches the browser rectangle to the real size (physical pixels) of the child window.
     private void UpdateBounds()
     {
         if (_controller is null || _hwnd == IntPtr.Zero)
@@ -155,7 +154,7 @@ public sealed class WebViewHost : NativeControlHost
         }
     }
 
-    /// <summary>Inyecta una pulsacion de tecla en la pagina (mando -> tecla). No-op si aun no esta listo.</summary>
+    /// <summary>Injects a keypress into the page (controller -> key). No-op until the browser is ready.</summary>
     public void SendKey(int keyCode)
     {
         var core = _controller?.CoreWebView2;
@@ -163,8 +162,8 @@ public sealed class WebViewHost : NativeControlHost
     }
 
     /// <summary>
-    /// "Aparca" el navegador al perder el foco (juego en primer plano): suspende su actividad y baja su
-    /// uso de memoria. Se deshace con <see cref="Resume"/> al volver. No lo cierra.
+    /// Parks the browser when focus is lost (a game is in the foreground): suspends its activity and
+    /// drops its memory use. Undone by <see cref="Resume"/>. Does not close it.
     /// </summary>
     public void Suspend()
     {
@@ -177,7 +176,7 @@ public sealed class WebViewHost : NativeControlHost
         _ = core.TrySuspendAsync();
     }
 
-    /// <summary>Reanuda tras <see cref="Suspend"/> (Playfront vuelve al primer plano).</summary>
+    /// <summary>Resumes after <see cref="Suspend"/> (Playfront is in the foreground again).</summary>
     public void Resume()
     {
         if (_controller?.CoreWebView2 is not { } core)
@@ -201,8 +200,8 @@ public sealed class WebViewHost : NativeControlHost
         _disposed = true;
         if (_controller is not null)
         {
-            // Cerrar el controlador se lleva por delante los procesos del navegador (msedgewebview2) y su
-            // memoria: es como Playfront suelta el navegador entero al salir de la pantalla.
+            // Closing the controller takes the browser processes (msedgewebview2) and their memory with
+            // it: this is how the whole browser is released on leaving the screen.
             _controller.Close();
             _controller = null;
         }
@@ -220,7 +219,7 @@ public sealed class WebViewHost : NativeControlHost
         public int Bottom;
     }
 
-    // Observador minimo para GetObservable (evita depender de System.Reactive).
+    // Minimal observer for GetObservable, to avoid taking a dependency on System.Reactive.
     private sealed class AnonymousObserver<T> : IObserver<T>
     {
         private readonly Action<T> _onNext;

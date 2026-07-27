@@ -16,31 +16,31 @@ using Avalonia.Threading;
 namespace Playfront.App.Views;
 
 /// <summary>
-/// Pantalla de la Tienda (1:1 con la Store de Xbox). Vive en su propia vista para cargarse BAJO
-/// DEMANDA: MainWindow la crea al entrar (EnterStore) y la libera al salir (ExitStore). Ver
-/// Arquitectura de rendimiento: nada se construye antes de que el usuario lo abra.
+/// Store screen (1:1 with the Xbox Store). It lives in its own view so it loads ON DEMAND: MainWindow
+/// creates it on entry (EnterStore) and releases it on exit (ExitStore) - nothing is built before it
+/// is opened.
 ///
-/// Se construye por fases. Hecho: fondo + rail estrecho + maqueta de la Store Home + NAVEGACION del
-/// contenido (foco direccional con el anillo verde). Pendiente: arte real de los tiles y la doble
-/// barra lateral. Lo que SALE de la pantalla se avisa por eventos (ExitRequested).
+/// Built in stages. Done: background, narrow rail, Store Home layout and content NAVIGATION
+/// (directional focus with the accent ring). Pending: real tile artwork. Leaving the screen is
+/// signalled by events (ExitRequested).
 /// </summary>
 public partial class StoreView : UserControl
 {
-    /// <summary>Se pide cerrar la Tienda y volver a la home (B en el nivel superior de la Tienda).</summary>
+    /// <summary>Closing the Store and returning Home was requested (B at the Store's top level).</summary>
     public event Action? ExitRequested;
 
     /// <summary>
-    /// Se pide abrir una PAGINA DE CATEGORIA desde la 2a columna de la barra lateral (A sobre una
-    /// subcategoria que ya tenga pantalla). De momento solo existe la de "Music apps".
+    /// A CATEGORY PAGE was requested from the sidebar's second column (A on a subcategory that already
+    /// has a screen). Only "Music apps" exists so far.
     /// </summary>
     public event Action<string>? CategoryRequested;
 
-    /// <summary>Subcategorias que ya tienen pantalla construida.</summary>
+    /// <summary>Subcategories that already have a screen built.</summary>
     private static bool HasPage(string sub) => sub == "Music apps";
 
-    // Un elemento navegable: su anillo de seleccion (para encender/apagar el "selected") + su
-    // rectangulo en coordenadas ABSOLUTAS del lienzo 1920x1080 (para el calculo direccional). El
-    // rectangulo es el del TILE, no el del anillo (el anillo va inflado 8px alrededor).
+    // One navigable element: its selection ring (to toggle "selected") plus its rectangle in ABSOLUTE
+    // 1920x1080 canvas coordinates, used by the directional search. The rectangle is the TILE's, not
+    // the ring's - the ring is inflated 8 px all round.
     private sealed record FocusItem(Border Ring, double X, double Y, double W, double H)
     {
         public double CenterX => X + W / 2;
@@ -52,21 +52,19 @@ public partial class StoreView : UserControl
     private readonly List<FocusItem> _items = new();
     private int _focus;
 
-    // Fila "Games": caratulas placeholder (portrait). Geometria en coordenadas relativas al
-    // GamesRailHost (que esta en Canvas.Top=985); para el calculo direccional se pasan a absolutas.
-    // Carátulas APAISADAS (medido en tienda home.png: son landscape, no portrait). Empiezan en el
-    // borde del contenido (x=240 relativo al host, que está en Canvas.Left=240 -> 240 absoluto). El
-    // rail se sale por la derecha y se recorta abajo, como en la referencia.
+    // "Games" row: placeholder covers, LANDSCAPE (measured off the reference - they are not portrait).
+    // Geometry is relative to GamesRailHost and converted to absolute for the directional search. They
+    // start at the content edge, and the rail runs off the right and is clipped at the bottom, as in
+    // the reference.
     private const int GamesCoverCount = 6;
     private const double GamesRailTop = 948;
     private const double CoverW = 306;
     private const double CoverH = 172;
     private const double CoverPitch = 325;
 
-    // ===== Carrusel del HERO (spotlight) =====
-    // 5 paginas de EJEMPLO. Cada una tiene un COLOR plano de placeholder (mas adelante iran los
-    // artworks reales de los juegos). LB/RB pasan de pagina -pero SOLO con el foco sobre el hero
-    // (index 0)-, y la tira de paginas se DESLIZA hacia el lado del cambio (efecto carrusel movil).
+    // ===== HERO (spotlight) carousel =====
+    // 5 placeholder pages, each a flat colour until real game artwork lands. LB/RB page through them,
+    // but ONLY with focus on the hero (index 0), and the filmstrip slides towards the change.
     private sealed record HeroPage(string Title, string Subtitle, string Color);
 
     private static readonly HeroPage[] HeroPages =
@@ -78,114 +76,110 @@ public partial class StoreView : UserControl
         new("Sea of Thieves", "A shared-world pirate adventure", "#2A8C8C"),
     };
 
-    private const double HeroWidth = 1098; // ancho del hero (= una pagina del filmstrip)
-    private int _heroPage;                 // pagina logica actual (0..N-1)
+    private const double HeroWidth = 1098; // hero width (= one filmstrip page)
+    private int _heroPage;                 // current logical page (0..N-1)
     private Ellipse[] _heroDots = null!;
     private static readonly IBrush DotActive = Brushes.White;
     private static readonly IBrush DotInactive = new SolidColorBrush(Color.Parse("#7AFFFFFF"));
 
-    // Carrusel INFINITO por clones: el filmstrip lleva un clon de la ULTIMA pagina al principio y uno
-    // de la PRIMERA al final -> [clon(N-1), 0, 1, ..., N-1, clon(0)]. La pagina logica p esta en el
-    // indice de filmstrip p+1. Al pasar del extremo se desliza hacia el clon (continuo, sin rebobinar)
-    // y, acabada la animacion, se SALTA sin animacion a la pagina real equivalente. Ese salto se cubre
-    // con _heroWrapping (ignora pulsaciones durante el ~breve salto) + un timer.
-    private Transitions? _heroTransitions; // la transicion definida en el XAML (para quitarla en el salto)
+    // INFINITE carousel via clones: the filmstrip carries a clone of the LAST page at the start and one
+    // of the FIRST at the end -> [clone(N-1), 0, 1, ..., N-1, clone(0)]. Logical page p sits at
+    // filmstrip index p+1. Going past either end slides onto the clone (continuous, no rewind) and,
+    // once the animation ends, JUMPS without animation to the equivalent real page. That jump is
+    // covered by _heroWrapping (input ignored during it) plus a timer.
+    private Transitions? _heroTransitions; // the transition declared in the XAML, removed for the jump
     private bool _heroWrapping;
     private DispatcherTimer? _heroWrapTimer;
 
-    // ===== DOBLE BARRA LATERAL =====
-    // Estado de la barra: cerrada (navegando el contenido), o abierta con el foco en la columna de
-    // ETIQUETAS (col0) o en la de SUBCATEGORIAS (col1). Se abre al ir a la IZQUIERDA desde el
-    // contenido cuando ya no hay nada mas a la izquierda; se cierra con B/Izquierda.
+    // ===== DOUBLE SIDEBAR =====
+    // Sidebar state: closed (navigating content), or open with focus in the LABEL column (col0) or the
+    // SUBCATEGORY column (col1). It opens on Left from the content when there is nothing further left;
+    // it closes with B.
     private enum SidebarState { Closed, Col0, Col1 }
     private SidebarState _sidebarState = SidebarState.Closed;
-    private const int ActiveSectionRow = 2; // Home: la seccion de la Tienda en la que estamos ahora mismo
-    private int _col0Focus;  // fila enfocada en la columna de etiquetas (indice en NavRows)
-    private int _col1Focus;  // subcategoria enfocada en la 2a columna
+    private const int ActiveSectionRow = 2; // Home: the Store section currently being shown
+    private int _col0Focus;  // focused row in the label column (index into NavRows)
+    private int _col1Focus;  // focused subcategory in the second column
 
-    // Una fila del rail expandido: su TEXTO, el CENTRO vertical de la fila (= centro del icono, en el
-    // lienzo 1920x1080) y su lista de SUBCATEGORIAS (vacia = no despliega 2a columna).
+    // One row of the expanded rail: its TEXT, the row's vertical CENTRE (= icon centre, in 1920x1080
+    // canvas coordinates) and its list of SUBCATEGORIES (empty = no second column).
     //
-    // Las secciones son EXACTAMENTE las de la captura "tienda barra lateral.png": Search, Home, Games,
-    // Apps, Hardware | Lists, Cart, Redeem | CLOSE. (Antes habia Movies & TV y Settings, que en esa
-    // version de la Store no existen, y "Wishlist" se llama "Lists".)
+    // The sections are EXACTLY those in the reference capture: Search, Home, Games, Apps, Hardware |
+    // Lists, Cart, Redeem | CLOSE. (Movies & TV and Settings do not exist in that Store version, and
+    // what is elsewhere called "Wishlist" is "Lists" here.)
     //
-    // SOLO se rellenan las listas de subcategorias que se ven ABIERTAS en alguna captura de referencia:
-    //   - APPS, de "tienda barra lateral.png" (la columna lleva el titulo "Apps").
-    //   - HOME, de "home.png" (titulo "Home"): Store Home / Deals / Subscriptions.
-    //   - GAMES, de "games.png" (titulo "Games"): 11 entradas.
-    // Las demas secciones se quedan SIN subcategorias a proposito: no hay captura de ellas y no se
-    // inventan.
+    // ONLY subcategory lists seen OPEN in a reference capture are filled in - Home, Games and Apps.
+    // Every other section is deliberately left without subcategories: there is no capture of them and
+    // they are not invented.
     private sealed record NavRow(string Label, double Center, string[] Subs, bool IsClose = false);
     private static readonly string[] NoSub = Array.Empty<string>();
     private static readonly NavRow[] NavRows =
     {
-        new("(perfil)",      63,   NoSub),  // 0 perfil: el nombre lo pinta SidebarProfileName con el usuario de Windows
+        new("(profile)",     63,   NoSub),  // 0 profile: SidebarProfileName paints the Windows user name
         new("Search",        150,  NoSub),  // 1
         new("Home",          233,  new[] { "Store Home", "Deals", "Subscriptions" }), // 2
-        // Games (de "games.png"): las 11 entradas VISIBLES en la captura. La original lleva ademas una
-        // flecha abajo (hay mas lista por debajo) que aqui NO va: la lista acaba en
-        // "Most played" y no hay scroll.
+        // Games: the 11 entries VISIBLE in the capture. The original also shows a down arrow (more list
+        // below) which is deliberately omitted: the list ends at "Most played" and there is no scroll.
         new("Games",         316,  new[]
         {
             "Games Home", "Add-ons", "Accessibility in games", "Subscriptions", "New games",
             "Coming soon", "Top paid", "Optimized for Series X|S", "Game demos", "Top free",
             "Most played",
         }), // 3
-        // "Music apps" es la unica que no va literal de la captura (alli pone "Popular music apps"):
-        // aqui va a secas, sin el "Popular".
+        // "Music apps" is the only entry not taken verbatim from the capture, which reads "Popular
+        // music apps".
         new("Apps",          399,  new[] { "Apps Home", "Entertainment apps", "Apps for gamers", "Apps with trials", "Popular apps", "Music apps" }), // 4
         new("Hardware",      482,  NoSub),  // 5
-        new("Lists",         577,  NoSub),  // 6 (tras la divisoria)
+        new("Lists",         577,  NoSub),  // 6 (after the divider)
         new("Cart",          660,  NoSub),  // 7
         new("Redeem",        743,  NoSub),  // 8
         new("CLOSE",         1013, NoSub, IsClose: true), // 9
     };
 
-    // Geometria de la col. de SUBCATEGORIAS (medida en barra lateral 1, llevada al lienzo): tiles
-    // alineados a la izquierda del panel, primera fila centrada en 150 (= fila Search) y pitch 83
-    // (mismo que las etiquetas). Relleno gris medido (66,70,71).
+    // SUBCATEGORY column geometry, measured off the reference and mapped onto the canvas: tiles
+    // left-aligned in the panel, first row centred at 150 (the Search row) and 83 pitch, same as the
+    // labels. Grey fill measured at (66,70,71).
     private const double SubTileLeft = 420;
     private const double SubTileWidth = 340;
     private const double SubTileHeight = 70;
-    private const double SubRowTop0 = 150;   // centro de la primera fila
+    private const double SubRowTop0 = 150;   // centre of the first row
     private const double SubRowPitch = 83;
     private static readonly IBrush SubTileFill = new SolidColorBrush(Color.Parse("#424647"));
     private static readonly IBrush LabelIdle = new SolidColorBrush(Color.Parse("#B9BEC1"));
 
     private readonly List<TextBlock> _sidebarLabels = new();
     private readonly List<Border> _subRings = new();
-    private readonly List<Border> _subTiles = new(); // tiles + anillos de la 2a columna (para la cascada)
+    private readonly List<Border> _subTiles = new(); // second-column tiles + rings (for the cascade)
 
-    // ===== Tiempos de la animacion de la barra (ms) =====
-    // La SALIDA es mas corta que la ENTRADA a proposito: al abrir se quiere la sensacion de que la
-    // barra "se despliega"; al cerrar, que se quite de en medio rapido y devuelva el contenido.
+    // ===== Sidebar animation timings (ms) =====
+    // The EXIT is deliberately shorter than the ENTRY: opening should feel like the bar unfolding,
+    // closing like it getting out of the way and handing the content back.
     private const int Col0InMs = 170;
-    private const int LabelInMs = 260, LabelStepMs = 18;  // cada etiqueta entra 18 ms despues de la anterior
-    private const int LabelOutMs = 180, LabelOutStepMs = 16; // ...y al cerrar sale igual, pero AL REVES
+    private const int LabelInMs = 260, LabelStepMs = 18;  // each label enters 18 ms after the previous
+    private const int LabelOutMs = 180, LabelOutStepMs = 16; // ...and leaves the same way, REVERSED
     private const int Col1InMs = 320, Col1OutMs = 190;
-    private const int SubTileInMs = 240, SubTileStepMs = 14; // cascada de los tiles de subcategoria
-    private const int SubTileOutMs = 180;                    // ...y su cascada inversa al cerrar
-    private const double SubTileSlideX = -34;                // desde donde entra cada tile
-    private const int BarSlideMs = 200;  // la barrita del activo deslizandose de fila a fila
-    private const int RailToneMs = 220;  // el rail cambiando de tono colapsado <-> expandido
-    private const double LabelSlideX = -26; // desde donde entra cada etiqueta (hacia los iconos)
-    private const double Col1SlideX = -170; // la 2a columna emerge desde detras de las etiquetas
+    private const int SubTileInMs = 240, SubTileStepMs = 14; // subcategory tile cascade
+    private const int SubTileOutMs = 180;                    // ...and its reverse on close
+    private const double SubTileSlideX = -34;                // where each tile slides in from
+    private const int BarSlideMs = 200;  // the active bar sliding from row to row
+    private const int RailToneMs = 220;  // rail tone crossfade, collapsed <-> expanded
+    private const double LabelSlideX = -26; // where each label slides in from (towards the icons)
+    private const double Col1SlideX = -170; // the second column emerges from behind the labels
 
-    // Al cerrar, primero se van las FILAS (en cascada inversa: la de abajo primero, subiendo) y solo
-    // despues se funden los PANELES; si no, el panel desapareceria antes que sus etiquetas y estas se
-    // verian flotando un instante sobre el contenido.
+    // On close the ROWS leave first (reverse cascade, bottom row first, working up) and only then do
+    // the PANELS fade; otherwise a panel would vanish before its labels and they would be left floating
+    // over the content for an instant.
     private const int PanelOutDelayMs = 190, SidebarOutMs = 160;
 
-    // Transiciones de entrada y de SALIDA (duraciones distintas). Se guardan para poder anularlas un
-    // instante al fijar el estado inicial sin animar (mismo truco que el carrusel del hero).
+    // Entry and EXIT transitions (different durations). Kept so they can be nulled for an instant while
+    // the starting state is set without animating - the same trick the hero carousel uses.
     private Transitions _col0In = null!;
     private Transitions _col1In = null!, _col1Out = null!, _col1Hide = null!;
     private Transitions _hostOut = null!;
-    private Transitions[] _labelIn = null!, _labelOut = null!; // una por fila (llevan su retardo dentro)
-    private bool _subShown;          // si la 2a columna esta desplegada ahora (para animarla solo al aparecer)
-    private string[]? _lastSubs;     // ultima lista pintada en la 2a columna (para no re-animar si no cambia)
-    private DispatcherTimer? _closeTimer; // remata el cierre (ocultar la capa) cuando acaba la salida
+    private Transitions[] _labelIn = null!, _labelOut = null!; // one per row, each carrying its delay
+    private bool _subShown;          // whether the second column is currently out (animate only on appear)
+    private string[]? _lastSubs;     // last list painted there, to avoid re-animating an unchanged one
+    private DispatcherTimer? _closeTimer; // finishes the close (hides the layer) when the exit ends
 
     public StoreView()
     {
@@ -193,10 +187,10 @@ public partial class StoreView : UserControl
 
         _heroDots = new[] { HeroDot0, HeroDot1, HeroDot2, HeroDot3, HeroDot4 };
         BuildHeroPages();
-        _heroTransitions = HeroFilmstrip.Transitions; // guarda la transicion del XAML
-        SetFilm(1, animate: false);                   // arranca en la pagina 0 (indice 1 por el clon)
+        _heroTransitions = HeroFilmstrip.Transitions; // keep the transition declared in the XAML
+        SetFilm(1, animate: false);                   // start on page 0 (filmstrip index 1, past the clone)
         UpdateDots();
-        // Timer del "salto" del wrap: tras la animacion (~300 ms), salta sin animar a la pagina real.
+        // Wrap-jump timer: after the animation (~300 ms), snap to the real page without animating.
         _heroWrapTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(320) };
         _heroWrapTimer.Tick += (_, _) =>
         {
@@ -205,8 +199,8 @@ public partial class StoreView : UserControl
             _heroWrapping = false;
         };
 
-        // Nombre del perfil = el usuario de WINDOWS (el mismo de C:\Users\...). Cuando Playfront tenga
-        // cuenta propia/Xbox, este es el sitio donde cambiarlo.
+        // Profile name = the WINDOWS user. When Playfront gets its own or an Xbox account, change it
+        // here.
         SidebarProfileName.Text = string.IsNullOrWhiteSpace(Environment.UserName) ? "Player" : Environment.UserName;
 
         BuildGamesRail();
@@ -214,22 +208,22 @@ public partial class StoreView : UserControl
         BuildSidebarLabels();
         BuildSidebarTransitions();
 
-        // Foco inicial en el HERO (spotlight), el punto de entrada natural arriba-izquierda. En la
-        // captura salia SEARCH porque era lo que estaba enfocado en ese momento, no un estado fijo.
+        // Initial focus on the HERO, the natural top-left entry point. The capture shows SEARCH focused
+        // because that is where it happened to be, not a fixed state.
         _focus = 0;
         UpdateSelection();
     }
 
-    // Crea las etiquetas de texto de la col0 (a la derecha de los iconos del rail, ya dibujados). Una
-    // vez; el color (gris/blanco) y la barra del activo se actualizan al mover el foco. El nombre del
-    // perfil (fila 0) lo pinta SidebarProfileName en el XAML, asi que aqui esa fila no lleva etiqueta.
+    // Creates the col0 text labels, to the right of the rail icons. Built once; colour (grey/white) and
+    // the active bar update as focus moves. Row 0's name is painted by SidebarProfileName in the XAML,
+    // so that row gets no label here.
     private void BuildSidebarLabels()
     {
         for (var i = 0; i < NavRows.Length; i++)
         {
             if (i == 0)
             {
-                _sidebarLabels.Add(SidebarProfileName); // el nombre del perfil ya esta en el XAML
+                _sidebarLabels.Add(SidebarProfileName); // the profile name already lives in the XAML
                 continue;
             }
 
@@ -246,14 +240,14 @@ public partial class StoreView : UserControl
             _sidebarLabels.Add(label);
         }
 
-        // La barrita del activo se coloca UNA vez en la fila 0 y a partir de ahi se mueve con
-        // translateY (una posicion animable); asi puede DESLIZARSE de fila a fila en vez de saltar.
+        // The active bar is positioned ONCE on row 0 and moves from there with translateY, an animatable
+        // property, so it can SLIDE between rows instead of jumping.
         Canvas.SetTop(SidebarActiveBar, NavRows[0].Center - 14);
     }
 
-    // Transiciones de una etiqueta. ENTRADA: desliza desde los iconos + funde, con retardo segun su
-    // fila -> cascada de ARRIBA a ABAJO. SALIDA: lo mismo AL REVES (la fila de abajo se va primero y
-    // la cascada sube). Ademas funde el color gris<->blanco al cambiar de fila enfocada.
+    // A label's transitions. ENTRY: slides in from the icons and fades, delayed by its row -> cascade
+    // from TOP to BOTTOM. EXIT: the same REVERSED (bottom row first, cascading up). Also cross-fades
+    // grey<->white as the focused row changes.
     private static Transitions LabelTransitions(int step, bool entering) => new()
     {
         new TransformOperationsTransition
@@ -276,8 +270,8 @@ public partial class StoreView : UserControl
         },
     };
 
-    // Genera las caratulas de la fila Games + sus anillos dentro de GamesRailHost. Placeholders
-    // grises por ahora; se pueblan con arte real despues.
+    // Builds the Games row covers and their rings inside GamesRailHost. Grey placeholders for now; real
+    // artwork later.
     private void BuildGamesRail()
     {
         for (var i = 0; i < GamesCoverCount; i++)
@@ -290,8 +284,8 @@ public partial class StoreView : UserControl
             Canvas.SetTop(tile, 0);
             GamesRailHost.Children.Add(tile);
 
-            // Anillo inflado 8 por lado (como el resto de la app), esquina 10 para casar con el
-            // radio del tile (6) + inflado.
+            // Ring inflated 8 per side (as everywhere else in the app); corner 10 to match the tile
+            // radius (6) plus the inflation.
             var ring = new Border
             {
                 Width = CoverW + 16,
@@ -309,8 +303,8 @@ public partial class StoreView : UserControl
 
     private readonly List<Border> _coverRings = new();
 
-    // Construye la lista de navegables con sus rectangulos ABSOLUTOS (mismos numeros que el XAML). El
-    // orden aqui no importa para el movimiento (es direccional por geometria), solo para el indice.
+    // Builds the navigable list with ABSOLUTE rectangles (same numbers as the XAML). Order here does not
+    // affect movement, which is geometric; it only fixes the indices.
     private void BuildFocusItems()
     {
         _items.Add(new FocusItem(HeroRing, 240, 42, 1098, 553));      // 0 Hero
@@ -322,7 +316,7 @@ public partial class StoreView : UserControl
         _items.Add(new FocusItem(CardARing, 858, 613, 480, 268));     // 6 Destiny 2
         _items.Add(new FocusItem(CardBRing, 1357, 613, 483, 268));    // 7 Halo Infinite
 
-        for (var i = 0; i < _coverRings.Count; i++)                   // 8.. caratulas Games
+        for (var i = 0; i < _coverRings.Count; i++)                   // 8.. Games covers
         {
             _items.Add(new FocusItem(_coverRings[i], 240 + i * CoverPitch, GamesRailTop, CoverW, CoverH));
         }
@@ -330,7 +324,7 @@ public partial class StoreView : UserControl
 
     public void Move(GamepadButton button)
     {
-        // Con la barra lateral abierta, el mando la controla a ella (no al contenido).
+        // With the sidebar open, the controller drives it, not the content.
         if (_sidebarState != SidebarState.Closed)
         {
             MoveSidebar(button);
@@ -343,8 +337,8 @@ public partial class StoreView : UserControl
                 ExitRequested?.Invoke();
                 return;
             case GamepadButton.Left:
-                // Izquierda desde el contenido: si hay un tile a la izquierda, mover; si ya no queda
-                // nada (estamos en la columna mas a la izquierda), ABRIR la barra lateral.
+                // Left from the content: move if there is a tile to the left; if there is nothing left
+                // (already in the leftmost column), OPEN the sidebar.
                 if (FindNeighbor(Direction.Left) is var left && left >= 0)
                 {
                     _focus = left;
@@ -365,23 +359,23 @@ public partial class StoreView : UserControl
             case GamepadButton.Down:
                 MoveFocus(Direction.Down);
                 return;
-            // LB/RB: carrusel del hero, SOLO con el foco sobre el hero (index 0). Con el foco en otro
-            // tile, los bumpers no hacen nada. Da la vuelta de forma CONTINUA (wrap) en los extremos.
+            // LB/RB: hero carousel, ONLY with focus on the hero (index 0). On any other tile the
+            // bumpers do nothing. Wraps CONTINUOUSLY at either end.
             case GamepadButton.LB when _focus == 0:
                 HeroPrev();
                 return;
             case GamepadButton.RB when _focus == 0:
                 HeroNext();
                 return;
-            // A (activar el tile) se cableara cuando el contenido sea funcional.
+            // A (activating a tile) gets wired up once the content is functional.
         }
     }
 
-    // ===== Navegacion de la doble barra lateral =====
+    // ===== Double sidebar navigation =====
 
-    // Prepara las transiciones de entrada y de salida. Curva CubicEaseOut = arranca rapido y frena al
-    // final (sensacion "smooth" de asentarse) para lo que entra; CubicEaseIn (arranca suave y acelera)
-    // para lo que sale, que es como se percibe natural que algo "se retire".
+    // Prepares the entry and exit transitions. CubicEaseOut - fast start, slowing to a settle - for
+    // anything entering; CubicEaseIn - gentle start, accelerating - for anything leaving, which is how
+    // something withdrawing reads as natural.
     private void BuildSidebarTransitions()
     {
         _col0In = Fade(Col0InMs);
@@ -390,19 +384,19 @@ public partial class StoreView : UserControl
         _col1Hide = SlideFade(Col1OutMs, new CubicEaseIn());
         _hostOut = Fade(SidebarOutMs, new CubicEaseIn(), PanelOutDelayMs);
 
-        // Una transicion por fila (llevan el retardo de la cascada dentro), en los dos sentidos.
+        // One transition per row, in both directions, each carrying its cascade delay.
         _labelIn = new Transitions[NavRows.Length];
         _labelOut = new Transitions[NavRows.Length];
         for (var i = 0; i < NavRows.Length; i++)
         {
             _labelIn[i] = LabelTransitions(i, entering: true);
-            _labelOut[i] = LabelTransitions(NavRows.Length - 1 - i, entering: false); // al reves
+            _labelOut[i] = LabelTransitions(NavRows.Length - 1 - i, entering: false); // reversed
         }
 
         Col0Layer.Transitions = _col0In;
         Col1Layer.Transitions = _col1In;
 
-        // La barrita del activo se desliza de fila a fila (translateY animado).
+        // The active bar slides between rows (animated translateY).
         SidebarActiveBar.Transitions = new Transitions
         {
             new TransformOperationsTransition
@@ -413,9 +407,8 @@ public partial class StoreView : UserControl
             },
         };
 
-        // El rail (columna de iconos) cambia de tono entre colapsado y expandido FUNDIENDO el color,
-        // y sus adornos de estado colapsado (linea, sombra, barrita verde) se funden en vez de
-        // aparecer/desaparecer de golpe.
+        // The rail (icon column) cross-fades its tone between collapsed and expanded, and its
+        // collapsed-state decorations (line, shadow, accent bar) fade instead of popping.
         RailPanel.Transitions = new Transitions
         {
             new BrushTransition { Property = Shape.FillProperty, Duration = TimeSpan.FromMilliseconds(RailToneMs) },
@@ -460,9 +453,9 @@ public partial class StoreView : UserControl
     private static string TranslateX(double px) =>
         $"translateX({px.ToString(CultureInfo.InvariantCulture)}px)";
 
-    // Fija una capa en su estado INICIAL (desplazada a la izquierda + transparente) SIN animar y, en el
-    // siguiente ciclo, la lleva a su sitio CON transicion -> desliza+funde. Anular las transiciones al
-    // fijar el inicio evita que ese salto se anime tambien (mismo patron que SetFilm del hero).
+    // Places a layer at its STARTING state (shifted left and transparent) WITHOUT animating and, on the
+    // next cycle, moves it home WITH its transition -> slide plus fade. Nulling the transitions while
+    // setting the start stops that jump animating too (same pattern as the hero's SetFilm).
     private static void AnimateIn(Control layer, Transitions trans, double fromTx)
     {
         layer.Transitions = null;
@@ -476,16 +469,16 @@ public partial class StoreView : UserControl
         }, DispatcherPriority.Background);
     }
 
-    // Lo contrario: retira la capa deslizandola de vuelta (el estado actual ya es el "desde", asi que
-    // basta con poner la transicion de salida y fijar el destino). No toca la opacidad: al cerrar, el
-    // fundido lo hace la barra ENTERA de una pieza (SidebarHost), para que nada se quede rezagado.
+    // The opposite: withdraws the layer by sliding it back (the current state is already the "from", so
+    // setting the exit transition and the destination is enough). Opacity is untouched: on close the
+    // fade is done by the WHOLE bar at once (SidebarHost), so nothing lags behind.
     private static void SlideOut(Control layer, Transitions trans, double toTx)
     {
         layer.Transitions = trans;
         layer.RenderTransform = TransformOperations.Parse(TranslateX(toTx));
     }
 
-    // Igual pero solo opacidad (para el atenuado y la capa de etiquetas, que no se deslizan).
+    // Same, opacity only (for the dim layer and the label layer, which do not slide).
     private static void FadeIn(Control c, Transitions trans)
     {
         c.Transitions = null;
@@ -500,9 +493,8 @@ public partial class StoreView : UserControl
         c.Opacity = 0;
     }
 
-    // Entrada EN CASCADA de las etiquetas: todas arrancan desplazadas hacia los iconos y
-    // transparentes, y entran una detras de otra de ARRIBA a ABAJO (el retardo lo lleva cada etiqueta
-    // en su transicion).
+    // CASCADING label entry: all start shifted towards the icons and transparent, then come in one
+    // after another from TOP to BOTTOM (each label's delay lives in its own transition).
     private void AnimateLabelsIn()
     {
         for (var i = 0; i < _sidebarLabels.Count; i++)
@@ -524,8 +516,8 @@ public partial class StoreView : UserControl
         }, DispatcherPriority.Background);
     }
 
-    // Salida EN CASCADA INVERSA: la MISMA animacion al reves (se va primero la fila de abajo y la
-    // cascada sube), volviendo cada etiqueta hacia los iconos de los que salio.
+    // REVERSE CASCADE exit: the SAME animation backwards (bottom row leaves first, cascading up), each
+    // label returning towards the icons it came from.
     private void AnimateLabelsOut()
     {
         for (var i = 0; i < _sidebarLabels.Count; i++)
@@ -537,23 +529,22 @@ public partial class StoreView : UserControl
         }
     }
 
-    // Abre la barra: despliega la col. de etiquetas sobre el contenido (SIN atenuarlo, a peticion del
-    // usuario) y muestra la 2a columna si la seccion enfocada la tiene. El foco arranca en la seccion
-    // activa de la Tienda (Home). Se recuerda el tile del contenido en _focus para volver a el al
-    // cerrar. La entrada se ANIMA: el panel funde y las etiquetas entran en cascada.
+    // Opens the bar: unfolds the label column over the content (WITHOUT dimming it) and shows the second
+    // column if the focused section has one. Focus starts on the Store's active section (Home). The
+    // content tile stays in _focus so closing returns to it. The entry is animated: the panel fades and
+    // the labels cascade in.
     private static readonly IBrush RailToneCollapsed = new SolidColorBrush(Color.Parse("#1D2627"));
 
-    // Con la barra abierta el rail deja de ser opaco: pasa al MISMO tinte translucido que la columna de
-    // etiquetas (medido en "tienda barra lateral": el rail y las etiquetas son un unico panel). Detras
-    // del rail solo hay el degradado del fondo, que ya es suave, asi que ahi no hace falta desenfocar.
+    // With the bar open the rail stops being opaque and takes the SAME translucent tint as the label
+    // column - measured: rail and labels are a single panel. Behind the rail there is only the
+    // background gradient, already soft, so no blur is needed there.
     private static readonly IBrush RailToneExpanded = new SolidColorBrush(Color.Parse("#C71E2929"));
 
-    // ===== Fondo ACRILICO de la barra =====
-    // La Store de Xbox no pone paneles opacos: son translucidos sobre el contenido DESENFOCADO (medido
-    // en la captura: detras del panel no queda ni un detalle reconocible, solo manchas de color). Aqui
-    // se hace igual pero SIN coste continuo: al abrir se saca UNA foto de la pantalla (sin la barra,
-    // que aun no esta visible), se desenfoca UNA vez, y esa imagen fija se usa de fondo. Al cerrar se
-    // suelta (son ~8 MB): todo bajo demanda y acotado.
+    // ===== Acrylic backdrop =====
+    // The Xbox Store uses translucent panels over BLURRED content, not opaque ones (measured: behind
+    // the panel not one detail survives, only colour blobs). Same here but with no continuous cost: on
+    // open, ONE snapshot of the screen is taken (before the bar is visible), blurred ONCE, and that
+    // still image is used as the background. On close it is released - it is ~8 MB.
     private const double BlurRadius = 90;
     private static readonly PixelSize CanvasPixels = new(1920, 1080);
     private static readonly Vector CanvasDpi = new(96, 96);
@@ -564,13 +555,13 @@ public partial class StoreView : UserControl
         ReleaseBackdrop();
         try
         {
-            // 1) Foto de la pantalla tal cual esta ahora (la barra todavia no se ha mostrado).
+            // 1) Snapshot of the screen as it is right now (the bar is not shown yet).
             using var raw = new RenderTargetBitmap(CanvasPixels, CanvasDpi);
             raw.Render(this);
 
-            // 2) Se desenfoca UNA vez horneandola en otra imagen, en vez de dejar el efecto vivo
-            //    (un desenfoque a pantalla completa en cada fotograma costaria GPU sin necesidad:
-            //    el contenido de debajo no se mueve mientras la barra esta abierta).
+            // 2) Blurred ONCE by baking it into another image rather than leaving the effect live: a
+            //    full-screen blur every frame would burn GPU for nothing, since the content underneath
+            //    does not move while the bar is open.
             var blurred = new RenderTargetBitmap(CanvasPixels, CanvasDpi);
             var host = new Image
             {
@@ -587,8 +578,8 @@ public partial class StoreView : UserControl
         }
         catch
         {
-            // Si el sistema no puede rasterizar (driver raro), la barra sigue funcionando: se queda
-            // con el tinte translucido sin desenfoque en vez de romperse.
+            // If the system cannot rasterize (odd driver), the bar still works: it keeps the
+            // translucent tint without the blur instead of breaking.
             _backdrop = null;
         }
 
@@ -606,14 +597,14 @@ public partial class StoreView : UserControl
 
     private void OpenSidebar()
     {
-        // Si se estaba cerrando, cancela el remate del cierre (reabrir a medio cierre es valido).
+        // If it was closing, cancel the close finisher - reopening mid-close is valid.
         _closeTimer?.Stop();
 
         _sidebarState = SidebarState.Col0;
         _col0Focus = ActiveSectionRow;
 
-        // Apaga el anillo del contenido y el rail "colapsado" (linea + sombra + barra verde en Home);
-        // el panel gris del rail funde al tono neutro del estado expandido.
+        // Turns off the content ring and the collapsed rail decorations (line, shadow, accent bar on
+        // Home); the rail panel fades to the expanded state's neutral tone.
         foreach (var it in _items)
         {
             it.Ring.Classes.Set("selected", false);
@@ -624,66 +615,65 @@ public partial class StoreView : UserControl
         RailShadow.Opacity = 0;
         RailActiveBar.Opacity = 0;
 
-        _subShown = false;       // la 2a columna arranca oculta; se anima al aparecer
+        _subShown = false;       // the second column starts hidden and animates in when it appears
         _lastSubs = null;
-        Col1Layer.Opacity = 0;   // evita cualquier destello de col1 antes de que UpdateSidebar decida
+        Col1Layer.Opacity = 0;   // avoids any flash of col1 before UpdateSidebar decides
 
-        // Foto desenfocada del contenido ANTES de mostrar la barra (si no, se fotografiaria a si misma).
+        // Blurred snapshot of the content BEFORE showing the bar; otherwise it would photograph itself.
         CaptureBackdrop();
 
-        // La capa entera vuelve a opaca sin animar (si se estaba cerrando, corta ese fundido en seco).
+        // The whole layer goes opaque without animating; if it was closing, that cuts the fade dead.
         SidebarHost.Transitions = null;
         SidebarHost.Opacity = 1;
         SidebarHost.IsVisible = true;
 
-        // Animacion de entrada: el panel de etiquetas funde y las etiquetas entran EN CASCADA
-        // deslizandose desde los iconos (que ya estaban ahi).
+        // Entry animation: the label panel fades in and the labels CASCADE in, sliding from the icons
+        // that were already there.
         FadeIn(Col0Layer, _col0In);
         AnimateLabelsIn();
 
         UpdateSidebar(animateBar: false);
     }
 
-    // Cierra la barra y devuelve el foco al contenido (el tile en _focus). Es la MISMA animacion de
-    // apertura AL REVES: primero se recogen las filas en cascada inversa (la de abajo primero,
-    // subiendo) volviendo hacia los iconos, y solo DESPUES se funden los paneles y la 2a columna se
-    // mete detras de las etiquetas; asi ningun panel desaparece antes que su contenido. La capa se
-    // oculta al terminar. El estado pasa a Closed ya, para que el mando vuelva a controlar el
-    // contenido inmediatamente.
+    // Closes the bar and returns focus to the content (the tile in _focus). It is the opening animation
+    // REVERSED: the rows retract first in reverse cascade (bottom first, working up) back towards the
+    // icons, and only THEN do the panels fade and the second column tuck behind the labels - so no
+    // panel disappears before its contents. The layer is hidden when it finishes. State goes to Closed
+    // immediately so the controller drives the content again straight away.
     private void CloseSidebar()
     {
         _sidebarState = SidebarState.Closed;
 
         AnimateLabelsOut();
-        FadeOut(SidebarHost, _hostOut); // el fundido de los paneles lleva su retardo dentro
+        FadeOut(SidebarHost, _hostOut); // the panel fade carries its own delay
         if (_subShown)
         {
             AnimateSubTilesOut();
             SlideOut(Col1Layer, _col1Out, Col1SlideX);
         }
 
-        // La barrita del activo vuelve deslizandose a la SECCION ACTIVA (Home) mientras se funde: asi
-        // acaba justo encima de la barrita del rail colapsado, en vez de verse dos barras a la vez.
+        // The active bar slides back to the ACTIVE SECTION (Home) while fading, so it ends up right on
+        // top of the collapsed rail's bar instead of two bars being visible at once.
         MoveActiveBar(ActiveSectionRow, animate: true);
 
-        // El rail vuelve a su tono y adornos de estado colapsado, tambien fundiendo.
+        // The rail returns to its collapsed tone and decorations, also by fading.
         RailPanel.Fill = RailToneCollapsed;
         RailDivider.Opacity = 1;
         RailShadow.Opacity = 1;
         RailActiveBar.Opacity = 1;
 
-        UpdateSelection(); // el anillo del contenido vuelve a encenderse
+        UpdateSelection(); // the content ring comes back on
 
         _closeTimer ??= CreateCloseTimer();
         _closeTimer.Stop();
         _closeTimer.Start();
     }
 
-    // Remata el cierre: cuando la salida ha terminado, oculta la capa entera (asi deja de pintarse).
+    // Finishes the close: once the exit is done, hides the whole layer so it stops being painted.
     private DispatcherTimer CreateCloseTimer()
     {
-        // Tiene que cubrir la salida ENTERA: la cascada inversa de las filas (la ultima arranca tras
-        // NavRows.Length-1 escalones) y, despues, el fundido retardado de los paneles.
+        // Must cover the ENTIRE exit: the rows' reverse cascade (the last one starts after
+        // NavRows.Length-1 steps) and, after that, the delayed panel fade.
         var cascadeMs = (NavRows.Length - 1) * LabelOutStepMs + LabelOutMs;
         var panelsMs = PanelOutDelayMs + Math.Max(SidebarOutMs, Col1OutMs);
         var timer = new DispatcherTimer
@@ -696,7 +686,7 @@ public partial class StoreView : UserControl
             if (_sidebarState == SidebarState.Closed)
             {
                 SidebarHost.IsVisible = false;
-                ReleaseBackdrop(); // la barra ya no se ve: se sueltan los ~8 MB de la foto
+                ReleaseBackdrop(); // the bar is no longer visible: release the snapshot's ~8 MB
             }
         };
         return timer;
@@ -726,7 +716,7 @@ public partial class StoreView : UserControl
                     return;
                 case GamepadButton.Right:
                 case GamepadButton.A when !NavRows[_col0Focus].IsClose:
-                    // Entrar a la 2a columna, solo si la categoria tiene subcategorias.
+                    // Enter the second column, only if the category has subcategories.
                     if (NavRows[_col0Focus].Subs.Length > 0)
                     {
                         _sidebarState = SidebarState.Col1;
@@ -735,9 +725,9 @@ public partial class StoreView : UserControl
                     }
 
                     return;
-                // Cerrar la barra: solo con B o con A sobre CLOSE. IZQUIERDA aqui NO hace nada (a
-                // proposito): estando ya en la columna de etiquetas, volver a la izquierda
-                // cerraba la barra y devolvia el foco al contenido, que no es lo que se busca.
+                // Closing the bar: B, or A on CLOSE. LEFT deliberately does nothing here - from the
+                // label column, going left again used to close the bar and hand focus back to the
+                // content, which is not what is wanted.
                 case GamepadButton.A when NavRows[_col0Focus].IsClose:
                 case GamepadButton.B:
                     CloseSidebar();
@@ -747,7 +737,7 @@ public partial class StoreView : UserControl
             return;
         }
 
-        // Col1 (subcategorias).
+        // Col1 (subcategories).
         switch (button)
         {
             case GamepadButton.Up:
@@ -772,8 +762,8 @@ public partial class StoreView : UserControl
                 UpdateSidebar();
                 return;
             case GamepadButton.A:
-                // Abrir la subcategoria, si ya tiene pantalla. La barra se cierra primero (con su
-                // animacion) para no dejarla puesta debajo de la pagina nueva.
+                // Open the subcategory if it already has a screen. The bar closes first, with its
+                // animation, so it is not left sitting under the new page.
                 var sub = NavRows[_col0Focus].Subs[_col1Focus];
                 if (HasPage(sub))
                 {
@@ -785,28 +775,29 @@ public partial class StoreView : UserControl
         }
     }
 
-    // Refresca la barra segun el estado: barra del activo en la fila enfocada de col0, colores de las
-    // etiquetas (blanca la enfocada/activa, gris el resto) y la 2a columna (tiles de la categoria
-    // enfocada + anillo en la subcategoria enfocada, solo cuando estamos dentro de col1).
+    // Refreshes the bar for the current state: active bar on col0's focused row, label colours (white
+    // for the focused one, grey for the rest) and the second column (tiles for the focused category
+    // plus a ring on the focused subcategory, only while focus is inside col1).
     private void UpdateSidebar(bool animateBar = true)
     {
-        // Barra del activo (color del tema): se DESLIZA hasta la fila enfocada (translateY animado).
-        // Al abrir la barra se coloca de golpe (animateBar=false) para no verla viajar desde la fila 0.
+        // Active bar (theme colour): SLIDES to the focused row via animated translateY. On opening it is
+        // placed instantly (animateBar=false) so it is not seen travelling from row 0.
         MoveActiveBar(_col0Focus, animateBar);
 
-        // Etiquetas: blanca la fila enfocada, gris el resto (el cambio de color lo funde su transicion).
+        // Labels: white for the focused row, grey for the rest; the colour change is faded by its own
+        // transition.
         for (var i = 0; i < _sidebarLabels.Count; i++)
         {
             _sidebarLabels[i].Foreground = i == _col0Focus ? Brushes.White : LabelIdle;
         }
 
-        // 2a columna. Tres casos:
-        //  - aparece (categoria con subcategorias viniendo de una sin ellas): emerge desde DETRAS de
-        //    las etiquetas deslizandose a la derecha;
-        //  - cambia de lista (de Games a Movies & TV, p.ej.): los tiles se refrescan con un
-        //    deslizamiento corto para que se note el cambio sin re-desplegar toda la columna;
-        //  - desaparece: se retira metiendose de nuevo detras de las etiquetas (no se corta de golpe;
-        //    los tiles se quedan puestos hasta que la columna es invisible).
+        // Second column. Three cases:
+        //  - it appears (a category with subcategories, coming from one without): emerges from BEHIND
+        //    the labels, sliding right;
+        //  - the list changes (Games to Apps, say): tiles refresh with a short slide so the change
+        //    registers without re-unfolding the whole column;
+        //  - it disappears: withdraws back behind the labels (not cut off - the tiles stay put until
+        //    the column is invisible).
         var subs = NavRows[_col0Focus].Subs;
         var wantSub = subs.Length > 0;
         if (wantSub)
@@ -819,15 +810,15 @@ public partial class StoreView : UserControl
             }
             else if (!ReferenceEquals(subs, _lastSubs))
             {
-                BuildSubTiles(subs); // la cascada de los tiles nuevos ya la lanza BuildSubTiles
+                BuildSubTiles(subs); // BuildSubTiles already kicks off the new tiles' cascade
             }
 
             _lastSubs = subs;
         }
         else if (_subShown)
         {
-            // Se retira metiendose detras de las etiquetas Y fundiendo (aqui la barra sigue abierta,
-            // asi que la columna tiene que desaparecer por si misma).
+            // Withdraws behind the labels AND fades: the bar itself stays open here, so the column has
+            // to disappear on its own.
             Col1Layer.Transitions = _col1Hide;
             Col1Layer.Opacity = 0;
             Col1Layer.RenderTransform = TransformOperations.Parse(TranslateX(Col1SlideX));
@@ -836,7 +827,7 @@ public partial class StoreView : UserControl
 
         _subShown = wantSub;
 
-        // El anillo de foco solo se enciende cuando el foco esta DENTRO de col1.
+        // The focus ring only lights up while focus is INSIDE col1.
         var showRing = _sidebarState == SidebarState.Col1;
         for (var i = 0; i < _subRings.Count; i++)
         {
@@ -844,9 +835,9 @@ public partial class StoreView : UserControl
         }
     }
 
-    // Coloca la barrita del activo en una fila. La barra vive fijada en la fila 0 y se mueve con
-    // translateY (una propiedad animable) para poder DESLIZARSE de fila a fila; con animate=false se
-    // pone de golpe (al abrir la barra, para no verla viajar desde arriba).
+    // Places the active bar on a row. It is pinned to row 0 and moved with translateY, an animatable
+    // property, so it can SLIDE between rows; animate=false places it instantly (used when opening, so
+    // it is not seen travelling down from the top).
     private void MoveActiveBar(int row, bool animate)
     {
         var trans = SidebarActiveBar.Transitions;
@@ -864,10 +855,9 @@ public partial class StoreView : UserControl
         }
     }
 
-    // (Re)construye los tiles de la 2a columna para una lista de subcategorias. Si esta vacia, la
-    // columna queda sin tiles (categoria sin subcategorias, p.ej. Home/Search). Los tiles entran EN
-    // CASCADA (uno detras de otro), igual que las etiquetas: se nota que la lista "se llena" en vez
-    // de aparecer de golpe, tanto al desplegar la columna como al cambiar de categoria.
+    // (Re)builds the second column's tiles for a list of subcategories. An empty list leaves the column
+    // without tiles. The tiles CASCADE in one after another, like the labels, so the list reads as
+    // filling up rather than popping - both when the column unfolds and when the category changes.
     private void BuildSubTiles(string[] subs)
     {
         SidebarSubHost.Children.Clear();
@@ -901,8 +891,8 @@ public partial class StoreView : UserControl
                 Margin = new Thickness(28, 0, 0, 0),
             };
 
-            // Anillo de seleccion (sigue el color del tema, como el resto de la app), inflado 8. Se
-            // mueve con su tile durante la cascada para no quedarse descolocado.
+            // Selection ring (follows the theme colour, like the rest of the app), inflated 8. It moves
+            // with its tile during the cascade so it never ends up offset.
             var ring = new Border
             {
                 Width = SubTileWidth + 16,
@@ -921,23 +911,23 @@ public partial class StoreView : UserControl
         AnimateSubTilesIn();
     }
 
-    // SOMBRA de los tiles de subcategoria (solo estos botones, nada mas de la app la lleva).
-    // Medida pixel a pixel en "tienda barra lateral": justo DEBAJO del borde inferior de cada tile hay
-    // una franja oscura de ~3 px que baja el color unos 13 puntos (~24% de negro sobre el panel) y una
-    // cola tenue de ~10 px mas. En el borde izquierdo apenas hay 2-3 puntos y en el derecho nada ->
-    // no es un contorno: es una sombra ARROJADA HACIA ABAJO. Llevado a nuestro lienzo (la captura es
-    // 794 de alto, el nuestro 1080: factor 1,36) sale ~4 px de desplazamiento y ~12 de difuminado.
+    // SHADOW on the subcategory tiles - the only buttons in the app that have one.
+    // Measured pixel by pixel: just BELOW each tile's bottom edge there is a ~3 px dark band that drops
+    // the colour about 13 levels (~24% black over the panel) plus a faint ~10 px tail. The left edge
+    // shows barely 2-3 levels and the right none, so it is not an outline: it is a shadow CAST
+    // DOWNWARDS. Scaled to this canvas (the capture is 794 tall against 1080, factor 1.36) that comes
+    // to ~4 px offset and ~12 blur.
     private static DropShadowEffect SubTileShadow() => new()
     {
         OffsetX = 0,
         OffsetY = 3,
         BlurRadius = 10,
         Color = Colors.Black,
-        Opacity = 0.3, // calibrado por captura: con 0,45 oscurecia un 58%, muy lejos del 24% medido
+        Opacity = 0.3, // calibrated against the capture: 0.45 darkened 58%, far off the measured 24%
     };
 
-    // Transiciones de un tile de subcategoria: desliza + funde con retardo segun su posicion en la
-    // cascada (al entrar, de arriba abajo; al salir, al reves).
+    // A subcategory tile's transitions: slide plus fade, delayed by its position in the cascade (top
+    // down on entry, reversed on exit).
     private static Transitions SubTileTransitions(int step, bool entering = true) => new()
     {
         new TransformOperationsTransition
@@ -955,7 +945,7 @@ public partial class StoreView : UserControl
         },
     };
 
-    // Arranca la cascada de los tiles recien construidos (mismo patron que AnimateLabelsIn).
+    // Kicks off the cascade for the tiles just built (same pattern as AnimateLabelsIn).
     private void AnimateSubTilesIn()
     {
         foreach (var t in _subTiles)
@@ -977,8 +967,8 @@ public partial class StoreView : UserControl
         }, DispatcherPriority.Background);
     }
 
-    // La cascada de los tiles AL REVES (al cerrar): se va primero el de abajo y va subiendo. Cada tile
-    // lleva pegado su anillo en _subTiles (tile, anillo, tile, anillo...), de ahi el i/2 para la fila.
+    // The tile cascade REVERSED (on close): the bottom one leaves first, working up. _subTiles
+    // interleaves each tile with its ring (tile, ring, tile, ring...), hence the i/2 for the row.
     private void AnimateSubTilesOut()
     {
         var rows = _subRings.Count;
@@ -991,21 +981,21 @@ public partial class StoreView : UserControl
         }
     }
 
-    // Construye el filmstrip con CLONES en los extremos: [clon(N-1), 0, 1, ..., N-1, clon(0)]. Asi la
-    // pagina logica p queda en el indice de filmstrip p+1, y hay una pagina "de mas" a cada lado para
-    // que el wrap se deslice de forma continua antes de saltar (sin animar) a la pagina real.
+    // Builds the filmstrip with CLONES at the ends: [clone(N-1), 0, 1, ..., N-1, clone(0)]. Logical
+    // page p ends up at filmstrip index p+1, and there is one spare page on each side so the wrap can
+    // slide continuously before snapping (unanimated) to the real page.
     private void BuildHeroPages()
     {
         var n = HeroPages.Length;
-        HeroFilmstrip.Children.Add(BuildHeroPagePanel(HeroPages[n - 1])); // clon de la ultima (izq)
+        HeroFilmstrip.Children.Add(BuildHeroPagePanel(HeroPages[n - 1])); // clone of the last (left)
         foreach (var page in HeroPages)
         {
             HeroFilmstrip.Children.Add(BuildHeroPagePanel(page));
         }
-        HeroFilmstrip.Children.Add(BuildHeroPagePanel(HeroPages[0]));     // clon de la primera (dcha)
+        HeroFilmstrip.Children.Add(BuildHeroPagePanel(HeroPages[0]));     // clone of the first (right)
     }
 
-    // Un panel de pagina: color plano de placeholder + titulo + subtitulo (mas adelante ira el artwork).
+    // One page panel: flat placeholder colour plus title and subtitle (artwork comes later).
     private static Panel BuildHeroPagePanel(HeroPage page)
     {
         var panel = new Panel { Width = HeroWidth, Height = 553 };
@@ -1029,8 +1019,8 @@ public partial class StoreView : UserControl
         return panel;
     }
 
-    // Coloca el filmstrip en un indice (0..N+1). animate=false = "salto" del wrap sin transicion (quita
-    // y repone la transicion definida en el XAML para que el cambio sea instantaneo).
+    // Positions the filmstrip at an index (0..N+1). animate=false is the wrap snap: it removes and
+    // restores the XAML transition so the change is instant.
     private void SetFilm(int filmIndex, bool animate)
     {
         if (!animate)
@@ -1047,8 +1037,8 @@ public partial class StoreView : UserControl
         }
     }
 
-    // RB: pagina siguiente (el contenido se desliza a la izquierda). En la ultima, wrap CONTINUO a la
-    // primera (desliza al clon de la primera y luego salta a la real).
+    // RB: next page (content slides left). On the last one it wraps CONTINUOUSLY to the first: slide
+    // onto the first's clone, then snap to the real one.
     private void HeroNext()
     {
         if (_heroWrapping)
@@ -1063,7 +1053,7 @@ public partial class StoreView : UserControl
         }
         else
         {
-            SetFilm(HeroPages.Length + 1, animate: true); // clon de la primera (extremo derecho)
+            SetFilm(HeroPages.Length + 1, animate: true); // clone of the first (far right)
             _heroPage = 0;
             StartWrapSnap();
         }
@@ -1071,8 +1061,8 @@ public partial class StoreView : UserControl
         UpdateDots();
     }
 
-    // LB: pagina anterior (el contenido se desliza a la derecha). En la primera, wrap CONTINUO a la
-    // ultima (desliza al clon de la ultima y luego salta a la real).
+    // LB: previous page (content slides right). On the first one it wraps CONTINUOUSLY to the last:
+    // slide onto the last's clone, then snap to the real one.
     private void HeroPrev()
     {
         if (_heroWrapping)
@@ -1087,7 +1077,7 @@ public partial class StoreView : UserControl
         }
         else
         {
-            SetFilm(0, animate: true); // clon de la ultima (extremo izquierdo)
+            SetFilm(0, animate: true); // clone of the last (far left)
             _heroPage = HeroPages.Length - 1;
             StartWrapSnap();
         }
@@ -1095,7 +1085,7 @@ public partial class StoreView : UserControl
         UpdateDots();
     }
 
-    // Arranca el "salto" invisible del wrap: bloquea pulsaciones y, tras la animacion, SetFilm sin animar.
+    // Starts the wrap's invisible snap: blocks input and, after the animation, SetFilm without animating.
     private void StartWrapSnap()
     {
         _heroWrapping = true;
@@ -1103,7 +1093,7 @@ public partial class StoreView : UserControl
         _heroWrapTimer.Start();
     }
 
-    // Marca el punto activo (blanco) y el resto (blanco translucido).
+    // Marks the active dot white and the rest translucent white.
     private void UpdateDots()
     {
         for (var i = 0; i < _heroDots.Length; i++)
@@ -1124,15 +1114,14 @@ public partial class StoreView : UserControl
         }
     }
 
-    // Navegacion direccional por geometria (como el XYFocus de las consolas). El candidato tiene que
-    // caer en la direccion pedida (su centro mas alla del BORDE del tile actual: asi un tile que esta
-    // "al lado" y solo se solapa un poco no cuenta como "abajo"). Entre los candidatos se prefiere
-    // SIEMPRE a los ALINEADOS -los que se solapan con el actual en el eje perpendicular, o sea que
-    // estan en la misma columna/fila- por encima de los desalineados, sin importar la distancia. Esto
-    // es lo que hace que, con tiles de tamaños muy distintos (el hero enorme frente a las tarjetas),
-    // "arriba" desde la tarjeta inferior-derecha vaya a la superior-derecha (misma columna) y no salte
-    // en diagonal al hero. Entre los alineados gana el mas cercano; si no hay ninguno, se usa una
-    // puntuacion con penalizacion por el hueco lateral.
+    // Geometric directional navigation, like the consoles' XYFocus. A candidate has to lie in the
+    // requested direction - its centre past the current tile's EDGE, so a tile that merely sits
+    // alongside and overlaps slightly does not count as "below". ALIGNED candidates (those overlapping
+    // the current tile on the perpendicular axis, i.e. in the same row/column) ALWAYS beat unaligned
+    // ones, regardless of distance. That is what makes "up" from the bottom-right card go to the
+    // top-right card rather than cutting diagonally to the hero, despite the wildly different tile
+    // sizes. Among aligned candidates the nearest wins; with none, a score penalising the lateral gap
+    // is used.
     private int FindNeighbor(Direction dir)
     {
         var cur = _items[_focus];
@@ -1150,7 +1139,7 @@ public partial class StoreView : UserControl
 
             var it = _items[i];
 
-            // ¿esta el candidato en la direccion pedida? Centro mas alla del borde del actual.
+            // Is the candidate in the requested direction? Centre past the current tile's edge.
             var inDir = dir switch
             {
                 Direction.Left => it.CenterX < cur.X,
@@ -1164,8 +1153,8 @@ public partial class StoreView : UserControl
                 continue;
             }
 
-            double primary; // distancia en el eje del movimiento (entre centros)
-            double perpGap; // hueco entre bordes en el eje perpendicular (0 = alineados/solapados)
+            double primary; // distance along the movement axis (centre to centre)
+            double perpGap; // edge gap on the perpendicular axis (0 = aligned/overlapping)
             if (dir is Direction.Left or Direction.Right)
             {
                 primary = Math.Abs(it.CenterX - cur.CenterX);
@@ -1179,7 +1168,7 @@ public partial class StoreView : UserControl
 
             if (perpGap <= 0)
             {
-                // Alineado (misma columna/fila): gana el mas cercano en el eje del movimiento.
+                // Aligned (same row/column): nearest along the movement axis wins.
                 if (primary < bestAlignedPrimary)
                 {
                     bestAlignedPrimary = primary;
@@ -1188,7 +1177,7 @@ public partial class StoreView : UserControl
             }
             else
             {
-                // Desalineado: solo se usa si no hay ninguno alineado. Penaliza el hueco lateral.
+                // Unaligned: only used when nothing is aligned. The lateral gap is penalised.
                 var score = primary + perpGap * 2;
                 if (score < bestOtherScore)
                 {
