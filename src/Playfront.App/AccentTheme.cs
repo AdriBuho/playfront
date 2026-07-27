@@ -5,29 +5,26 @@ using Avalonia.Media;
 
 namespace Playfront.App;
 
-// Gestiona el color de acento del tema (el color de las selecciones: bordes, anillos, halos,
-// resaltes, circulo de "My color"). Antes el acento era un StaticResource fijo (#439941) con los
-// halos escritos literales en el XAML; ahora todo se deriva de UN color base y se publica como
-// recursos de la aplicacion que el XAML consume con DynamicResource, para poder cambiarlo en
-// caliente desde el selector de color. La eleccion se guarda en disco y se recarga al arrancar.
+// Theme accent colour: everything that marks selection (borders, rings, glows, highlights, the "My
+// color" swatch). It used to be a fixed StaticResource with the glows hard-coded in XAML; now it all
+// derives from ONE base colour published as application resources that XAML consumes through
+// DynamicResource, so the picker can change it live. The choice is persisted and reloaded at startup.
 public static class AccentTheme
 {
-    // Acento por defecto: "Bright green" (#5AA029), el verde de la rejilla del selector (r1c1). Se
-    // eligio uno de los 14 a proposito para que, al entrar al selector por primera vez, el color de
-    // sistema ya sea uno de la rejilla y salga su marca de "aplicado". Es el mas cercano al verde
-    // aprobado antes (#439941). Si no hay nada guardado, este.
+    // Default accent: "Bright green" (#5AA029), the green at grid position r1c1. Deliberately one of
+    // the 14 so that opening the picker for the first time already shows a grid entry marked as
+    // applied. Closest match to the previously approved #439941.
     public const string DefaultHex = "#5AA029";
 
-    // Los 14 colores del selector (ColorPickerScreen) con un nombre para mostrar en "My color".
-    // Mismo orden que la rejilla: fila 1 y luego fila 2.
-    // El unico nombre confirmado por una captura es "Bright green" (r1c1); el resto son
-    // descriptivos razonables (si aparecen los nombres reales de Xbox se cambian aqui).
-    // NOTAS:
-    // - "Navy" (#25458B, el azul mas oscuro) se sustituyo por BLANCO a proposito, para
-    //   poder tener la seleccion en blanco (como la Store de Xbox) eligiendolo como color de tema.
-    // - Orden: de MAS CLARO a MAS OSCURO (por luminancia percibida 0.299R+0.587G+0.114B), empezando
-    //   por el blanco arriba-izquierda. Fila 1 (indices 0-6) y luego fila 2 (7-13). ColorSwatchHexes
-    //   de MainWindow lleva EXACTAMENTE el mismo orden (mismo indice = mismo color).
+    // The 14 picker colours with a display name for "My color". Same order as the grid: row 1, then
+    // row 2. Only "Bright green" (r1c1) is a confirmed Xbox name; the rest are reasonable descriptions
+    // and can be corrected here if the real ones turn up.
+    //
+    // Two things not to "fix":
+    //  - "Navy" (#25458B, the darkest blue) was replaced by WHITE on purpose, so that picking it gives
+    //    a white selection like the Xbox Store.
+    //  - Order runs lightest to darkest by perceived luminance (0.299R+0.587G+0.114B), starting at
+    //    white. ColorSwatchHexes in MainWindow uses EXACTLY the same order — same index, same colour.
     public static readonly (string Hex, string Name)[] Palette =
     {
         ("#FFFFFF", "White"),     ("#DB5985", "Pink"),  ("#5AA029", "Bright green"), ("#D84F1F", "Orange"),
@@ -38,7 +35,7 @@ public static class AccentTheme
 
     private static string SettingsPath => AppData.File("accent.txt");
 
-    // Nombre a mostrar para un color de acento (el valor bajo "My color").
+    // Display name for an accent colour (the value shown under "My color").
     public static string NameFor(string hex)
     {
         foreach (var (h, n) in Palette)
@@ -67,7 +64,7 @@ public static class AccentTheme
         }
         catch
         {
-            // Si el archivo esta corrupto o no se puede leer, se usa el acento por defecto.
+            // Corrupt or unreadable: fall back to the default accent.
         }
 
         return DefaultHex;
@@ -82,16 +79,17 @@ public static class AccentTheme
         }
         catch
         {
-            // Guardar es "best effort": si falla, el tema sigue aplicado en esta sesion, solo no
-            // persiste al reiniciar.
+            // Best-effort: on failure the theme still applies for this session, it just won't survive
+            // a restart.
         }
     }
 
-    // Publica en los recursos de la app todos los colores/pinceles/sombras derivados del acento.
-    // Los halos son el MISMO tono del acento pero mas oscuros y saturados (glow1/2/3, de mas claro
-    // a mas oscuro) - la misma relacion que el verde (#439941 -> #007800/#006400/#004B00). Los
-    // factores de brillo (0.783/0.65/0.483) reproducen esos tres verdes a partir del acento base,
-    // asi que el tema verde por defecto queda visualmente identico al que estaba escrito a mano.
+    // Publishes every colour, brush and shadow derived from the accent as application resources.
+    //
+    // The glows are the accent's own hue, darker and more saturated (glow1/2/3, light to dark) — the
+    // same relationship the hand-written green had (#439941 -> #007800/#006400/#004B00). The
+    // brightness factors 0.783/0.65/0.483 reproduce those three greens from the base accent, so the
+    // default theme looks identical to the version that was written by hand.
     public static void Apply(Application app, Color accent)
     {
         var glow1 = Derive(accent, 0.783);
@@ -102,12 +100,12 @@ public static class AccentTheme
         res["AccentColor"] = accent;
         res["AccentBrush"] = new SolidColorBrush(accent);
         res["AccentFadedBrush"] = new SolidColorBrush(Color.FromArgb(0, accent.R, accent.G, accent.B));
-        // Version OSCURA del acento (mismo tono), para "tracks" tenues como el hueco del anillo de
-        // almacenamiento de la biblioteca (en Xbox ese hueco es un verde oscuro, no gris). Sigue el tema.
+        // Dark version of the accent (same hue) for faint tracks, such as the empty part of the
+        // library's storage meter — on Xbox that groove is dark green, not grey. Follows the theme.
         res["AccentTrackBrush"] = new SolidColorBrush(Derive(accent, 0.42));
 
-        // Sombras (halos) reconstruidas con el tono del acento. Los desenfoques/spreads/alpha son
-        // los mismos que tenia cada halo escrito a mano; solo cambia el color RGB.
+        // Glows rebuilt in the accent's hue. Blur, spread and alpha are the values each hand-written
+        // glow already had; only the RGB changes.
         res["HomeRingShadow"] = BoxShadows.Parse(
             $"0 0 3 1 {Hex(0xC0, accent)}, 0 0 5 3 {Hex(0xF2, glow1)}, 0 0 13 3 {Hex(0xA6, glow2)}, " +
             $"0 0 24 2 {Hex(0x59, glow3)}, inset 0 0 6 4 {Hex(0xF2, glow1)}, inset 0 0 12 3 {Hex(0x99, glow2)}");
@@ -120,10 +118,11 @@ public static class AccentTheme
 
     private static string Hex(byte alpha, Color c) => $"#{alpha:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
 
-    // Glow = mismo tono, saturacion al maximo, valor (brillo) reducido por el factor. EXCEPCION: para
-    // colores casi sin saturacion (blanco/gris), NO se fuerza la saturacion -eso daria un halo rojo,
-    // porque su tono por defecto es 0 (rojo)-: se mantiene el gris y solo se baja el brillo. Asi el
-    // acento BLANCO produce un halo blanco/gris (no rojo).
+    // Glow = same hue, saturation pushed to full, brightness scaled down.
+    //
+    // Exception for near-greyscale colours (white, grey): saturation is NOT forced, because their hue
+    // defaults to 0 — which is red — and a white accent would produce a red glow. Keeping them grey
+    // and only dimming gives a white accent a white glow.
     private static Color Derive(Color c, double valueFactor)
     {
         RgbToHsv(c, out var h, out var s, out var v);

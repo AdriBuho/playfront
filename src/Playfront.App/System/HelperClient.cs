@@ -8,15 +8,15 @@ using System.Threading.Tasks;
 
 namespace Playfront.App.System;
 
-/// <summary>Respuesta del servicio ayudante a un comando.</summary>
+/// <summary>Reply from the helper service to a command.</summary>
 public sealed record HelperResponse(bool Ok, string? Message);
 
 /// <summary>
-/// Cliente de la interfaz de Playfront (que corre SIN permisos) para pedirle acciones privilegiadas al
-/// servicio ayudante de Playfront (que corre como SYSTEM), por una tuberia con nombre segura. Mismo patron
-/// que la app de Xbox hablando con el servicio GamingServices: la UI pide, el ayudante ejecuta.
-/// La UI nunca hace el trabajo privilegiado ella misma; solo envia comandos concretos (ping, y mas
-/// adelante install-steam, set-tdp...).
+/// Client used by the Playfront UI (which runs unprivileged) to ask the Playfront helper service
+/// (which runs as SYSTEM) to perform privileged actions, over a named pipe.
+///
+/// The UI never does privileged work itself; it only sends specific commands (ping, and later
+/// install-steam, set-tdp...). That split is why the shell itself never needs to be elevated.
 /// </summary>
 public static class HelperClient
 {
@@ -36,14 +36,14 @@ public static class HelperClient
         var line = await reader.ReadLineAsync(ct);
         if (line == null)
         {
-            return new HelperResponse(false, "sin respuesta del ayudante");
+            return new HelperResponse(false, "no reply from the helper service");
         }
 
         return JsonSerializer.Deserialize<HelperResponse>(line, JsonOptions)
-               ?? new HelperResponse(false, "respuesta invalida del ayudante");
+               ?? new HelperResponse(false, "invalid reply from the helper service");
     }
 
-    /// <summary>¿Esta el servicio ayudante instalado y en marcha? (un ping rapido, sin lanzar excepciones).</summary>
+    /// <summary>Is the helper service installed and running? A quick ping that never throws.</summary>
     public static async Task<bool> IsRunningAsync()
     {
         try

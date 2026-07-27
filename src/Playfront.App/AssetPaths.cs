@@ -4,31 +4,28 @@ using System.IO;
 namespace Playfront.App;
 
 /// <summary>
-/// Donde estan los assets PESADOS (los fondos de vídeo y el arte de juegos, ~416 MB).
+/// Locates the heavy assets (game background video and artwork, ~416 MB).
 ///
-/// Van aparte del programa a proposito, y esto es una decision de arquitectura, no un detalle:
-///  - **El sistema de actualizacion no los toca.** Velopack reemplaza la carpeta del programa en cada
-///    actualizacion; si los assets vivieran ahi dentro, cada actualizacion arrastraria 416 MB en vez
-///    de los ~70 KB que cuesta hoy.
-///  - **Pueden ser opcionales.** El instalador puede ofrecer descargarlos o no.
-///  - **Se puede dejar de repartir un fichero concreto** (si una editora lo reclama) sin que se rompa
-///    ninguna instalacion.
+/// They ship separately from the program on purpose:
+///  - The updater never touches them. Velopack replaces the program folder on every update; if the
+///    assets lived there, each update would drag 416 MB instead of the ~70 KB it costs today.
+///  - They can be optional, so the installer may offer to skip them.
+///  - A single file can be withdrawn (if a publisher asks) without breaking any installation.
 ///
-/// Orden de busqueda, y por que en ese orden:
-///  1. **Junto al ejecutable** (`&lt;exe&gt;\Assets\Backgrounds`). Es el caso de desarrollo y el de una
-///     carpeta publicada que se copia a mano. Va primero para que trabajar en el repositorio se
-///     comporte siempre igual, aunque la maquina tenga tambien una instalacion de verdad.
-///  2. **La carpeta compartida de la maquina** (`%ProgramData%\Playfront\Assets\Backgrounds`), que es
-///     donde los deja el instalador. Es compartida (no por usuario) para no duplicar 416 MB si hay
-///     varias cuentas, y de solo lectura para la app: escribir ahi es cosa del instalador, que va
-///     elevado.
+/// Lookup order:
+///  1. Next to the executable (`&lt;exe&gt;\Assets\Backgrounds`) — development, and a published folder
+///     copied by hand. First so that working in the repository behaves the same way even on a machine
+///     that also has a real installation.
+///  2. The machine-wide folder (`%ProgramData%\Playfront\Assets\Backgrounds`), where the installer puts
+///     them. Machine-wide rather than per-user to avoid duplicating 416 MB across accounts, and
+///     read-only to the app: writing there is the installer's job, and it runs elevated.
 ///
-/// Si no aparecen en ningun sitio, la app arranca igual (verificado el 2026-07-26): fondo negro y los
-/// tiles como rectangulos grises. Eso es lo que hace posible retirar un fichero sin romper nada.
+/// With no assets anywhere the app still starts: black background and grey placeholder tiles. That is
+/// what makes withdrawing a file safe.
 /// </summary>
 internal static class AssetPaths
 {
-    /// <summary>Subcarpeta compartida donde el instalador deja los assets pesados.</summary>
+    /// <summary>Machine-wide subfolder where the installer puts the heavy assets.</summary>
     private const string SharedSubfolder = @"Playfront\Assets";
 
     private static readonly string LocalRoot =
@@ -39,12 +36,12 @@ internal static class AssetPaths
         SharedSubfolder, "Backgrounds");
 
     /// <summary>
-    /// Ruta completa en disco de un asset de fondos, a partir de su ruta relativa
-    /// (por ejemplo "Games/halo.mp4"). Devuelve la primera que exista de verdad.
+    /// Full on-disk path for a background asset given its relative path (for example "Games/halo.mp4").
+    /// Returns the first location that actually exists.
     ///
-    /// Si no existe en ningun sitio devuelve la ruta local, para que quien la use vea "no esta" en el
-    /// sitio esperado en vez de una ruta rara del sistema — el mensaje de error importa cuando esto
-    /// falla en la maquina de otra persona y solo tenemos el registro para diagnosticar.
+    /// When it exists nowhere, returns the local path so the caller reports "missing" at the expected
+    /// location rather than at some system path. That message is all we get when this fails on someone
+    /// else's machine.
     /// </summary>
     public static string Background(string relativePath)
     {
@@ -60,13 +57,13 @@ internal static class AssetPaths
     }
 
     /// <summary>
-    /// Si los assets pesados estan disponibles en algun sitio. Sirve para que la interfaz pueda
-    /// EXPLICAR por que esta todo vacio en vez de callarse (norma de "degradar, nunca reventar").
+    /// Whether the heavy assets are available anywhere. Lets the UI explain why everything is empty
+    /// instead of staying silent.
     /// </summary>
     public static bool HeavyAssetsAvailable =>
         Directory.Exists(Path.Combine(LocalRoot, "Games")) ||
         Directory.Exists(Path.Combine(SharedRoot, "Games"));
 
-    /// <summary>Las dos rutas donde se busca, para escribirlas en el registro al arrancar.</summary>
-    public static string Describe() => $"assets locales='{LocalRoot}', compartidos='{SharedRoot}'";
+    /// <summary>Both search paths, for the startup log entry.</summary>
+    public static string Describe() => $"local assets='{LocalRoot}', shared='{SharedRoot}'";
 }

@@ -5,16 +5,14 @@ using System.Threading.Tasks;
 namespace Playfront.App;
 
 /// <summary>
-/// Red de seguridad ante caidas (P0 de la auditoria), capa de REGISTRO + guardas por superficie.
-/// Playfront va a ser el shell (sustituye a explorer.exe): un fallo no capturado deja la consola en negro,
-/// asi que:
-///  - <see cref="Guard"/> envuelve cada superficie del hilo de UI (ticks de temporizador, input,
-///    callbacks) para que un fallo PUNTUAL se registre y la app SIGA viva, en vez de morir por algo
-///    de lo que se podria haber recuperado.
-///  - <see cref="Install"/> engancha los eventos globales de .NET solo para REGISTRAR lo que se escape
-///    (NO recupera: en .NET moderno saltan con el proceso ya muriendo; la recuperacion real la dara el
-///    vigilante externo, la otra pieza de P0).
-/// El log se escribe en %LocalAppData%\Playfront\playfront.log.
+/// Crash safety net: logging plus per-surface guards. Playfront is meant to replace explorer.exe as
+/// the shell, where an unhandled exception leaves the console staring at a black screen. So:
+///  - <see cref="Guard"/> wraps every UI-thread surface (timer ticks, input, callbacks) so a one-off
+///    failure is logged and the app stays alive instead of dying from something recoverable.
+///  - <see cref="Install"/> hooks .NET's global events only to LOG whatever escapes. It does not
+///    recover: on modern .NET those fire with the process already going down. Recovery is the
+///    external watchdog's job.
+/// The log lives at %LocalAppData%\Playfront\playfront.log.
 /// </summary>
 internal static class CrashLog
 {
@@ -24,15 +22,15 @@ internal static class CrashLog
     private static string BuildLogPath()
     {
         var dir = AppData.Folder;
-        try { Directory.CreateDirectory(dir); } catch { /* si no se puede crear, Log lo ignora */ }
+        try { Directory.CreateDirectory(dir); } catch { /* if it can't be created, Log swallows it */ }
         return Path.Combine(dir, "playfront.log");
     }
 
-    // Engancha los gestores globales de .NET. Llamar UNA vez, lo antes posible (Program.Main).
+    // Hooks .NET's global handlers. Call once, as early as possible (Program.Main).
     public static void Install()
     {
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
-            Log("AppDomain.UnhandledException" + (e.IsTerminating ? " (terminando)" : ""), e.ExceptionObject as Exception);
+            Log("AppDomain.UnhandledException" + (e.IsTerminating ? " (terminating)" : ""), e.ExceptionObject as Exception);
         TaskScheduler.UnobservedTaskException += (_, e) =>
         {
             Log("UnobservedTaskException", e.Exception);
@@ -40,8 +38,8 @@ internal static class CrashLog
         };
     }
 
-    // Ejecuta una accion capturando y registrando cualquier excepcion. El fallo NO se propaga: la app
-    // sigue viva. Usar en cada superficie del hilo de UI que, de fallar, tumbaria todo (ticks, input...).
+    // Runs an action, logging any exception. The failure does not propagate: the app stays alive.
+    // Use on every UI-thread surface that would otherwise take everything down (ticks, input...).
     public static void Guard(Action action, string context)
     {
         try
@@ -54,9 +52,9 @@ internal static class CrashLog
         }
     }
 
-    // Apunta un dato informativo (no un fallo) en el mismo registro. Existe porque, sin telemetria
-    // ninguna, el registro local es LO UNICO con lo que se puede diagnosticar un "se me ha roto" en
-    // la maquina de otra persona: conviene que diga al menos que version arranco y cuando.
+    // Records an informational entry in the same log. With no telemetry at all, this local log is the
+    // only way to diagnose an "it broke" report from someone else's machine, so it should at least say
+    // which version started and when.
     public static void Info(string message)
     {
         try
@@ -69,7 +67,7 @@ internal static class CrashLog
         }
         catch
         {
-            // El propio registro nunca debe tumbar la app.
+            // Logging itself must never take the app down.
         }
     }
 
@@ -85,7 +83,7 @@ internal static class CrashLog
         }
         catch
         {
-            // El propio registro nunca debe tumbar la app (disco lleno, permisos, etc.).
+            // Logging itself must never take the app down (disk full, permissions, etc.).
         }
     }
 }

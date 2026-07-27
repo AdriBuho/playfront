@@ -3,23 +3,23 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace Playfront.Helper;
 
-// Verifica que un ejecutable tiene una firma Authenticode VALIDA y de confianza (via WinVerifyTrust de
-// Windows, que comprueba tanto la cadena de certificados como que el contenido no se ha manipulado) Y
-// que el firmante es Valve. Es OBLIGATORIO antes de ejecutar el instalador de Steam: el ayudante corre
-// como SYSTEM, asi que ejecutar un binario descargado sin verificar la firma seria un agujero grave.
+// Checks that an executable carries a VALID, trusted Authenticode signature (via Windows'
+// WinVerifyTrust, which validates both the certificate chain and that the contents weren't tampered
+// with) AND that the signer is Valve. Mandatory before running the Steam installer: the helper runs
+// as SYSTEM, so executing a downloaded binary without verifying its signature would be a serious hole.
 internal static class SignatureVerifier
 {
     public static bool VerifyValve(string filePath, out string signer)
     {
-        signer = "(desconocido)";
+        signer = "(unknown)";
 
-        // (1) La firma es valida y de confianza (hash intacto + cadena hasta una CA de confianza).
+        // (1) Signature valid and trusted: hash intact, chain up to a trusted CA.
         if (!IsAuthenticodeTrusted(filePath))
         {
             return false;
         }
 
-        // (2) El firmante es Valve.
+        // (2) The signer is Valve.
         try
         {
             using var cert = new X509Certificate2(X509Certificate.CreateFromSignedFile(filePath));
@@ -69,13 +69,13 @@ internal static class SignatureVerifier
             var action = WinTrustActionGenericVerifyV2;
             int result = WinVerifyTrust(IntPtr.Zero, ref action, pData);
 
-            // Cerrar el estado que abrio la verificacion (obligatorio para no filtrar).
+            // Close the state the verification opened, or it leaks.
             var closeData = Marshal.PtrToStructure<WinTrustData>(pData);
             closeData.dwStateAction = WtdStateActionClose;
             Marshal.StructureToPtr(closeData, pData, false);
             WinVerifyTrust(IntPtr.Zero, ref action, pData);
 
-            return result == 0; // 0 = firma valida y de confianza
+            return result == 0; // 0 = signature valid and trusted
         }
         finally
         {

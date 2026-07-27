@@ -3,8 +3,8 @@ using System.Runtime.InteropServices;
 namespace Playfront.App.System;
 
 /// <summary>
-/// Lee el estado real de la batería de Windows vía la API nativa <c>GetSystemPowerStatus</c>
-/// (kernel32.dll) — igual de directo que leer el mando por XInput, sin librerías externas.
+/// Reads real battery state from Windows through the native <c>GetSystemPowerStatus</c>
+/// (kernel32.dll) — as direct as reading the gamepad through XInput, with no external libraries.
 /// </summary>
 public sealed class BatteryMonitor
 {
@@ -27,15 +27,15 @@ public sealed class BatteryMonitor
     private const byte ChargingFlag = 8;
     private const byte AcOnline = 1;
 
-    /// <summary>Porcentaje de batería (0-100), o null si Windows no sabe darlo (p.ej. sin batería).</summary>
+    /// <summary>Battery percentage (0-100), or null when Windows can't report it (no battery).</summary>
     public int? Percent { get; private set; }
 
-    /// <summary>Windows dice que la batería está ganando carga activamente. Deja de ser true
-    /// en cuanto llega al 100%, aunque siga enchufada — por eso normalmente interesa mas
-    /// <see cref="IsPluggedIn"/> para saber si esta "conectada a la corriente".</summary>
+    /// <summary>Windows reports the battery is actively gaining charge. This goes false as soon as it
+    /// reaches 100%, even while still plugged in — which is why <see cref="IsPluggedIn"/> is usually
+    /// the one you want for "on mains power".</summary>
     public bool IsCharging { get; private set; }
 
-    /// <summary>El cable de corriente está conectado, este o no la batería ya al 100%.</summary>
+    /// <summary>Mains power is connected, whether or not the battery is already full.</summary>
     public bool IsPluggedIn { get; private set; }
 
     public void Refresh()

@@ -2,13 +2,13 @@ using Playfront.Helper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-// Punto de entrada del ayudante de Playfront. Dos modos:
-//  (1) Gestion del servicio desde linea de comandos (requiere admin UNA vez):
-//        Playfront.Helper.exe --install    -> se registra como servicio de Windows y arranca
-//        Playfront.Helper.exe --uninstall  -> lo para y lo borra
-//        Playfront.Helper.exe --status     -> muestra su estado
-//  (2) Sin argumentos: lo lanza el Administrador de servicios de Windows y corre como servicio SYSTEM,
-//      atendiendo peticiones de la interfaz de Playfront por la tuberia con nombre (ver PipeServer).
+// Entry point of the Playfront helper. Two modes:
+//  (1) Service management from the command line (needs admin ONCE):
+//        Playfront.Helper.exe --install    -> registers as a Windows service and starts it
+//        Playfront.Helper.exe --uninstall  -> stops and removes it
+//        Playfront.Helper.exe --status     -> prints its state
+//  (2) No arguments: started by the Windows Service Control Manager, runs as SYSTEM and serves
+//      requests from the Playfront UI over the named pipe (see PipeServer).
 if (args.Length > 0)
 {
     switch (args[0].ToLowerInvariant())

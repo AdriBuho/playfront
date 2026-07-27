@@ -5,21 +5,20 @@ using System.Reflection;
 namespace Playfront.App;
 
 /// <summary>
-/// La version de Playfront, para mostrarla en pantalla y escribirla en el registro de la app.
-/// No hay ningun numero escrito aqui a proposito: se lee del propio ejecutable, y ese numero lo
-/// pone la compilacion desde PlayfrontVersion en Directory.Build.props (unico sitio donde se define).
-/// Asi la version que se ve en la app NO puede desincronizarse de la del .exe ni de la del instalador.
+/// Playfront's version, for display and for the app log. No number is hard-coded here on purpose: it
+/// is read back from the executable, where the build stamps it from PlayfrontVersion in
+/// Directory.Build.props — the single place it is defined. That makes it impossible for the version
+/// shown in the app to drift from the .exe or the installer.
 /// </summary>
 internal static class PlayfrontVersion
 {
-    // Se calcula una sola vez: leer metadatos del ejecutable es barato pero no gratis, y esto se
-    // consulta desde la interfaz.
+    // Computed once: reading executable metadata is cheap but not free, and the UI asks for this.
     private static readonly Lazy<string> Lazy = new(Read);
 
-    /// <summary>Version corta, tal como se ensena al usuario. Ejemplo: "0.1.0".</summary>
+    /// <summary>Short version, as shown to the user. For example "0.1.0".</summary>
     public static string Current => Lazy.Value;
 
-    /// <summary>Lo que se ensena en la interfaz. Ejemplo: "Playfront 0.1.0".</summary>
+    /// <summary>What the UI displays. For example "Playfront 0.1.0".</summary>
     public static string Display => "Playfront " + Current;
 
     private static string Read()
@@ -28,31 +27,27 @@ internal static class PlayfrontVersion
         {
             var assembly = Assembly.GetExecutingAssembly();
 
-            // InformationalVersion es la que refleja <Version> tal cual (AssemblyVersion siempre
-            // anade un ".0" de mas y FileVersion tampoco admite sufijos tipo "-beta").
+            // InformationalVersion is the one that mirrors <Version> verbatim: AssemblyVersion always
+            // appends an extra ".0", and FileVersion rejects suffixes such as "-beta".
             var informational = assembly
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
 
             if (!string.IsNullOrWhiteSpace(informational))
             {
-                // Algunas herramientas de compilacion le pegan "+<identificador del commit>";
-                // eso no le dice nada al usuario, asi que se recorta.
+                // Some build tooling appends "+<commit id>", which means nothing to the user.
                 var plus = informational.IndexOf('+');
                 return plus > 0 ? informational[..plus] : informational;
             }
 
-            // Reservas por si ese atributo no estuviera: las propiedades del fichero, y por ultimo
-            // la version del ensamblado.
+            // Fallbacks if that attribute is missing: file properties, then assembly version.
             var file = FileVersionInfo.GetVersionInfo(assembly.Location).FileVersion;
             if (!string.IsNullOrWhiteSpace(file)) return file;
 
-            // En ingles porque puede acabar en pantalla (norma: la interfaz de la app va en ingles).
             return assembly.GetName().Version?.ToString() ?? "unknown";
         }
         catch
         {
-            // Degradar, nunca reventar (norma de distribucion): no saber la version jamas debe
-            // impedir que la app arranque.
+            // Not knowing the version must never stop the app from starting.
             return "unknown";
         }
     }

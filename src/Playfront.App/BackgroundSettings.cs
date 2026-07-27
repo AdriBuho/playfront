@@ -3,31 +3,28 @@ using System.IO;
 
 namespace Playfront.App;
 
-// Gestiona el fondo de la home. Tres posibilidades: el video dinamico por defecto, uno de los 14
-// colores solidos del selector "Solid colors", o un video concreto elegido en "Dynamic backgrounds"
-// (p.ej. Modern Warfare III). La eleccion se guarda en disco y se recarga al arrancar, igual que
-// AccentTheme hace con el color de acento. Un archivo aparte del acento (background.txt) porque son
-// ajustes independientes: el color del tema (bordes/selecciones) y el fondo de pantalla no tienen
-// por que coincidir.
+// Home background selection. Three possibilities: the default dynamic video, one of the 14 solid
+// colours from the "Solid colors" picker, or a specific video chosen in "Dynamic backgrounds". The
+// choice is persisted and reloaded at startup, like AccentTheme does for the accent colour. It uses
+// its own file (background.txt) because the two are independent settings: the theme colour (borders,
+// selection) and the wallpaper need not match.
 public static class BackgroundSettings
 {
-    // Los 14 colores solidos, calcados PIXEL A PIXEL del centro de cada recuadro del frame del video
-    // ("How to Change your Background on Xbox Series X", pantalla "Solid colors", ~segundo 31). Fila
-    // 1 (indices 0..6) y luego fila 2 (7..13), en el mismo orden que la rejilla. Los recuadros de
-    // Xbox tienen un degradado vertical muy sutil; se toma el color del centro como representativo
-    // (igual que el selector de acento, que usa recuadros de color plano).
+    // The 14 solid colours, sampled pixel by pixel from the centre of each swatch in the Xbox
+    // reference. Row 1 is indices 0..6, row 2 is 7..13, in grid order. Xbox's swatches carry a very
+    // subtle vertical gradient; the centre colour is taken as representative.
     public static readonly string[] SolidPalette =
     {
         "#101010", "#389517", "#0F7464", "#0E70B3", "#14347A", "#852991", "#940F5C",
         "#3A3A3A", "#106C0F", "#0F6B6E", "#115CA8", "#5E3398", "#B8315E", "#780A1B",
     };
 
-    // Valor guardado: un hex "#RRGGBB" = ese color solido; "video:<ruta relativa a Assets/Backgrounds>"
-    // = ese video concreto; cualquier otra cosa (o nada) = video dinamico por defecto.
+    // Stored value: "#RRGGBB" means that solid colour; "video:<path relative to Assets/Backgrounds>"
+    // means that specific video; anything else (or nothing) means the default dynamic video.
     private static string SettingsPath => AppData.File("background.txt");
 
-    // Devuelve el hex del color solido guardado, o null si el fondo es el video dinamico (por
-    // defecto, o si no se puede leer el archivo).
+    // Hex of the stored solid colour, or null when the background is a video (default, or when the
+    // file can't be read).
     public static string? LoadSolidHex()
     {
         try
@@ -43,14 +40,14 @@ public static class BackgroundSettings
         }
         catch
         {
-            // Si el archivo esta corrupto o no se puede leer, se cae al video dinamico.
+            // Corrupt or unreadable: fall back to the dynamic video.
         }
 
         return null;
     }
 
-    // Devuelve la ruta (relativa a Assets/Backgrounds) del video dinamico concreto elegido, o null si
-    // el fondo no es un video concreto (color solido, o el video dinamico por defecto).
+    // Path (relative to Assets/Backgrounds) of the chosen video, or null when the background is not a
+    // specific video (solid colour, or the default dynamic one).
     public static string? LoadVideoRelPath()
     {
         try
@@ -66,7 +63,7 @@ public static class BackgroundSettings
         }
         catch
         {
-            // Si no se puede leer, se cae al video dinamico por defecto.
+            // Unreadable: fall back to the default dynamic video.
         }
 
         return null;
@@ -87,8 +84,8 @@ public static class BackgroundSettings
         }
         catch
         {
-            // Guardar es best-effort (igual que AccentTheme): si falla, el fondo sigue aplicado en
-            // esta sesion, solo no persiste al reiniciar.
+            // Best-effort, like AccentTheme: on failure the background still applies for this session,
+            // it just won't survive a restart.
         }
     }
 }

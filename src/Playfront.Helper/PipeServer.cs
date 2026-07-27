@@ -8,13 +8,14 @@ using Microsoft.Extensions.Logging;
 
 namespace Playfront.Helper;
 
-// Servidor de la tuberia con nombre por la que la interfaz de Playfront (sin permisos) le pide cosas al
-// ayudante (SYSTEM). Reglas de seguridad:
-//  - Tuberia LOCAL (\\.\pipe\PlayfrontHelper); las named pipes no salen a la red salvo que se pida, y no se
-//    pide. Con ACL que permite conectarse a usuarios locales autenticados (la UI de Playfront).
-//  - Solo VERBOS FIJOS Y SEGUROS (ver Dispatch). No existe "ejecuta esto": el llamante no puede hacer
-//    que el ayudante corra codigo arbitrario, solo disparar acciones concretas ya escritas aqui.
-// Protocolo: una linea JSON de peticion { "command": "...", ... } -> una linea JSON de respuesta
+// Named-pipe server through which the unprivileged Playfront UI asks the SYSTEM helper for work.
+// Two security rules hold the whole design together:
+//  - The pipe is LOCAL (\\.\pipe\PlayfrontHelper). Named pipes are not exposed over the network
+//    unless asked for, and this does not ask. Its ACL lets locally authenticated users connect.
+//  - Only FIXED, SPECIFIC verbs are accepted (see DispatchAsync). There is deliberately no "run this"
+//    command: a caller cannot make the helper execute arbitrary code, only trigger actions written
+//    here.
+// Protocol: one JSON request line { "command": "...", ... } -> one JSON reply line
 // { "ok": bool, "message": "..." }.
 public sealed class PipeServer : BackgroundService
 {
@@ -28,7 +29,7 @@ public sealed class PipeServer : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _log.LogInformation("Playfront Helper: servidor de tuberia escuchando en \\\\.\\pipe\\{Pipe}", PipeName);
+        _log.LogInformation("Playfront Helper: pipe server listening on \\\\.\\pipe\\{Pipe}", PipeName);
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -43,7 +44,7 @@ public sealed class PipeServer : BackgroundService
             }
             catch (Exception e)
             {
-                _log.LogError(e, "Error atendiendo la tuberia");
+                _log.LogError(e, "Error serving the pipe");
                 await Task.Delay(500, stoppingToken);
             }
         }
@@ -52,11 +53,11 @@ public sealed class PipeServer : BackgroundService
     private static NamedPipeServerStream CreatePipe()
     {
         var security = new PipeSecurity();
-        // Usuarios locales autenticados (la interfaz de Playfront corre como el usuario) pueden conectarse.
+        // Locally authenticated users may connect: the Playfront UI runs as the logged-in user.
         security.AddAccessRule(new PipeAccessRule(
             new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null),
             PipeAccessRights.ReadWrite, AccessControlType.Allow));
-        // El propio SYSTEM y los administradores, control total.
+        // SYSTEM itself and administrators get full control.
         security.AddAccessRule(new PipeAccessRule(
             new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null),
             PipeAccessRights.FullControl, AccessControlType.Allow));
@@ -88,28 +89,28 @@ public sealed class PipeServer : BackgroundService
         }
         catch (Exception e)
         {
-            _log.LogError(e, "Peticion invalida");
-            response = new Response(false, $"peticion invalida: {e.Message}");
+            _log.LogError(e, "Invalid request");
+            response = new Response(false, $"invalid request: {e.Message}");
         }
 
         await writer.WriteLineAsync(JsonSerializer.Serialize(response).AsMemory(), ct);
     }
 
-    // El unico sitio donde se decide QUE puede hacer el ayudante. Verbos concretos y seguros (mas
-    // adelante: set-tdp, ...). NUNCA un verbo generico de "ejecuta esto".
+    // The only place that decides WHAT the helper is allowed to do. Specific, safe verbs (later:
+    // set-tdp, ...). Never a generic "execute this".
     private async Task<Response> DispatchAsync(Request request)
     {
         switch (request.Command?.ToLowerInvariant())
         {
             case "ping":
                 var identity = WindowsIdentity.GetCurrent().Name;
-                _log.LogInformation("ping atendido (identidad: {Identity})", identity);
-                return new Response(true, $"pong — el ayudante corre como {identity}");
+                _log.LogInformation("ping served (identity: {Identity})", identity);
+                return new Response(true, $"pong — helper running as {identity}");
 
             case "steam-status":
             {
                 var (installed, path) = SteamInstaller.Detect();
-                return new Response(true, installed ? $"Steam instalado en {path}" : "Steam NO instalado");
+                return new Response(true, installed ? $"Steam installed at {path}" : "Steam NOT installed");
             }
 
             case "install-steam":
@@ -120,7 +121,7 @@ public sealed class PipeServer : BackgroundService
             }
 
             default:
-                return new Response(false, $"comando desconocido: '{request.Command}'");
+                return new Response(false, $"unknown command: '{request.Command}'");
         }
     }
 

@@ -8,19 +8,20 @@ using Vortice.MediaFoundation;
 
 namespace Playfront.App.Video;
 
-// Genera el poster (primer fotograma) de un video usando EXACTAMENTE el mismo decodificador que lo
-// reproduce en la home (Media Foundation por hardware, salida RGB32), no ffmpeg. Media Foundation y
-// ffmpeg convierten el color YUV->RGB de forma un poco distinta (rango/matriz de BT.709), y por eso el
-// poster sacado con ffmpeg no cuadra en color con el video al arrancar. Sacando el poster por ESTA via,
-// coincide por construccion.
+// Produces a video's poster frame using EXACTLY the same decoder that plays it on the home screen
+// (hardware Media Foundation, RGB32 output) rather than ffmpeg.
 //
-// Escribe los pixeles en crudo (BGRX, tal cual los da el decodificador) a un archivo; un paso posterior
-// con ffmpeg los pasa a JPG/PNG. Es un modo headless (sin ventana): se dispara con la variable de
-// entorno PLAYFRONT_CAPTURE_POSTER en Program.cs, decodifica un fotograma y sale, sin arrancar la interfaz.
+// This is not a preference: Media Foundation and ffmpeg convert YUV->RGB slightly differently (BT.709
+// range and matrix), so a poster extracted with ffmpeg does not match the video's colours at startup.
+// Extracting it this way makes them match by construction.
+//
+// Writes raw pixels (BGRX, exactly as the decoder hands them over) to a file; a later ffmpeg step
+// turns them into JPG/PNG. Headless mode: triggered by the PLAYFRONT_CAPTURE_POSTER environment
+// variable in Program.cs, decodes one frame and exits without starting the UI.
 internal static class PosterCapture
 {
-    // Decodifica el primer fotograma de videoPath y escribe sus pixeles BGRX en crudo a rawOutputPath.
-    // Devuelve el tamaño (para poder reconstruir la imagen con ffmpeg despues).
+    // Decodes the first frame of videoPath and writes its raw BGRX pixels to rawOutputPath.
+    // Returns the size, so the image can be reassembled with ffmpeg afterwards.
     public static (int width, int height) CaptureFirstFrameRaw(string videoPath, string rawOutputPath)
     {
         const DeviceCreationFlags flags = DeviceCreationFlags.VideoSupport | DeviceCreationFlags.BgraSupport;
@@ -52,7 +53,7 @@ internal static class PosterCapture
         using (var currentType = reader.GetCurrentMediaType(SourceReaderIndex.FirstVideoStream))
             MediaFactory.MFGetAttributeSize(currentType, MfGuids.MF_MT_FRAME_SIZE, out _, out _);
 
-        // Leer hasta el primer sample con imagen (los primeros ReadSample pueden venir vacios).
+        // Read until the first sample that carries a picture: the first ReadSample calls can be empty.
         IMFSample? sample = null;
         for (var i = 0; i < 120 && sample == null; i++)
         {
@@ -62,7 +63,7 @@ internal static class PosterCapture
                 break;
         }
         if (sample == null)
-            throw new InvalidOperationException("No se pudo leer el primer fotograma del video.");
+            throw new InvalidOperationException("Couldn't read the first frame of the video.");
 
         using (sample)
         using (var buffer = sample.ConvertToContiguousBuffer())
@@ -73,7 +74,7 @@ internal static class PosterCapture
             var subresource = dxgiBuffer.SubresourceIndex;
             var desc = frameTexture.Description;
 
-            // Textura "staging" (legible por CPU) del mismo formato, para copiar el fotograma y leerlo.
+            // Staging texture (CPU-readable) of the same format, to copy the frame into and read it.
             var stagingDesc = new Texture2DDescription
             {
                 Format = desc.Format,

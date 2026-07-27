@@ -9,11 +9,11 @@ using Avalonia.VisualTree;
 namespace Playfront.App.Video;
 
 /// <summary>
-/// Base para un control que le entrega a Avalonia una textura de la GPU directamente
-/// (sin copiarla nunca a memoria normal). Adaptado del sample oficial de Avalonia
-/// (samples/GpuInterop/DrawingSurfaceDemoBase.cs) - se encarga solo del "enganche" con el
-/// compositor (crear la superficie, mantener su tamaño sincronizado con el control); la clase
-/// derivada decide qué textura entregarle y cuándo.
+/// Base for a control that hands Avalonia a GPU texture directly, without ever copying it through
+/// system memory. Adapted from Avalonia's official sample
+/// (samples/GpuInterop/DrawingSurfaceDemoBase.cs). It only handles the compositor plumbing — creating
+/// the surface and keeping its size in sync with the control; the derived class decides which texture
+/// to hand over and when.
 /// </summary>
 public abstract class GpuCompositionControlBase : Control
 {
@@ -40,11 +40,10 @@ public abstract class GpuCompositionControlBase : Control
     {
         if (_initialized)
         {
-            // Orden IMPORTANTE: primero parar el trabajo de la GPU/hilo de video
-            // (FreeGraphicsResources pone _stop y espera a que el hilo de bombeo salga), y SOLO
-            // DESPUES soltar la superficie de dibujo. Al reves, el hilo de bombeo puede seguir
-            // usando la superficie mientras esta ya se libera -> excepciones y, en el peor caso,
-            // se realimenta el bloqueo mutuo del apagado.
+            // Order matters: stop the GPU/video work first (FreeGraphicsResources sets _stop and
+            // waits for the pump thread to exit), and only THEN release the drawing surface. The
+            // other way round, the pump thread can still be using the surface while it is being
+            // freed — exceptions, and at worst a deadlock on shutdown.
             FreeGraphicsResources();
             Surface?.Dispose();
         }
@@ -76,7 +75,7 @@ public abstract class GpuCompositionControlBase : Control
         }
     }
 
-    /// <summary>Se dispara si la inicializacion falla - de normal solo interesa para depurar.</summary>
+    /// <summary>Raised when initialisation fails; normally only of interest when debugging.</summary>
     public event Action<string>? Failed;
 
     private void UpdateFrame()
@@ -102,7 +101,7 @@ public abstract class GpuCompositionControlBase : Control
     {
         var interop = await compositor.TryGetCompositionGpuInterop();
         if (interop == null)
-            return (false, "El backend grafico actual no soporta interop de GPU con Avalonia");
+            return (false, "The current graphics backend does not support GPU interop with Avalonia");
         return InitializeGraphicsResources(compositor, compositionDrawingSurface, interop);
     }
 

@@ -2,10 +2,9 @@ using System.Diagnostics;
 
 namespace Playfront.Helper;
 
-// Registro/baja del ayudante como servicio de Windows, via sc.exe. Requiere permisos de administrador
-// (crear un servicio SYSTEM los exige) — ese es el UNICO momento en que hace falta elevacion, una sola
-// vez. Despues el servicio ya corre como SYSTEM y todo lo que hace es sin mas avisos (igual que
-// GamingServices de Xbox).
+// Registers and removes the helper as a Windows service through sc.exe. Creating a SYSTEM service
+// requires administrator rights, and this is the ONLY moment elevation is needed — once. After that
+// the service runs as SYSTEM and everything it does happens without further prompts.
 internal static class ServiceInstaller
 {
     public const string ServiceName = "PlayfrontHelper";
@@ -14,17 +13,17 @@ internal static class ServiceInstaller
 
     public static int Install()
     {
-        // Ruta al PROPIO ejecutable (el apphost Playfront.Helper.exe). OJO: hay que ejecutar el .exe
-        // directamente para instalar, no via "dotnet run" (si no, se registraria dotnet.exe).
+        // Path to this very executable (the Playfront.Helper.exe apphost). It must be run directly to
+        // install: through "dotnet run" it would register dotnet.exe as the service binary.
         var exe = Environment.ProcessPath;
         if (string.IsNullOrEmpty(exe) || !exe.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
         {
-            Console.Error.WriteLine("Ejecuta el propio Playfront.Helper.exe para instalar (no 'dotnet run').");
+            Console.Error.WriteLine("Run Playfront.Helper.exe itself to install (not 'dotnet run').");
             return 1;
         }
 
-        // sc create: el espacio tras "binPath=" es OBLIGATORIO; la ruta va entre comillas por si tiene
-        // espacios. start= auto para que arranque con Windows.
+        // sc create: the space after "binPath=" is mandatory, and the path is quoted in case it
+        // contains spaces. start= auto so it comes up with Windows.
         var r = Run("sc", $"create {ServiceName} binPath= \"{exe}\" start= auto DisplayName= \"{DisplayName}\"");
         if (r != 0) return r;
         Run("sc", $"description {ServiceName} \"{Description}\"");
@@ -51,7 +50,7 @@ internal static class ServiceInstaller
         using var p = Process.Start(psi);
         if (p == null)
         {
-            Console.Error.WriteLine($"No se pudo lanzar {file}.");
+            Console.Error.WriteLine($"Could not start {file}.");
             return 1;
         }
         Console.Write(p.StandardOutput.ReadToEnd());

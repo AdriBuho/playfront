@@ -2,10 +2,10 @@ using System;
 
 namespace Playfront.App.Video;
 
-// GUIDs de Media Foundation que no vienen ya definidos como constante "bonita" en Vortice.
-// Sacados directamente de las cabeceras oficiales de Windows (mfapi.h / mfreadwrite.h) - no se
-// pueden adivinar ni aproximar, un solo digito mal y el atributo correspondiente simplemente no
-// se aplica (sin error visible, el fallo es "se porta raro" en vez de "explota").
+// Media Foundation GUIDs that Vortice doesn't already expose as named constants. Taken verbatim from
+// the official Windows headers (mfapi.h / mfreadwrite.h). They cannot be guessed or approximated: one
+// wrong digit and the corresponding attribute is simply not applied, with no visible error — the
+// symptom is "behaves oddly", not "crashes".
 internal static class MfGuids
 {
     public static readonly Guid MF_SOURCE_READER_D3D_MANAGER = new("ec822da2-e1e9-4b29-a0d8-563c719f5269");
@@ -19,6 +19,6 @@ internal static class MfGuids
 
     public static readonly Guid MFMediaType_Video = new("73646976-0000-0010-8000-00aa00389b71");
 
-    // D3DFMT_X8R8G8B8 = 22 (0x16) -> RGB32 sin canal alfa util (el nuestro siempre opaco)
+    // D3DFMT_X8R8G8B8 = 22 (0x16) -> RGB32 with no meaningful alpha; ours is always opaque.
     public static readonly Guid MFVideoFormat_RGB32 = new("00000016-0000-0010-8000-00aa00389b71");
 }

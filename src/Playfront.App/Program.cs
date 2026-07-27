@@ -1,4 +1,4 @@
-﻿using Avalonia;
+using Avalonia;
 using System;
 using System.Runtime.InteropServices;
 using Velopack;
@@ -13,25 +13,21 @@ class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        // Velopack (el motor de actualizaciones) tiene que ir en la PRIMERA linea de Main, y no es un
-        // capricho de su documentacion: justo despues de instalar o de actualizar, el instalador
-        // relanza este mismo .exe con argumentos especiales para crear el acceso directo, limpiar la
-        // version anterior, etc. Esta llamada atiende esas peticiones y TERMINA el proceso sin abrir
-        // ninguna ventana. Si se arrancara la interfaz antes, en cada instalacion y en cada
-        // actualizacion se veria aparecer Playfront un instante y cerrarse solo.
-        // En un arranque normal no hace nada y sigue de largo.
+        // Velopack must be the FIRST line of Main. Right after installing or updating, the installer
+        // relaunches this same .exe with special arguments to create the shortcut, clean up the
+        // previous version and so on. This call services those requests and ends the process without
+        // opening a window. Starting the UI first would flash Playfront on screen and close it again
+        // on every install and every update. On a normal launch it does nothing and falls through.
         VelopackApp.Build().Run();
 
-        // LO PRIMERO de todo: si venimos de la epoca en que el proyecto se llamaba Atlas, mover los
-        // datos del usuario (%LocalAppData%\Atlas -> ...\Playfront) para no perder sus ajustes. Tiene
-        // que ir aqui arriba porque varias clases calculan su ruta una sola vez, la primera vez que se
-        // usan: moverla despues no tendria ningun efecto.
+        // Before anything else: move user data from the era when the project was called Atlas
+        // (%LocalAppData%\Atlas -> ...\Playfront). It has to run here because several classes resolve
+        // their path once, on first use — moving it later would have no effect.
         AppData.MigrateLegacyFolder();
 
-        // Modo oculto de captura de poster: decodifica el primer fotograma de un video con el MISMO
-        // decodificador que lo reproduce (Media Foundation), lo escribe en crudo y sale, SIN arrancar
-        // la interfaz. Sirve para generar posters que coinciden en color con el video (ver
-        // Video/PosterCapture.cs). Formato de la variable: "rutaVideo|rutaSalidaCruda".
+        // Hidden poster-capture mode: decodes a video's first frame with the SAME decoder that plays it
+        // (Media Foundation), writes it raw and exits without starting the UI. Used to generate posters
+        // whose colours match the video (see Video/PosterCapture.cs). Format: "videoPath|rawOutputPath".
         var capture = Environment.GetEnvironmentVariable("PLAYFRONT_CAPTURE_POSTER");
         if (!string.IsNullOrEmpty(capture))
         {
@@ -41,22 +37,21 @@ class Program
             return;
         }
 
-        // Red de seguridad (P0): engancha el registro global de errores lo antes posible, y protege
-        // el arranque/bucle principal. Si algo fatal tumba la app, queda registrado el motivo en
-        // %LocalAppData%\Playfront\playfront.log y el proceso muere (mas adelante el vigilante externo lo
-        // relanzara; la recuperacion real es cosa suya, no de aqui).
+        // Hooks the global error log as early as possible and guards startup and the main loop. If
+        // something fatal takes the app down, the reason lands in %LocalAppData%\Playfront\playfront.log
+        // and the process dies; relaunching is the external watchdog's job, not this one's.
         CrashLog.Install();
 
-        // Primera linea de cada arranque: que version es y sobre que Windows corre. Es la base del
-        // "informe de diagnostico" que pide la norma de distribucion - si alguien reporta un fallo,
-        // esto ya dice con que version le paso, sin necesidad de preguntarselo.
-        CrashLog.Info($"Playfront {PlayfrontVersion.Current} arrancando en Windows {Environment.OSVersion.Version} ({RuntimeInformation.ProcessArchitecture})");
+        // First line of every startup: which version, on which Windows. This is the base of the
+        // diagnostic report — when someone reports a problem, this already says which version it
+        // happened on without having to ask.
+        CrashLog.Info($"Playfront {PlayfrontVersion.Current} starting on Windows {Environment.OSVersion.Version} ({RuntimeInformation.ProcessArchitecture})");
 
-        // Si faltan los assets pesados (los ~416 MB de fondos y arte), la app funciona igual pero se ve
-        // vacia. Queda escrito para que un "se me ve todo gris" se diagnostique sin adivinar.
+        // Without the heavy assets the app works but looks empty. Logged so that "everything is grey"
+        // can be diagnosed without guessing.
         if (!AssetPaths.HeavyAssetsAvailable)
         {
-            CrashLog.Info($"Assets pesados NO encontrados: la interfaz se vera sin fondos ni arte. Buscados en {AssetPaths.Describe()}.");
+            CrashLog.Info($"Heavy assets NOT found: the UI will have no backgrounds or artwork. Searched {AssetPaths.Describe()}.");
         }
 
         try
@@ -74,9 +69,9 @@ class Program
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
-            // AngleEgl es el modo de dibujado que usa Direct3D 11 por debajo (en vez del modo
-            // por defecto) - hace falta para que el fondo de video por hardware pueda entregarle
-            // fotogramas a Avalonia sin pasar por la memoria normal (ver Video/HardwareVideoBackgroundControl.cs).
+            // AngleEgl renders through Direct3D 11 instead of the default backend. Required for the
+            // hardware video background to hand frames to Avalonia without going through system memory
+            // (see Video/HardwareVideoBackgroundControl.cs).
             .With(new Win32PlatformOptions { RenderingMode = [Win32RenderingMode.AngleEgl] })
 #if DEBUG
             .WithDeveloperTools()

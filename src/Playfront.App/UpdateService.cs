@@ -7,60 +7,57 @@ using Velopack.Sources;
 namespace Playfront.App;
 
 /// <summary>
-/// El motor del boton de "actualizar" (estilo Xbox): comprobar si hay version nueva, descargarla con
-/// progreso, y reiniciar en la version nueva. Es SOLO la logica: no dibuja nada, para que la pantalla
-/// que la use (System -> Console info, cuando exista) sea la unica dueña de como se ve.
+/// Check for a new version, download it, and restart into it. Logic only — it draws nothing, so the
+/// screen that uses it owns the whole appearance.
 ///
-/// Por debajo usa Velopack (MIT). Detalles que condicionan el diseño:
-///  - Velopack instala en la carpeta del usuario, asi que actualizar NO pide permisos de administrador.
-///  - Solo funciona si la app se instalo con su instalador. Ejecutandola desde la carpeta de
-///    compilacion (o desde una copia a mano) no hay nada que actualizar: eso NO es un error, es
-///    <see cref="UpdateState.Unsupported"/>, y la interfaz tiene que decirlo en pantalla en vez de
-///    callarse (norma de distribucion: degradar, nunca reventar, y explicar por que).
+/// Backed by Velopack (MIT). Two consequences worth knowing:
+///  - It installs under the user's profile, so updating never prompts for administrator rights.
+///  - It only works when the app was installed by its installer. Running from a build output folder
+///    leaves nothing to update: that is <see cref="UpdateState.Unsupported"/>, not an error, and the
+///    UI is expected to say so rather than stay silent.
 /// </summary>
 internal enum UpdateState
 {
-    /// <summary>Sin comprobar todavia.</summary>
+    /// <summary>Not checked yet.</summary>
     Idle,
 
-    /// <summary>Preguntando si hay version nueva.</summary>
+    /// <summary>Asking whether a newer version exists.</summary>
     Checking,
 
-    /// <summary>No se puede actualizar desde aqui: la app no esta instalada con el instalador.</summary>
+    /// <summary>Can't update from here: not installed by the installer.</summary>
     Unsupported,
 
-    /// <summary>Comprobado: es la ultima version.</summary>
+    /// <summary>Checked: already on the latest version.</summary>
     UpToDate,
 
-    /// <summary>Hay version nueva, sin descargar.</summary>
+    /// <summary>A newer version exists, not downloaded yet.</summary>
     Available,
 
-    /// <summary>Descargando (mirar <see cref="UpdateService.Progress"/>).</summary>
+    /// <summary>Downloading (see <see cref="UpdateService.Progress"/>).</summary>
     Downloading,
 
-    /// <summary>Descargada y lista: al reiniciar se aplica.</summary>
+    /// <summary>Downloaded and staged: restarting applies it.</summary>
     ReadyToRestart,
 
-    /// <summary>Algo fallo (sin red, la fuente no responde, disco lleno...). Ver <see cref="UpdateService.LastError"/>.</summary>
+    /// <summary>Something failed (no network, source unreachable, disk full...). See <see cref="UpdateService.LastError"/>.</summary>
     Failed,
 }
 
 internal sealed class UpdateService
 {
     /// <summary>
-    /// De donde salen las actualizaciones. GitHub Releases porque no tiene tope de descargas ni de
-    /// tamaño y es gratis en repositorios publicos.
+    /// Where updates come from. GitHub Releases has no download or size caps and is free for public
+    /// repositories.
     ///
-    /// Tiene que coincidir EXACTAMENTE con el repositorio real. Si no coincide, no da error visible:
-    /// la comprobacion simplemente no encuentra nada y la app se queda callada creyendo que ya esta
-    /// al dia. Al renombrar o mover el repositorio, cambiar tambien esto.
+    /// This must match the real repository exactly. A mismatch produces no visible error: the check
+    /// simply finds nothing and the app stays quiet, believing it is up to date. Update this if the
+    /// repository is ever renamed or moved.
     /// </summary>
     private const string GithubRepository = "https://github.com/AdriBuho/playfront";
 
     /// <summary>
-    /// Valvula de escape para PROBAR en local: si esta puesta, las actualizaciones se buscan ahi
-    /// (una carpeta del disco o una URL) en vez de en GitHub. Mismo patron que
-    /// PLAYFRONT_CAPTURE_POSTER en Program.cs: nada de codigo de prueba dentro del producto.
+    /// Testing escape hatch: when set, updates are looked up there (a local folder or a URL) instead
+    /// of GitHub. Keeps test-only wiring out of the product.
     /// </summary>
     private const string SourceOverrideVariable = "PLAYFRONT_UPDATE_SOURCE";
 
@@ -69,9 +66,9 @@ internal sealed class UpdateService
 
     public UpdateService()
     {
-        // Construir el UpdateManager no toca la red; solo mira como esta instalada la app.
-        // Aun asi puede fallar (una instalacion a medias, permisos raros), y eso no debe impedir
-        // que la app arranque: se queda sin actualizaciones y lo dice.
+        // Building the UpdateManager touches no network; it only inspects how the app was installed.
+        // It can still throw (half-finished install, odd permissions), and that must not stop the app
+        // from starting: it just ends up without updates and says so.
         try
         {
             var over = Environment.GetEnvironmentVariable(SourceOverrideVariable);
@@ -88,33 +85,33 @@ internal sealed class UpdateService
         }
     }
 
-    /// <summary>En que punto esta. La interfaz pinta a partir de esto.</summary>
+    /// <summary>Where the process currently is. The UI renders from this.</summary>
     public UpdateState State { get; private set; } = UpdateState.Idle;
 
-    /// <summary>Progreso de descarga, 0-100. Solo tiene sentido en <see cref="UpdateState.Downloading"/>.</summary>
+    /// <summary>Download progress, 0-100. Only meaningful while <see cref="UpdateState.Downloading"/>.</summary>
     public int Progress { get; private set; }
 
-    /// <summary>Version que se instalaria, si hay alguna. Ejemplo: "0.1.1".</summary>
+    /// <summary>The version that would be installed, if any. For example "0.1.1".</summary>
     public string? AvailableVersion { get; private set; }
 
-    /// <summary>Por que fallo, en texto para el usuario (en ingles: norma de idioma de la interfaz).</summary>
+    /// <summary>Why it failed, phrased for the user.</summary>
     public string? LastError { get; private set; }
 
-    /// <summary>Se dispara en cada cambio de estado o de progreso, para que la interfaz se refresque.</summary>
+    /// <summary>Raised on every state or progress change, so the UI can repaint.</summary>
     public event Action? Changed;
 
     /// <summary>
-    /// Version instalada segun Velopack. Puede no coincidir con <see cref="PlayfrontVersion.Current"/>
-    /// si la app no se instalo con el instalador (ahi devuelve null).
+    /// Installed version according to Velopack. Differs from <see cref="PlayfrontVersion.Current"/>
+    /// when the app was not installed by the installer, where this returns null.
     /// </summary>
     public string? InstalledVersion => _manager?.CurrentVersion?.ToString();
 
-    /// <summary>Lo que ensena el boton de "buscar actualizaciones".</summary>
+    /// <summary>Asks whether a newer version exists.</summary>
     public async Task CheckAsync()
     {
         if (_manager is null || !_manager.IsInstalled)
         {
-            // Caso normalisimo en desarrollo (dotnet run) y en una copia de la carpeta publicada.
+            // Routine during development (dotnet run) and for a hand-copied build folder.
             LastError = "Updates are only available when Playfront is installed with its installer.";
             Set(UpdateState.Unsupported);
             return;
@@ -128,13 +125,13 @@ internal sealed class UpdateService
             {
                 AvailableVersion = null;
                 Set(UpdateState.UpToDate);
-                CrashLog.Info($"Updates: ya esta en la ultima version ({InstalledVersion}).");
+                CrashLog.Info($"Updates: already on the latest version ({InstalledVersion}).");
                 return;
             }
 
             AvailableVersion = _pending.TargetFullRelease.Version.ToString();
             Set(UpdateState.Available);
-            CrashLog.Info($"Updates: hay version nueva {AvailableVersion} (instalada {InstalledVersion}).");
+            CrashLog.Info($"Updates: {AvailableVersion} available (installed {InstalledVersion}).");
         }
         catch (Exception e)
         {
@@ -142,7 +139,7 @@ internal sealed class UpdateService
         }
     }
 
-    /// <summary>Descarga la version nueva. Deja la app usable mientras baja.</summary>
+    /// <summary>Downloads the new version. The app stays usable meanwhile.</summary>
     public async Task DownloadAsync()
     {
         if (_manager is null || _pending is null) return;
@@ -158,7 +155,7 @@ internal sealed class UpdateService
             }).ConfigureAwait(false);
 
             Set(UpdateState.ReadyToRestart);
-            CrashLog.Info($"Updates: {AvailableVersion} descargada, lista para aplicar al reiniciar.");
+            CrashLog.Info($"Updates: {AvailableVersion} downloaded, ready to apply on restart.");
         }
         catch (Exception e)
         {
@@ -167,8 +164,8 @@ internal sealed class UpdateService
     }
 
     /// <summary>
-    /// Aplica lo descargado y reinicia Playfront. NO vuelve: el proceso muere aqui.
-    /// Ojo cuando Playfront sea el shell: durante el reinicio no hay interfaz ninguna en pantalla.
+    /// Applies the staged update and restarts. Does not return: the process dies here.
+    /// Once Playfront is the Windows shell, nothing is on screen during that restart.
     /// </summary>
     public void ApplyAndRestart()
     {
@@ -176,7 +173,7 @@ internal sealed class UpdateService
 
         try
         {
-            CrashLog.Info($"Updates: aplicando {AvailableVersion} y reiniciando.");
+            CrashLog.Info($"Updates: applying {AvailableVersion} and restarting.");
             _manager.ApplyUpdatesAndRestart(_pending);
         }
         catch (Exception e)
