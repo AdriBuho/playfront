@@ -215,6 +215,42 @@ $setup = Get-ChildItem -Path $Output -Filter '*-Setup.exe' -File | Select-Object
 if (-not $setup) { Fail "El empaquetado termino pero no hay ningun *-Setup.exe en $Output" }
 Write-Ok "$($setup.Name)  -  $([math]::Round($setup.Length/1MB,1)) MB"
 
+# --- 3b. El servicio ayudante ----------------------------------------------------------------------
+#  Va en su PROPIO paquete, no dentro del de la app, por dos motivos:
+#    1. Se instala en 'Program Files' y como servicio de Windows: eso necesita permisos de
+#       administrador. La app NO los necesita (vive en la carpeta del usuario) y no debe pedirlos,
+#       porque si los pidiera no podria actualizarse sola y en silencio.
+#    2. El actualizador reemplaza la carpeta de la app en cada version. Meter aqui 79 MB que casi
+#       nunca cambian convertiria cada actualizacion pequeña en una descarga enorme.
+#  Quien lo registra como servicio es el propio ejecutable ('--install'), no un script aparte.
+Write-Step 'Publicando el servicio ayudante (paquete aparte)'
+$helperStage = Join-Path $Output 'helper-stage'
+if (Test-Path $helperStage) { Remove-Item -Recurse -Force $helperStage }
+
+& dotnet publish (Join-Path $repoRoot 'src\Playfront.Helper\Playfront.Helper.csproj') `
+    --configuration $Configuration `
+    --runtime $Runtime `
+    --self-contained true `
+    --output $helperStage `
+    --nologo `
+    -verbosity:minimal
+if ($LASTEXITCODE -ne 0) { Fail 'Fallo la publicacion del servicio ayudante' }
+
+$helperExe = Join-Path $helperStage 'Playfront.Helper.exe'
+if (-not (Test-Path $helperExe)) { Fail "La publicacion termino pero no hay Playfront.Helper.exe en $helperStage" }
+
+# Mismos simbolos de terceros fuera que en la app: son megas de codigo ajeno que no vamos a depurar.
+$helperForeignPdb = Get-ChildItem -Path $helperStage -Filter *.pdb -File |
+    Where-Object { $_.Name -ne 'Playfront.Helper.pdb' }
+if ($helperForeignPdb) { $helperForeignPdb | Remove-Item -Force }
+
+$helperZip = Join-Path $Output 'PlayfrontHelper.zip'
+if (Test-Path $helperZip) { Remove-Item -Force $helperZip }
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+# Aqui SI se comprime (al reves que los assets): son DLL, y bajan de ~79 MB a la mitad larga.
+[IO.Compression.ZipFile]::CreateFromDirectory($helperStage, $helperZip, [IO.Compression.CompressionLevel]::Optimal, $false)
+Write-Ok "PlayfrontHelper.zip  -  $([math]::Round((Get-Item $helperZip).Length/1MB,1)) MB (sin comprimir: $(SizeMB $helperStage) MB)"
+
 # --- 4. Comprimir los assets pesados ---------------------------------------------------------------
 if (-not $SkipAssets -and (Test-Path $heavyTemp)) {
     Write-Step 'Comprimiendo los assets pesados'
@@ -237,6 +273,7 @@ if (-not $SkipAssets -and (Test-Path $heavyTemp)) {
 
 # --- 5. Limpieza de lo intermedio ------------------------------------------------------------------
 Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force $helperStage -ErrorAction SilentlyContinue
 Remove-Item -Recurse -Force (Join-Path $Output 'assets-stage') -ErrorAction SilentlyContinue
 
 # --- Resumen ---------------------------------------------------------------------------------------
@@ -245,10 +282,12 @@ Get-ChildItem -Path $Output -File | Sort-Object Length -Descending | ForEach-Obj
     Write-Host ("    {0,10} MB   {1}" -f [math]::Round($_.Length/1MB,1), $_.Name)
 }
 Write-Host ''
-Write-Host '    Lo que tiene que hacer el instalador con esto:' -ForegroundColor White
-Write-Host "      1. Descargar y ejecutar el Setup.exe con:  --silent --installto `"$recommendedInstallDir`""
-Write-Host '         (el --installto NO es opcional por estetica: sin el, la carpeta se llama'
-Write-Host "          %LocalAppData%\$packId, que el usuario no reconoce)"
-Write-Host '      2. Descomprimir PlayfrontAssets-Games.zip en  %ProgramData%\Playfront\Assets'
-Write-Host '      3. Instalar el servicio ayudante (build\Install-Helper.ps1 es el borrador)'
+Write-Host '    Estos ficheros se cuelgan de una release de GitHub. Quien los junta y los instala es' -ForegroundColor White
+Write-Host '    build\installer\Playfront.iss (Inno Setup), que produce un unico .exe de 2 MB:'
+Write-Host ''
+Write-Host "      1. La app     -> $recommendedInstallDir  (carpeta del usuario, SIN permisos)"
+Write-Host '      2. El ayudante -> %ProgramFiles%\Playfront\Helper + servicio  (CON permisos)'
+Write-Host '      3. Arte/videos -> %ProgramData%\Playfront\Assets'
+Write-Host ''
+Write-Host '    Al sacar una version nueva hay que cambiar ReleaseTag en ese .iss y recompilarlo.'
 Write-Host ''
