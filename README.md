@@ -55,8 +55,14 @@ their absence, disable themselves and say why rather than failing.
 
 ## Licence
 
-[PolyForm Noncommercial License 1.0.0](LICENSE.md): you may install Playfront, study it,
-modify it and share it, but not sell it or use it commercially.
+**Source-available, not open source.** The code is here so that anyone who runs Playfront
+can see exactly what it does — it replaces your Windows shell and installs a service with
+system privileges, and you should not have to take that on trust.
+
+You may **read the source** and **run the released app** for personal, non-commercial use.
+You may not copy it, modify it, redistribute it, or publish your own version. Full terms in
+[`LICENSE.md`](LICENSE.md) — and if you want to do something it does not allow, open an
+issue and ask.
 
 Playfront ships artwork and fonts that belong to Microsoft and to individual game
 publishers — all of it is listed in [`THIRD-PARTY.md`](THIRD-PARTY.md), along with how to

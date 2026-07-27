@@ -1,88 +1,48 @@
-Required Notice: Copyright 2026 Playfront
+# Playfront License
 
----
+Copyright (c) 2026 AdriBuho. All rights reserved.
 
-**Scope of this license.** These terms cover Playfront's own source code: the shell
-application (`src/`) and the packaging scripts (`build/`).
+Playfront is **source-available, not open source**. The code is published so that anyone
+who runs it can see exactly what it does. That transparency is the only right granted
+here — everything else stays with the author.
 
-They do not cover the third-party artwork and fonts that Playfront ships, which belong
-to their respective owners — see `THIRD-PARTY.md`.
+## What you may do
 
-In plain words: you may install Playfront, study it, modify it and share it. You may
-not sell it or use it to make money. The section below is the license itself.
+**Read the source.** Study it, learn from it, quote it in a discussion, a review or a
+security report. Point at it to explain how something works.
 
----
+**Run the released application.** Download Playfront from this project's Releases page
+and use it on computers you own or administer, for personal, non-commercial purposes.
 
-# PolyForm Noncommercial License 1.0.0
+## What you may not do
 
-<https://polyformproject.org/licenses/noncommercial/1.0.0>
+Everything else. In particular, you may not:
 
-## Acceptance
+- copy, publish, mirror or otherwise redistribute the source code or the application;
+- modify the source code, or create derivative works, alternative builds or your own
+  versions of Playfront;
+- reuse the source code, in whole or in part, in another project;
+- use Playfront or its source code commercially, or charge anything for it;
+- remove or alter this notice.
 
-In order to get any license under these terms, you must agree to them as both strict obligations and conditions to all your licenses.
+GitHub's terms of service let anyone fork a public repository within GitHub. That is a
+function of the platform and does not grant any of the rights withheld above.
 
-## Copyright License
+## No warranty
 
-The licensor grants you a copyright license for the software to do everything you might do with the software that would otherwise infringe the licensor's copyright in it for any permitted purpose.  However, you may only distribute the software according to [Distribution License](#distribution-license) and make changes or new works based on the software according to [Changes and New Works License](#changes-and-new-works-license).
+Playfront is provided "as is", without warranty of any kind, express or implied.
 
-## Distribution License
+This matters more than usual here: Playfront is designed to replace the Windows shell and
+it installs a service that runs with system privileges. You run it at your own risk. The
+author is not liable for any damage, data loss or downtime.
 
-The licensor grants you an additional copyright license to distribute copies of the software.  Your license to distribute covers distributing the software with changes and new works permitted by [Changes and New Works License](#changes-and-new-works-license).
+## Third-party material
 
-## Notices
+This repository ships artwork, icons and fonts that belong to other people and are **not**
+covered by this licence — they carry their own terms. See
+[`THIRD-PARTY.md`](THIRD-PARTY.md).
 
-You must ensure that anyone who gets a copy of any part of the software from you also gets a copy of these terms or the URL for them above, as well as copies of any plain-text lines beginning with `Required Notice:` that the licensor provided with the software.  For example:
+## Asking
 
-> Required Notice: Copyright Yoyodyne, Inc. (http://example.com)
-
-## Changes and New Works License
-
-The licensor grants you an additional copyright license to make changes and new works based on the software for any permitted purpose.
-
-## Patent License
-
-The licensor grants you a patent license for the software that covers patent claims the licensor can license, or becomes able to license, that you would infringe by using the software.
-
-## Noncommercial Purposes
-
-Any noncommercial purpose is a permitted purpose.
-
-## Personal Uses
-
-Personal use for research, experiment, and testing for the benefit of public knowledge, personal study, private entertainment, hobby projects, amateur pursuits, or religious observance, without any anticipated commercial application, is use for a permitted purpose.
-
-## Noncommercial Organizations
-
-Use by any charitable organization, educational institution, public research organization, public safety or health organization, environmental protection organization, or government institution is use for a permitted purpose regardless of the source of funding or obligations resulting from the funding.
-
-## Fair Use
-
-You may have "fair use" rights for the software under the law. These terms do not limit them.
-
-## No Other Rights
-
-These terms do not allow you to sublicense or transfer any of your licenses to anyone else, or prevent the licensor from granting licenses to anyone else.  These terms do not imply any other licenses.
-
-## Patent Defense
-
-If you make any written claim that the software infringes or contributes to infringement of any patent, your patent license for the software granted under these terms ends immediately. If your company makes such a claim, your patent license ends immediately for work on behalf of your company.
-
-## Violations
-
-The first time you are notified in writing that you have violated any of these terms, or done anything with the software not covered by your licenses, your licenses can nonetheless continue if you come into full compliance with these terms, and take practical steps to correct past violations, within 32 days of receiving notice.  Otherwise, all your licenses end immediately.
-
-## No Liability
-
-***As far as the law allows, the software comes as is, without any warranty or condition, and the licensor will not be liable to you for any damages arising out of these terms or the use or nature of the software, under any kind of legal claim.***
-
-## Definitions
-
-The **licensor** is the individual or entity offering these terms, and the **software** is the software the licensor makes available under these terms.
-
-**You** refers to the individual or entity agreeing to these terms.
-
-**Your company** is any legal entity, sole proprietorship, or other kind of organization that you work for, plus all organizations that have control over, are under the control of, or are under common control with that organization.  **Control** means ownership of substantially all the assets of an entity, or the power to direct its management and policies by vote, contract, or otherwise.  Control can be direct or indirect.
-
-**Your licenses** are all the licenses granted to you for the software under these terms.
-
-**Use** means anything you do with the software requiring one of your licenses.
+The restrictions above are a default, not a refusal. If you want to do something this
+licence does not allow, open an issue and ask.
