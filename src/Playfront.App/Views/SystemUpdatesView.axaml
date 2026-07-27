@@ -2,55 +2,52 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Playfront.App.Views.SystemUpdatesView"
              Width="1920" Height="1080">
-    <!-- Pantalla "System Updates": se abre con A sobre la tarjeta "Updates" de la categoria System
-         de Ajustes, y se cierra con B (que devuelve a esa misma tarjeta). Pantalla COMPLETA, no un
-         panel dentro de Ajustes: no lleva ni barra lateral de categorias ni cabecera, igual que
-         "General Personalization". Se monta bajo demanda y se libera al salir.
+    <!-- "System Updates": opened with A on the "Updates" tile of Settings > System, closed with B
+         (returning to that same tile). A FULL screen, not a panel inside Settings: no category
+         sidebar and no header, same as "General Personalization". Mounted on demand, released on exit.
 
-         Medida sobre la referencia del usuario (1405x790, factor 1920/1405 = 1.3665). La lista
-         resulto ser OTRA VEZ la misma que "General Personalization" (440x96, paso 114): medido da
-         441x98 y paso 114.8. Por eso se reusa el estilo pzTile y su anillo, para que las pantallas
-         queden alineadas al pixel cuando se pasa de una a otra. La unica diferencia respecto a
-         Personalization es que la lista arranca 8px mas abajo (273 en vez de 265), porque encima
-         lleva la etiqueta de seccion "Updates".
+         Measured against the reference (1405x790, scale 1920/1405 = 1.3665). The list turned out to be
+         the same one "General Personalization" uses (440x96, pitch 114): measuring here gives 441x98
+         and pitch 114.8. That is why the pzTile style and its ring are reused — the two screens then
+         line up to the pixel when moving between them. The only difference is that the list starts 8px
+         lower (273 instead of 265), because the "Updates" section label sits above it.
 
-         Colores verificados contra la referencia: fondo #201F1F, casilla #303030, seleccionada
-         #444444 - los mismos que ya usa el resto de Ajustes. La primera casilla es un caso nuevo:
-         esta DESACTIVADA (no es un boton, es un aviso de estado), con fondo #252525 y texto
-         apagado. -->
+         Colours verified against the reference: background #201F1F, tile #303030, selected #444444 —
+         the same ones the rest of Settings already uses. The first tile is a new case: it is DIMMED
+         (a status line, not a button), background #252525 with muted text. -->
     <Canvas Width="1920" Height="1080">
         <Rectangle Width="1920" Height="1080" Fill="#201F1F" />
 
-        <!-- "System" en negrita y "Updates" en normal, dentro de un unico TextBlock con dos Runs
-             (no dos TextBlocks sueltos): asi el espacio entre las dos palabras lo coloca la propia
-             fuente, sin tener que medir a mano donde empieza la segunda. Misma posicion y tamaño
-             que el titulo de Personalization: medido aqui da x=112 y alto de mayuscula 45, que es
-             lo que produce ese mismo Left=106 / FontSize=46. -->
+        <!-- "System" bold and "Updates" regular inside a single TextBlock with two Runs, not two
+             separate TextBlocks: that way the font places the space between the words and there is no
+             need to measure where the second one starts. Same position and size as the Personalization
+             title: measuring here gives x=112 and a cap height of 45, which is what Left=106 /
+             FontSize=46 produces. -->
         <TextBlock Canvas.Left="106" Canvas.Top="59" FontSize="46" Foreground="White">
             <Run Text="System" FontWeight="Bold" />
             <Run Text="Updates" />
         </TextBlock>
 
-        <!-- Etiqueta de seccion, alineada con el borde izquierdo del texto de las casillas. -->
+        <!-- Section label, aligned with the left edge of the tile text. -->
         <TextBlock Canvas.Left="128" Canvas.Top="214" FontSize="28" Foreground="White" Text="Updates" />
 
-        <!-- Texto descriptivo del elemento enfocado. Arranca a la altura de la PRIMERA casilla
-             (no de la seleccionada): medido, su primera linea empieza en el mismo y que el borde
-             superior de "No console update available". Lo rellena el code-behind. -->
+        <!-- Description of the focused item. It starts level with the FIRST tile, not the selected
+             one: measured, its first line begins at the same y as the top edge of "No console update
+             available". Filled in by the code-behind. -->
         <TextBlock x:Name="UpdDescription" Canvas.Left="696" Canvas.Top="271" Width="450"
                    FontSize="24" LineHeight="32" TextWrapping="Wrap" Foreground="White" />
 
-        <!-- Casilla 1: es el ESTADO de la actualizacion, y cambia sola. Al abrir la pantalla se
-             lanza una comprobacion; segun el resultado, esta casilla se enciende o se apaga:
-               - apagada (fondo #252525, texto gris): no hay nada que hacer -> el foco la salta.
-                 Es el caso de la referencia ("No console update available").
-               - encendida (fondo y texto normales): hay algo que pulsar (descargar / reiniciar).
-             El texto y los colores los pone el code-behind; los de aqui son solo el estado inicial
-             mientras se comprueba. -->
+        <!-- Tile 1 is the update STATE and changes on its own. Opening the screen starts a check;
+             depending on the result this tile lights up or dims:
+               - dim (#252525 background, grey text): nothing to do, and focus skips it. This is the
+                 case shown in the reference ("No console update available").
+               - lit (normal background and text): there is something to press (download / restart).
+             Text and colours come from the code-behind; the values here are only the initial state
+             while the check runs. -->
         <Border Classes="pzTile" x:Name="UpdTile0" Canvas.Left="108" Canvas.Top="273" Background="#252525">
-            <!-- Ancho fijo + Wrap: algunos estados (sin conexion, o la app sin instalar) traen una
-                 frase que no cabe en una linea, y sin esto se corta a media palabra. Con 400 de
-                 ancho parte en dos lineas como mucho, que es lo que cabe en los 96 de alto. -->
+            <!-- Fixed width + Wrap: some states (offline, or app not installed) carry a sentence that
+                 doesn't fit on one line, and without this it is cut mid-word. At 400 wide it breaks
+                 into two lines at most, which is what fits in the 96px height. -->
             <TextBlock x:Name="UpdStatusText" Text="Checking for updates…" Foreground="#606060"
                        Width="400" TextWrapping="Wrap" HorizontalAlignment="Left" />
         </Border>
@@ -59,10 +56,9 @@
             <TextBlock Text="Latest console update status" />
         </Border>
 
-        <!-- Las dos casillas de interruptor llevan su casilla de verificacion pegada al borde
-             derecho (medido: 34x34, a 18px del borde). El TextBlock del check necesita Margin=0 y
-             su propio FontSize porque el estilo "Border.pzTile TextBlock" le meteria el margen
-             de 20,8 pensado para el texto de la casilla. -->
+        <!-- The two toggle tiles carry their checkbox against the right edge (measured: 34x34, 18px
+             in). The check glyph needs Margin=0 and its own FontSize, because the
+             "Border.pzTile TextBlock" style would otherwise apply the 20,8 margin meant for tile text. -->
         <Border Classes="pzTile" x:Name="UpdTile2" Canvas.Left="108" Canvas.Top="501">
             <Grid>
                 <TextBlock Text="Keep my console up to date" />
@@ -74,13 +70,12 @@
             </Grid>
         </Border>
 
-        <!-- Esta casilla parte el texto en dos lineas en la referencia. El ancho fijo es lo que
-             fuerza el corte en el mismo sitio ("...up" / "to date"), medido en la captura. -->
+        <!-- This tile wraps to two lines in the reference. The fixed width is what forces the break at
+             the same place ("...up" / "to date"), measured from the capture. -->
         <Border Classes="pzTile" x:Name="UpdTile3" Canvas.Left="108" Canvas.Top="615">
             <Grid>
-                <!-- HorizontalAlignment=Left es imprescindible: al fijarle un ancho, dentro de un
-                     Grid el TextBlock se centraria y el texto saldria mas a la derecha que el de
-                     las demas casillas. -->
+                <!-- HorizontalAlignment=Left is essential: once a width is set, a TextBlock inside a
+                     Grid centres itself and the text would sit further right than in the other tiles. -->
                 <TextBlock Text="Keep my games &amp; apps up to date" Width="320" TextWrapping="Wrap"
                            HorizontalAlignment="Left" />
                 <Border Width="34" Height="34" BorderBrush="White" BorderThickness="2" CornerRadius="2"
@@ -91,8 +86,8 @@
             </Grid>
         </Border>
 
-        <!-- Anillos: la casilla (440x96) inflada 8 por cada lado, igual que en el resto de Ajustes.
-             La primera tiene anillo porque puede recibir el foco cuando hay actualizacion. -->
+        <!-- Rings: the tile (440x96) inflated by 8 on each side, as everywhere else in Settings. The
+             first one has a ring because it can take focus when an update is available. -->
         <Border Classes="selectionRing" x:Name="UpdRing0" Canvas.Left="100" Canvas.Top="265" Width="456" Height="112" />
         <Border Classes="selectionRing selected" x:Name="UpdRing1" Canvas.Left="100" Canvas.Top="379" Width="456" Height="112" />
         <Border Classes="selectionRing" x:Name="UpdRing2" Canvas.Left="100" Canvas.Top="493" Width="456" Height="112" />

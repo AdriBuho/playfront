@@ -7,19 +7,17 @@ using Avalonia.Media.Transformation;
 namespace Playfront.App.Views;
 
 /// <summary>
-/// Pantalla de Ajustes (1:1 con Xbox). Vive en su propia vista para cargarse BAJO DEMANDA:
-/// MainWindow la crea al entrar en Ajustes y la libera al salir (no se queda residente).
-/// Arquitectura de rendimiento: nada se construye antes de que el usuario lo abra.
+/// The Settings screen. It lives in its own view so it can be loaded ON DEMAND: MainWindow creates it
+/// on entry and releases it on exit, so it is never resident. Nothing is built before it is opened.
 ///
-/// Contiene su propia navegacion (lista de categorias + una rejilla de tarjetas por categoria).
-/// Lo que SALE de esta pantalla se avisa por eventos, para que la vista no dependa de MainWindow:
-/// <see cref="PersonalizationRequested"/> (abrir la pantalla de Personalization) y
-/// <see cref="ExitRequested"/> (cerrar Ajustes y volver a la home).
+/// It owns its navigation (category list plus one card grid per category). Anything that LEAVES this
+/// screen is raised as an event, so the view never depends on MainWindow:
+/// <see cref="PersonalizationRequested"/> and <see cref="ExitRequested"/>.
 /// </summary>
 public partial class SettingsView : UserControl
 {
-    // Canvas.Top de cada SNavX en el XAML (indice = categoria) - se usa para desplazar el resalte
-    // por translateY relativo a NavTops[1] (la posicion base de "General").
+    // Canvas.Top of each SNavX in the XAML (index = category), used to slide the highlight by
+    // translateY relative to NavTops[1], the base position of "General".
     private static readonly double[] NavTops = { 153, 216, 280, 344, 408, 472, 536 };
 
     private static readonly string[] CategoryNames =
@@ -32,11 +30,12 @@ public partial class SettingsView : UserControl
 
     private readonly Border[] _navItems;
 
-    // Una rejilla por categoria, indexada igual que CategoryNames; null = categoria sin contenido
-    // todavia (se queda como hueco navegable en la lista, igual que en Xbox mientras se construye).
-    // Son arrays IRREGULARES a proposito: cada fila declara sus propias columnas, que es lo que
-    // permite que la ultima fila de System tenga una sola tarjeta ("Time") sin ningun caso especial
-    // en la navegacion - basta con leer la longitud de la fila en la que estas.
+    // One grid per category, indexed like CategoryNames; null means the category has no content yet
+    // and stays a navigable placeholder in the list.
+    //
+    // These are JAGGED arrays on purpose: each row declares its own columns, which is what lets the
+    // last row of System hold a single card ("Time") with no special case in the navigation — reading
+    // the length of the current row is enough.
     private readonly Border[][]?[] _grids;
     private readonly Border[][]?[] _rings;
 
@@ -45,13 +44,13 @@ public partial class SettingsView : UserControl
     private int _gridRow;
     private int _gridCol;
 
-    /// <summary>Se pide abrir la pantalla de Personalization (tarjeta "Personalization" de General).</summary>
+    /// <summary>Requests opening Personalization (the "Personalization" card in General).</summary>
     public event Action? PersonalizationRequested;
 
-    /// <summary>Se pide abrir la pantalla "System Updates" (tarjeta "Updates" de System).</summary>
+    /// <summary>Requests opening "System Updates" (the "Updates" card in System).</summary>
     public event Action? UpdatesRequested;
 
-    /// <summary>Se pide cerrar Ajustes y volver a la home (B en la lista de categorias).</summary>
+    /// <summary>Requests closing Settings and returning home (B on the category list).</summary>
     public event Action? ExitRequested;
 
     public SettingsView()
@@ -103,15 +102,14 @@ public partial class SettingsView : UserControl
 
         switch (button)
         {
-            // "Personalization" es la tarjeta de la fila 0, columna 1 de la rejilla de General
-            // (ver SCard1 en el XAML) - la unica que por ahora abre una pantalla propia. La
-            // comprobacion de categoria es imprescindible: sin ella, esa misma posicion en
-            // System ("Storage devices") abriria Personalization.
+            // "Personalization" is row 0, column 1 of the General grid (SCard1 in the XAML) — the only
+            // card that opens its own screen so far. The category check is essential: without it, that
+            // same position in System ("Storage devices") would open Personalization.
             case GamepadButton.A when _inGrid && _category == GeneralCategory && _gridRow == 0 && _gridCol == 1:
                 PersonalizationRequested?.Invoke();
                 return;
 
-            // "Updates" es la tarjeta de la fila 1, columna 0 de la rejilla de System (SysCard2).
+            // "Updates" is row 1, column 0 of the System grid (SysCard2).
             case GamepadButton.A when _inGrid && _category == SystemCategory && _gridRow == 1 && _gridCol == 0:
                 UpdatesRequested?.Invoke();
                 return;
@@ -123,8 +121,8 @@ public partial class SettingsView : UserControl
                 ExitRequested?.Invoke();
                 return;
 
-            // Se entra en la rejilla con A o con Derecha (las tarjetas estan a la derecha de la
-            // lista); Izquierda en la primera columna vuelve a la lista.
+            // The grid is entered with A or Right, since the cards sit to the right of the list;
+            // Left on the first column goes back to it.
             case GamepadButton.A when !_inGrid && grid != null:
             case GamepadButton.Right when !_inGrid && grid != null:
                 _inGrid = true;
@@ -164,9 +162,9 @@ public partial class SettingsView : UserControl
         UpdateSelection();
     }
 
-    // Al cambiar de fila, la nueva puede tener menos columnas que la anterior (en System la ultima
-    // fila tiene una sola tarjeta). Sin esto, bajar desde "Backup & transfer" dejaria la seleccion
-    // en una columna que no existe: no se veria ninguna tarjeta seleccionada.
+    // Moving rows can land on one with fewer columns (System's last row holds a single card). Without
+    // this, going down from "Backup & transfer" would leave the selection on a column that does not
+    // exist and nothing would appear selected.
     private void ClampColumn()
     {
         var grid = CurrentGrid;
@@ -178,10 +176,9 @@ public partial class SettingsView : UserControl
 
     private void UpdateSelection()
     {
-        // Dos rectangulos compartidos que se desplazan via RenderTransform hasta la fila de la
-        // categoria (mismo offset, misma Transition animando el movimiento): SettingsNavHighlight
-        // (bloque verde solido, mientras se navega la lista) y SettingsCategoryIndicator (franja
-        // gris + barrita verde a la derecha, mientras el foco esta dentro de la rejilla).
+        // Two shared rectangles slide to the category's row via RenderTransform, sharing the same
+        // offset and transition: SettingsNavHighlight (solid accent block, while browsing the list)
+        // and SettingsCategoryIndicator (grey strip with an accent bar, while focus is in the grid).
         var offsetY = NavTops[_category] - NavTops[GeneralCategory];
         var offsetTransform = TransformOperations.Parse($"translateY({offsetY.ToString(CultureInfo.InvariantCulture)}px)");
 
@@ -193,9 +190,9 @@ public partial class SettingsView : UserControl
 
         SettingsCategoryTitle.Text = CategoryNames[_category];
 
-        // Se recorren TODAS las rejillas, no solo la actual: es lo que apaga la de la categoria
-        // que se acaba de dejar. Si solo se tocara la actual, las tarjetas de General seguirian
-        // dibujadas por debajo de las de System.
+        // Every grid is walked, not just the current one: that is what turns off the category just
+        // left behind. Touching only the current one would leave General's cards drawn underneath
+        // System's.
         for (var category = 0; category < _grids.Length; category++)
         {
             var grid = _grids[category];
@@ -210,8 +207,8 @@ public partial class SettingsView : UserControl
                     var isSelected = visible && _inGrid && r == _gridRow && c == _gridCol;
                     grid[r][c].IsVisible = visible;
                     grid[r][c].Classes.Set("selected", isSelected);
-                    // El anillo se oculta con su tarjeta: si no, al cambiar a una categoria sin
-                    // rejilla seguiria dibujandose un rectangulo verde flotando sobre el vacio.
+                    // The ring hides with its card: otherwise switching to a category with no grid
+                    // would leave an accent rectangle floating over empty space.
                     rings[r][c].IsVisible = visible;
                     rings[r][c].Classes.Set("selected", isSelected);
                 }

@@ -1,30 +1,29 @@
 <#
 .SYNOPSIS
-  Genera la version REPARTIBLE de Playfront: carpetas autocontenidas que arrancan en un Windows
-  que no tiene .NET instalado.
+  Produces the distributable build of Playfront: self-contained folders that run on a Windows machine
+  with no .NET installed.
 
 .DESCRIPTION
-  Cumple la norma de distribucion del proyecto: el producto no es
-  la carpeta de compilacion ni "abre una terminal y escribe dotnet run", sino algo que se copia y
-  funciona. Este script es el paso previo al instalador: produce exactamente lo que el instalador
-  tendra que empaquetar.
+  The product is not the build output folder, and not "open a terminal and type dotnet run" — it is
+  something you copy and it works. This script is the step before the installer: it produces exactly
+  what the installer has to package.
 
-  Autocontenido significa que cada carpeta lleva su propia copia de .NET dentro. Pesa bastante mas
-  (~100 MB por programa) y da igual: quien instale Playfront no va a instalar el SDK ni el runtime.
+  Self-contained means each folder carries its own copy of .NET. That costs roughly 100 MB per program
+  and is worth it: whoever installs Playfront is not going to install the SDK or the runtime.
 
-  La app y el servicio ayudante van en carpetas SEPARADAS a proposito, cada una con su copia de
-  .NET. Compartir una sola copia entre los dos ahorraria espacio, pero no lo hacen: la app arrastra
-  las librerias de escritorio de Windows (por WebView2) y el servicio no, asi que mezclarlos es
-  justo el tipo de detalle que funciona aqui y falla en la maquina de otro.
+  The app and the helper service go in SEPARATE folders, each with its own copy of .NET. Sharing one
+  copy would save space, but they do not carry the same thing: the app drags in the Windows desktop
+  libraries (for WebView2) and the service does not. Mixing them is exactly the kind of detail that
+  works here and fails on someone else's machine.
 
 .PARAMETER Runtime
-  Plataforma de destino. win-x64 es la de la ROG Ally y la de cualquier PC normal.
+  Target platform. win-x64 covers the ROG Ally and any normal PC.
 
 .PARAMETER Output
-  Carpeta donde se deja el resultado. Por defecto 'dist' en la raiz del repositorio (fuera de git).
+  Where to leave the result. Defaults to 'dist' at the repository root (outside git).
 
 .PARAMETER Clean
-  Borra la carpeta de salida antes de publicar, para no dejar restos de una version anterior.
+  Delete the output folder first, so no leftovers from a previous version survive.
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File build\Publish-Playfront.ps1 -Clean
@@ -39,8 +38,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# Todo se resuelve a partir de la posicion de ESTE fichero, nunca de la carpeta desde la que se
-# lanza ni de una ruta escrita a mano (norma de distribucion: nada atado a esta maquina).
+# Everything resolves from the location of THIS file, never from the current directory or a hand-written
+# path: nothing may be tied to one machine.
 $repoRoot = Split-Path -Parent $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($Output)) { $Output = Join-Path $repoRoot 'dist' }
 
@@ -48,41 +47,41 @@ function Write-Step { param([string] $Text) Write-Host "`n==> $Text" -Foreground
 function Write-Ok   { param([string] $Text) Write-Host "    OK  $Text" -ForegroundColor Green }
 function Fail       { param([string] $Text) Write-Host "    ERROR  $Text" -ForegroundColor Red; exit 1 }
 
-# --- Version: se lee del unico sitio donde se define, para que el informe no pueda mentir --------
+# --- Version, read from the single place it is defined so the report cannot lie -------------------
 $propsPath = Join-Path $repoRoot 'Directory.Build.props'
-if (-not (Test-Path $propsPath)) { Fail "No se encuentra Directory.Build.props en $repoRoot" }
+if (-not (Test-Path $propsPath)) { Fail "Directory.Build.props not found in $repoRoot" }
 $version = ([xml](Get-Content $propsPath)).Project.PropertyGroup.PlayfrontVersion | Where-Object { $_ }
-if ([string]::IsNullOrWhiteSpace($version)) { Fail 'No se pudo leer PlayfrontVersion de Directory.Build.props' }
+if ([string]::IsNullOrWhiteSpace($version)) { Fail 'Could not read PlayfrontVersion from Directory.Build.props' }
 
 Write-Host ''
-Write-Host "  Playfront $version  -  publicacion autocontenida ($Runtime, $Configuration)" -ForegroundColor White
-Write-Host "  Salida: $Output"
+Write-Host "  Playfront $version  -  self-contained publish ($Runtime, $Configuration)" -ForegroundColor White
+Write-Host "  Output: $Output"
 
-# --- Comprobacion previa: el SDK de .NET tiene que estar -----------------------------------------
-Write-Step 'Comprobando el SDK de .NET'
+# --- Preflight: the .NET SDK must be present ------------------------------------------------------
+Write-Step 'Checking the .NET SDK'
 $sdk = (& dotnet --version 2>$null)
-if ($LASTEXITCODE -ne 0) { Fail 'No se encuentra "dotnet". Hace falta el SDK de .NET 10 para PUBLICAR (no para ejecutar lo publicado).' }
+if ($LASTEXITCODE -ne 0) { Fail 'No "dotnet" found. The .NET 10 SDK is needed to PUBLISH (not to run the result).' }
 Write-Ok "SDK $sdk"
 
-# --- Limpieza opcional ---------------------------------------------------------------------------
+# --- Optional cleanup -----------------------------------------------------------------------------
 if ($Clean -and (Test-Path $Output)) {
-    Write-Step 'Borrando la salida anterior'
+    Write-Step 'Deleting the previous output'
     Remove-Item -Recurse -Force $Output
     Write-Ok $Output
 }
 
-# --- Lo que se publica ---------------------------------------------------------------------------
-# 'Exe' es el nombre del ejecutable que MSBuild produce; se comprueba que exista al final, porque
-# "dotnet publish" puede acabar con exito y aun asi no dejar lo que esperabamos.
+# --- What gets published --------------------------------------------------------------------------
+# 'Exe' is the executable name MSBuild produces; its existence is checked afterwards, because
+# "dotnet publish" can succeed and still not leave what was expected.
 $targets = @(
     [pscustomobject]@{
-        Name    = 'App (el shell)'
+        Name    = 'App (the shell)'
         Project = Join-Path $repoRoot 'src\Playfront.App\Playfront.App.csproj'
         Dest    = Join-Path $Output 'Playfront'
         Exe     = 'Playfront.App.exe'
     },
     [pscustomobject]@{
-        Name    = 'Helper (el servicio con permisos)'
+        Name    = 'Helper (the privileged service)'
         Project = Join-Path $repoRoot 'src\Playfront.Helper\Playfront.Helper.csproj'
         Dest    = Join-Path $Output 'Playfront\Helper'
         Exe     = 'Playfront.Helper.exe'
@@ -90,12 +89,12 @@ $targets = @(
 )
 
 foreach ($t in $targets) {
-    Write-Step "Publicando $($t.Name)"
-    if (-not (Test-Path $t.Project)) { Fail "No se encuentra el proyecto: $($t.Project)" }
+    Write-Step "Publishing $($t.Name)"
+    if (-not (Test-Path $t.Project)) { Fail "Project not found: $($t.Project)" }
 
-    # Los simbolos de depuracion (.pdb) SI se incluyen a proposito: sin telemetria, el registro de
-    # %LocalAppData%\Playfront\playfront.log es lo unico con lo que diagnosticar un fallo en la maquina de
-    # otra persona, y sin .pdb los errores no dicen en que linea pasaron.
+    # Our own debug symbols (.pdb) ARE included deliberately: with no telemetry, the log at
+    # %LocalAppData%\Playfront\playfront.log is the only way to diagnose a failure on someone else's
+    # machine, and without .pdb the errors don't say which line they happened on.
     & dotnet publish $t.Project `
         --configuration $Configuration `
         --runtime $Runtime `
@@ -104,36 +103,35 @@ foreach ($t in $targets) {
         --nologo `
         -verbosity:minimal
 
-    if ($LASTEXITCODE -ne 0) { Fail "Fallo la publicacion de $($t.Name)" }
+    if ($LASTEXITCODE -ne 0) { Fail "Publishing $($t.Name) failed" }
 
     $exePath = Join-Path $t.Dest $t.Exe
-    if (-not (Test-Path $exePath)) { Fail "La publicacion termino pero no hay $($t.Exe) en $($t.Dest)" }
+    if (-not (Test-Path $exePath)) { Fail "Publish finished but there is no $($t.Exe) in $($t.Dest)" }
 
-    # Fuera los simbolos de depuracion de librerias AJENAS. Se conservan los NUESTROS (pesan ~100 KB
-    # y son los que hacen que un fallo diga en que linea de nuestro codigo paso), pero los de las
-    # librerias de terceros que dibujan la interfaz ocupan 100 MB y no sirven para diagnosticar
-    # Playfront: son simbolos de codigo que no es nuestro y que no vamos a depurar nunca.
+    # Third-party debug symbols are dropped. Ours are kept — around 100 KB, and they are what make a
+    # failure report the line it happened on. The UI libraries' symbols are 100 MB of code we are
+    # never going to debug and they do nothing to diagnose Playfront.
     $ownPdb = [IO.Path]::ChangeExtension($t.Exe, '.pdb')
     $foreignPdb = Get-ChildItem -Path $t.Dest -Filter *.pdb -File | Where-Object { $_.Name -ne $ownPdb }
     if ($foreignPdb) {
         $freedMB = [math]::Round((($foreignPdb | Measure-Object -Property Length -Sum).Sum / 1MB), 1)
         $foreignPdb | Remove-Item -Force
-        Write-Ok "Quitados $($foreignPdb.Count) simbolos de terceros ($freedMB MB); se conserva $ownPdb"
+        Write-Ok "Dropped $($foreignPdb.Count) third-party symbol files ($freedMB MB); kept $ownPdb"
     }
 
-    # Se lee la version del ejecutable REAL, no la del fichero de propiedades: asi se confirma que
-    # el numero llego de verdad hasta el binario que se va a repartir.
+    # The version is read back from the REAL executable, not from the properties file: that confirms
+    # the number actually reached the binary being shipped.
     $stamped = (Get-Item $exePath).VersionInfo.ProductVersion
     $sizeMB  = [math]::Round(((Get-ChildItem -Recurse -File $t.Dest | Measure-Object -Property Length -Sum).Sum / 1MB), 1)
-    Write-Ok "$($t.Exe)  -  version $stamped  -  $sizeMB MB en $($t.Dest)"
+    Write-Ok "$($t.Exe)  -  version $stamped  -  $sizeMB MB in $($t.Dest)"
 }
 
-# --- Resumen -------------------------------------------------------------------------------------
+# --- Summary --------------------------------------------------------------------------------------
 $totalMB = [math]::Round(((Get-ChildItem -Recurse -File $Output | Measure-Object -Property Length -Sum).Sum / 1MB), 1)
-Write-Step 'Listo'
-Write-Host "    Playfront $version publicado en $Output  ($totalMB MB en total)"
+Write-Step 'Done'
+Write-Host "    Playfront $version published to $Output  ($totalMB MB total)"
 Write-Host ''
-Write-Host '    Siguiente paso para probarlo DE VERDAD (norma de distribucion): copiar esa carpeta'
-Write-Host '    a una maquina o particion SIN el SDK de .NET y sin el repositorio, y arrancar'
-Write-Host '    Playfront\Playfront.App.exe desde ahi. Probarlo aqui no demuestra que sea autocontenido.'
+Write-Host '    To test this properly: copy that folder to a machine or partition WITHOUT the .NET SDK'
+Write-Host '    and without the repository, and start Playfront\Playfront.App.exe from there. Running it'
+Write-Host '    here proves nothing about whether it is really self-contained.'
 Write-Host ''

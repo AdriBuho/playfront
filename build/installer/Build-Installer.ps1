@@ -1,21 +1,21 @@
 <#
 .SYNOPSIS
-  Compila el instalador de Playfront (un unico .exe de ~2 MB que se descarga todo lo demas).
+  Builds the Playfront installer: a single ~2 MB .exe that downloads everything else.
 
 .DESCRIPTION
-  El instalador NO lleva nada dentro: descarga las tres piezas de la release de GitHub y las monta
-  cada una en su sitio. Por eso pesa 2 MB y no 500.
+  The installer carries nothing inside. It downloads the three pieces from the GitHub release and puts
+  each one where it belongs, which is why it weighs 2 MB instead of 500.
 
-  Antes de compilar hay que tener colgados de la release (los genera build\Pack-Playfront.ps1):
+  These must already be attached to the release (build\Pack-Playfront.ps1 produces them):
 
-    PlayfrontShell-win-Setup.exe   la app
-    PlayfrontHelper.zip            el servicio con permisos
-    PlayfrontAssets-Games.zip      el arte y los videos
+    PlayfrontShell-win-Setup.exe   the app
+    PlayfrontHelper.zip            the privileged service
+    PlayfrontAssets-Games.zip      artwork and video
 
-  La version que se descarga la fija ReleaseTag dentro de Playfront.iss.
+  Which release it downloads from is set by ReleaseTag inside Playfront.iss.
 
 .PARAMETER Output
-  Carpeta donde dejar el .exe. Por defecto 'dist\installer' (fuera de git).
+  Folder to leave the .exe in. Defaults to 'dist\installer' (outside git).
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File build\installer\Build-Installer.ps1
@@ -35,9 +35,9 @@ function Write-Step { param([string] $Text) Write-Host "`n==> $Text" -Foreground
 function Write-Ok   { param([string] $Text) Write-Host "    OK  $Text" -ForegroundColor Green }
 function Fail       { param([string] $Text) Write-Host "    ERROR  $Text" -ForegroundColor Red; exit 1 }
 
-Write-Step 'Buscando el compilador de Inno Setup'
-# Se instala con: winget install --id JRSoftware.InnoSetup
-# Ojo: winget lo deja en la carpeta del usuario, no en Program Files, asi que se miran los dos.
+Write-Step 'Looking for the Inno Setup compiler'
+# Install with: winget install --id JRSoftware.InnoSetup
+# Note: winget puts it under the user profile, not Program Files, so both are checked.
 $candidates = @(
     (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe'),
     (Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'),
@@ -46,33 +46,33 @@ $candidates = @(
 $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $iscc) {
     Fail @"
-No se encuentra ISCC.exe (el compilador de Inno Setup). Instalalo con:
+ISCC.exe (the Inno Setup compiler) was not found. Install it with:
 
     winget install --id JRSoftware.InnoSetup
 
-Buscado en:
+Searched:
 $($candidates -join "`n")
 "@
 }
 Write-Ok $iscc
 
-if (-not (Test-Path $issPath)) { Fail "No se encuentra $issPath" }
+if (-not (Test-Path $issPath)) { Fail "$issPath not found" }
 $null = New-Item -ItemType Directory -Force $Output
 
-Write-Step 'Compilando'
+Write-Step 'Compiling'
 & $iscc "/O$Output" $issPath
-if ($LASTEXITCODE -ne 0) { Fail "El compilador devolvio $LASTEXITCODE" }
+if ($LASTEXITCODE -ne 0) { Fail "The compiler returned $LASTEXITCODE" }
 
 $exe = Join-Path $Output 'PlayfrontSetup.exe'
-if (-not (Test-Path $exe)) { Fail "Compilo pero no hay PlayfrontSetup.exe en $Output" }
+if (-not (Test-Path $exe)) { Fail "Compiled, but there is no PlayfrontSetup.exe in $Output" }
 
-Write-Step 'Listo'
+Write-Step 'Done'
 Write-Host ("    {0:N2} MB   {1}" -f ((Get-Item $exe).Length / 1MB), $exe)
 Write-Host ''
-Write-Host '    Para probarlo de verdad hay que instalarlo Y desinstalarlo, comprobando las tres' -ForegroundColor White
-Write-Host '    partes (app, servicio, arte) y que los ajustes del usuario sobreviven:'
+Write-Host '    Testing this properly means installing AND uninstalling, checking all three parts' -ForegroundColor White
+Write-Host '    (app, service, artwork) and that the user settings survive:'
 Write-Host ''
 Write-Host '      PlayfrontSetup.exe /VERYSILENT /SUPPRESSMSGBOXES /LOG=%TEMP%\pf.log'
 Write-Host ''
-Write-Host '    El /LOG es lo unico que cuenta que ha pasado cuando falla en la maquina de otro.'
+Write-Host "    That /LOG is the only account of what happened when it fails on someone else's machine."
 Write-Host ''

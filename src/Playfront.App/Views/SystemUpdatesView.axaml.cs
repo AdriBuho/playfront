@@ -8,24 +8,24 @@ using Avalonia.Threading;
 namespace Playfront.App.Views;
 
 /// <summary>
-/// Pantalla "System Updates" (Ajustes -> System -> Updates). Se monta bajo demanda y se libera al
-/// salir con B, igual que el resto de pantallas del shell.
+/// The "System Updates" screen (Settings -> System -> Updates). Mounted on demand and released on B,
+/// like every other screen in the shell.
 ///
-/// La primera casilla es el ESTADO de la actualizacion y manda sobre el resto: al abrir la pantalla
-/// se lanza una comprobacion sola, y segun el resultado la casilla se enciende (hay algo que pulsar:
-/// descargar, o reiniciar para aplicar) o se apaga (no hay nada que hacer, y el foco la salta).
-/// Toda la logica de verdad vive en <see cref="UpdateService"/>; aqui solo se pinta.
+/// The first tile is the update state and drives the rest: opening the screen kicks off a check, and
+/// depending on the result the tile lights up (there is something to press: download, or restart) or
+/// goes dim (nothing to do, and focus skips it). All real logic lives in <see cref="UpdateService"/>;
+/// this only paints it.
 ///
-/// Los dos interruptores de abajo siguen siendo decorativos: se dibujan marcados porque asi salen
-/// en la referencia, y todavia no leen ni escriben nada.
+/// The two toggles below are still decorative: they render checked because that is how the reference
+/// shows them, and they neither read nor write anything yet.
 /// </summary>
 public partial class SystemUpdatesView : UserControl
 {
     private const int StatusTile = 0;
     private const int LastTile = 3;
 
-    // Colores medidos en la referencia. La casilla apagada no es un color inventado: es el que tiene
-    // "No console update available" en la captura del usuario.
+    // Colours measured from the reference. The dim tile colour is not invented: it is what
+    // "No console update available" actually uses there.
     private static readonly IBrush DisabledBackground = new SolidColorBrush(Color.FromRgb(0x25, 0x25, 0x25));
     private static readonly IBrush DisabledForeground = new SolidColorBrush(Color.FromRgb(0x60, 0x60, 0x60));
     private static readonly IBrush NormalBackground = new SolidColorBrush(Color.FromRgb(0x30, 0x30, 0x30));
@@ -34,8 +34,8 @@ public partial class SystemUpdatesView : UserControl
     private readonly Border[] _tiles;
     private readonly Border[] _rings;
 
-    // Texto de la derecha para cada casilla. Solo se conoce el de "Latest console update status":
-    // es el unico que aparece en la referencia, y aqui no se inventa texto que no se haya medido.
+    // Right-hand description per tile. Only the one for "Latest console update status" is known — it
+    // is the only one the reference shows — and text that hasn't been measured is not invented here.
     private static readonly string?[] Descriptions =
     {
         null,
@@ -44,16 +44,16 @@ public partial class SystemUpdatesView : UserControl
         null,
     };
 
-    // Arranca en la segunda casilla, que es donde esta el anillo en la referencia. Si la comprobacion
-    // encuentra actualizacion, la primera se enciende pero NO se roba el foco: mover la seleccion
-    // sola bajo el dedo del usuario es justo lo que no se espera de una pantalla de ajustes.
+    // Starts on the second tile, where the reference puts the ring. If the check finds an update the
+    // first tile lights up but does NOT steal focus: moving the selection under the user's thumb is
+    // the last thing a settings screen should do.
     private int _tile = 1;
 
-    /// <summary>Se pide cerrar esta pantalla y volver a Ajustes (B).</summary>
+    /// <summary>Requests closing this screen and returning to Settings (B).</summary>
     public event Action? ExitRequested;
 
-    // Interno (no publico) porque recibe UpdateService, que tambien lo es. La vista la construye
-    // MainWindow, que vive en el mismo ensamblado.
+    // Internal because it takes UpdateService, which is internal too. MainWindow constructs it and
+    // lives in the same assembly.
     internal SystemUpdatesView(UpdateService updates)
     {
         InitializeComponent();
@@ -66,8 +66,8 @@ public partial class SystemUpdatesView : UserControl
 
         UpdateSelection();
 
-        // Comprobacion automatica al entrar. No se comprueba si ya hay una descarga en marcha o
-        // esperando reinicio: eso tiraria a la basura lo ya descargado.
+        // Automatic check on entry. Skipped when a download is in flight or staged: re-checking would
+        // throw away what has already been downloaded.
         if (_updates.State is UpdateState.Idle or UpdateState.Unsupported
             or UpdateState.UpToDate or UpdateState.Failed)
         {
@@ -77,9 +77,9 @@ public partial class SystemUpdatesView : UserControl
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        // Imprescindible: la vista se destruye y se vuelve a crear cada vez que se abre la pantalla.
-        // Sin esto, cada visita dejaria una suscripcion viva apuntando a una vista muerta, y el
-        // servicio (que vive mientras viva la app) las acumularia todas.
+        // Required: this view is destroyed and rebuilt every time the screen opens. Without this,
+        // each visit would leave a live subscription pointing at a dead view, and the service — which
+        // outlives them all — would accumulate every one of them.
         _updates.Changed -= OnUpdatesChanged;
         base.OnDetachedFromVisualTree(e);
     }
@@ -110,8 +110,8 @@ public partial class SystemUpdatesView : UserControl
         UpdateSelection();
     }
 
-    // Lo que hace la casilla de estado al pulsarla depende de en que punto esta el proceso. Los
-    // estados que no aparecen aqui no son pulsables (ver StatusTileIsActionable).
+    // What pressing the status tile does depends on where the process is. States not listed here are
+    // not pressable (see StatusTileIsActionable).
     private void ActivateStatusTile()
     {
         switch (_updates.State)
@@ -120,28 +120,28 @@ public partial class SystemUpdatesView : UserControl
                 _ = _updates.DownloadAsync();
                 break;
             case UpdateState.ReadyToRestart:
-                // No vuelve de aqui: el proceso muere y arranca la version nueva.
+                // Does not return: the process dies and the new version starts.
                 _updates.ApplyAndRestart();
                 break;
         }
     }
 
-    // Hay algo que pulsar ahora mismo?
+    // Is there something to press right now?
     private bool StatusTileIsActionable() =>
         _updates.State is UpdateState.Available or UpdateState.ReadyToRestart;
 
-    // Esta "viva"? Es lo que decide si se ve encendida y si el foco puede estar en ella. Incluye la
-    // descarga a proposito, aunque durante la descarga no se pueda pulsar: si no, al pulsar
-    // "descargar" el foco se caeria solo a la casilla de abajo y habria que volver a subir para
-    // reiniciar. Mientras baja tambien esta ensenando el porcentaje, asi que apagarla seria mentir.
+    // Is it "live"? This decides whether it renders lit and whether focus may rest on it. Downloading
+    // counts deliberately, even though it can't be pressed then: otherwise pressing "download" would
+    // drop focus to the tile below and the user would have to climb back up to restart. It is also
+    // showing a percentage while downloading, so dimming it would be a lie.
     private bool StatusTileIsLive() =>
         StatusTileIsActionable() || _updates.State is UpdateState.Downloading;
 
     private int FirstSelectableTile() => StatusTileIsLive() ? StatusTile : 1;
 
-    // El servicio avisa desde el hilo en el que termine la tarea de red, no desde el de la interfaz.
-    // Tocar controles de Avalonia desde otro hilo tumba la app, asi que se rebota siempre al hilo
-    // de la interfaz antes de pintar nada.
+    // The service raises Changed on whichever thread the network task completed on, not the UI thread.
+    // Touching Avalonia controls from there takes the app down, so this always bounces back to the UI
+    // thread before painting.
     private void OnUpdatesChanged()
     {
         if (Dispatcher.UIThread.CheckAccess())
@@ -162,9 +162,9 @@ public partial class SystemUpdatesView : UserControl
         UpdTile0.Background = live ? NormalBackground : DisabledBackground;
         UpdStatusText.Foreground = live ? Brushes.White : DisabledForeground;
 
-        // Si el foco estaba en la casilla de estado y esta ha dejado de ser pulsable (por ejemplo,
-        // la comprobacion termina en "ya estas al dia"), hay que sacarlo de ahi: si no, quedaria el
-        // anillo sobre una casilla apagada que no responde a nada.
+        // If focus was on the status tile and it stopped being pressable (for example the check
+        // finishes as "up to date"), move focus off it: otherwise the ring would sit on a dim tile
+        // that answers nothing.
         if (_tile < FirstSelectableTile())
         {
             _tile = FirstSelectableTile();
@@ -175,17 +175,17 @@ public partial class SystemUpdatesView : UserControl
             var isSelected = i == _tile;
             _tiles[i].Classes.Set("selected", isSelected);
             _rings[i].Classes.Set("selected", isSelected);
-            // El anillo de la casilla de estado no debe verse cuando esta apagada.
+            // The status tile's ring must not show while the tile is dim.
             _rings[i].IsVisible = i != StatusTile || live;
         }
 
-        // Sin texto medido para esa casilla se deja el hueco vacio en vez de rellenarlo con algo
-        // inventado: es preferible que se note que falta a que parezca terminado y sea falso.
+        // With no measured text for a tile the gap is left empty rather than filled with something
+        // invented: better that it visibly lacks text than that it looks finished and is wrong.
         UpdDescription.Text = Descriptions[_tile] ?? string.Empty;
     }
 
-    // Textos en ingles (norma de idioma de la interfaz). Solo "No console update available" sale de
-    // la referencia del usuario; los demas son provisionales hasta tener capturas de esos estados.
+    // English throughout (UI language rule). Only "No console update available" comes from the
+    // reference; the rest are provisional until captures of those states exist.
     private string StatusText() => _updates.State switch
     {
         UpdateState.Idle or UpdateState.Checking => "Checking for updates…",
@@ -195,12 +195,12 @@ public partial class SystemUpdatesView : UserControl
             : "Console update available",
         UpdateState.Downloading => $"Downloading update… {_updates.Progress}%",
         UpdateState.ReadyToRestart => "Restart to install update",
-        // Frase propia, mas corta que la del servicio: la suya ("Updates are only available when
-        // Playfront is installed with its installer.") ocupa tres lineas y no cabe en la casilla.
-        // La larga se sigue escribiendo en el registro, que es donde sirve para diagnosticar.
+        // Own wording, shorter than the service's: its sentence ("Updates are only available when
+        // Playfront is installed with its installer.") wraps to three lines and doesn't fit the tile.
+        // The long one still goes to the log, which is where it is useful for diagnosis.
         UpdateState.Unsupported => "Updates only work when Playfront is installed",
-        // Aqui si se usa la del servicio tal cual: son frases cortas y ya explican el motivo
-        // (sin conexion, disco lleno...) en vez de esconderlo detras de un "error" generico.
+        // Here the service's own wording is used verbatim: those are short and already explain the
+        // cause (no connection, disk full...) instead of hiding it behind a generic "error".
         UpdateState.Failed => _updates.LastError ?? "Couldn't check for updates",
         _ => "Checking for updates…",
     };
