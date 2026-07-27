@@ -1,32 +1,33 @@
 <#
 .SYNOPSIS
-  Instala (o mueve, o quita) el servicio ayudante de Playfront en una ubicacion ESTABLE, fuera del
-  repositorio.
+  Installs (or moves, or removes) the Playfront helper service in a STABLE location, outside the
+  repository.
 
 .DESCRIPTION
-  Por que existe: registrar el servicio directamente desde la carpeta de compilacion
-  (src\...\bin\Debug\...) es una trampa. Mover, limpiar o borrar la carpeta del proyecto deja un
-  servicio de arranque automatico apuntando al vacio - y como corre como SYSTEM, no es un detalle
-  menor. Esa version depende ademas de tener .NET instalado en la maquina.
+  Why it exists: registering the service straight from the build output folder (src\...\bin\Debug\...)
+  is a trap. Moving, cleaning or deleting the project folder leaves an auto-start service pointing at
+  nothing — and since it runs as SYSTEM, that is not a small detail. That build also depends on .NET
+  being installed on the machine.
 
-  Este script copia la version PUBLICADA (autocontenida, lleva su propio .NET dentro) a
-  '%ProgramFiles%\Playfront\Helper' y registra el servicio desde ahi.
+  This script copies the PUBLISHED build (self-contained, carrying its own .NET) to
+  '%ProgramFiles%\Playfront\Helper' and registers the service from there.
 
-  Es a la vez la solucion de hoy y el borrador de lo que tendra que hacer el instalador cuando
-  exista: mismo destino, mismos pasos, misma verificacion.
+  It is both today's solution and the draft of what the installer has to do: same destination, same
+  steps, same verification.
 
-  Quien registra el servicio es el propio ejecutable ('Playfront.Helper.exe --install'), que se apunta a
-  si mismo: asi la ruta registrada no puede desincronizarse de donde esta el fichero de verdad.
+  The executable registers itself ('Playfront.Helper.exe --install'), pointing at its own location, so
+  the registered path cannot drift from where the file actually is.
 
 .PARAMETER Source
-  Carpeta con el ayudante ya publicado. Por defecto 'dist\Playfront\Helper', que es lo que produce
-  build\Publish-Playfront.ps1.
+  Folder holding the published helper. Defaults to 'dist\Playfront\Helper', what
+  build\Publish-Playfront.ps1 produces.
 
 .PARAMETER Destination
-  Donde queda instalado. Por defecto '%ProgramFiles%\Playfront\Helper'.
+  Where it ends up installed. Defaults to '%ProgramFiles%\Playfront\Helper'.
 
 .PARAMETER Uninstall
-  Quita el servicio y borra la carpeta instalada, dejando el sistema como si nunca hubiera estado.
+  Removes the service and deletes the installed folder, leaving the system as if it had never been
+  there.
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File build\Install-Helper.ps1
@@ -46,8 +47,8 @@ $ErrorActionPreference = 'Stop'
 $ServiceName = 'PlayfrontHelper'
 $ExeName     = 'Playfront.Helper.exe'
 
-# Todo relativo a la posicion de ESTE fichero, nunca a rutas escritas a mano ni a la carpeta desde
-# la que se lanza (norma de distribucion).
+# Everything is relative to the location of THIS file, never to hand-written paths or the current
+# directory.
 $repoRoot = Split-Path -Parent $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($Source))      { $Source      = Join-Path $repoRoot 'dist\Playfront\Helper' }
 if ([string]::IsNullOrWhiteSpace($Destination)) { $Destination = Join-Path $env:ProgramFiles 'Playfront\Helper' }
@@ -57,116 +58,116 @@ function Write-Ok   { param([string] $Text) Write-Host "    OK  $Text" -Foregrou
 function Write-Note { param([string] $Text) Write-Host "    --  $Text" -ForegroundColor DarkGray }
 function Fail       { param([string] $Text) Write-Host "    ERROR  $Text" -ForegroundColor Red; exit 1 }
 
-# --- Hace falta administrador ---------------------------------------------------------------------
-# Crear o borrar un servicio que corre como SYSTEM lo exige. Es el UNICO momento que necesita
-# elevacion: despues el servicio ya corre solo y la interfaz de Playfront nunca se eleva.
+# --- Administrator required -----------------------------------------------------------------------
+# Creating or deleting a service that runs as SYSTEM requires it. This is the ONLY moment elevation is
+# needed: afterwards the service runs on its own and the Playfront UI never elevates.
 $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Fail 'Hace falta ejecutar esto como administrador (se crea/borra un servicio del sistema).'
+    Fail 'This must be run as administrator (a system service is created/deleted).'
 }
 
-# --- Estado actual: se ENSENA antes de cambiar nada ------------------------------------------------
+# --- Current state, shown before anything changes -------------------------------------------------
 function Get-HelperService {
     return Get-CimInstance Win32_Service -Filter "Name='$ServiceName'" -ErrorAction SilentlyContinue
 }
 
-Write-Step "Estado actual del servicio '$ServiceName'"
+Write-Step "Current state of service '$ServiceName'"
 $existing = Get-HelperService
 if ($existing) {
-    Write-Note "Estado:  $($existing.State) (arranque: $($existing.StartMode))"
-    Write-Note "Apunta a: $($existing.PathName)"
+    Write-Note "State:     $($existing.State) (start: $($existing.StartMode))"
+    Write-Note "Points to: $($existing.PathName)"
     if ($existing.PathName -like "*$repoRoot*") {
-        Write-Note 'Esa ruta esta DENTRO del repositorio: es justo lo que se viene a arreglar.'
+        Write-Note 'That path is INSIDE the repository, which is exactly what this fixes.'
     }
 } else {
-    Write-Note 'No esta instalado.'
+    Write-Note 'Not installed.'
 }
 
-# --- Parada y baja del servicio existente ---------------------------------------------------------
+# --- Stop and deregister an existing service ------------------------------------------------------
 function Remove-HelperService {
     if (-not (Get-HelperService)) { return }
 
-    Write-Step 'Parando y dando de baja el servicio existente'
-    & sc.exe stop $ServiceName | Out-Null   # falla si ya estaba parado; da igual
+    Write-Step 'Stopping and deregistering the existing service'
+    & sc.exe stop $ServiceName | Out-Null   # fails if already stopped; harmless
     & sc.exe delete $ServiceName | Out-Null
 
-    # 'sc delete' puede dejarlo "marcado para borrar" hasta que su proceso muera de verdad; si se
-    # intenta crear el nuevo antes de eso, falla. Se espera a que desaparezca en vez de suponerlo.
+    # 'sc delete' can leave it "marked for deletion" until its process really dies; creating the new
+    # one before that fails. Wait for it to disappear instead of assuming it has.
     $deadline = (Get-Date).AddSeconds(30)
     while ((Get-Date) -lt $deadline) {
         if (-not (Get-HelperService)) { break }
         Start-Sleep -Milliseconds 500
     }
-    if (Get-HelperService) { Fail 'El servicio sigue registrado 30 s despues de darlo de baja. Reinicia y reintenta.' }
-    Write-Ok 'Servicio dado de baja'
+    if (Get-HelperService) { Fail 'The service is still registered 30s after deletion. Reboot and retry.' }
+    Write-Ok 'Service deregistered'
 }
 
-# --- Modo desinstalar -----------------------------------------------------------------------------
+# --- Uninstall mode -------------------------------------------------------------------------------
 if ($Uninstall) {
     Remove-HelperService
     if (Test-Path $Destination) {
-        Write-Step 'Borrando la carpeta instalada'
+        Write-Step 'Deleting the installed folder'
         Remove-Item -Recurse -Force $Destination
         Write-Ok $Destination
-        # Se borra tambien 'Program Files\Playfront' si queda vacia, para no dejar rastro.
+        # Also remove 'Program Files\Playfront' if it is left empty, so nothing is left behind.
         $parent = Split-Path -Parent $Destination
         if ((Test-Path $parent) -and -not (Get-ChildItem -Force $parent)) { Remove-Item -Force $parent }
     }
-    Write-Step 'Listo'
-    Write-Host "    El ayudante ya no esta instalado. La interfaz de Playfront seguira arrancando: al no"
-    Write-Host "    encontrar el servicio, lo que dependa de el (instalar Steam) quedara desactivado."
+    Write-Step 'Done'
+    Write-Host "    The helper is no longer installed. The Playfront UI will still start: with no service"
+    Write-Host "    to find, whatever depends on it (installing Steam) is simply disabled."
     Write-Host ''
     exit 0
 }
 
-# --- Comprobacion del origen ----------------------------------------------------------------------
-Write-Step 'Comprobando la version publicada del ayudante'
+# --- Check the source -----------------------------------------------------------------------------
+Write-Step 'Checking the published helper'
 $sourceExe = Join-Path $Source $ExeName
 if (-not (Test-Path $sourceExe)) {
-    Fail "No se encuentra $sourceExe.`n           Publica primero:  powershell -ExecutionPolicy Bypass -File build\Publish-Playfront.ps1"
+    Fail "$sourceExe not found.`n           Publish first:  powershell -ExecutionPolicy Bypass -File build\Publish-Playfront.ps1"
 }
 
-# Autocontenido = lleva .NET dentro = funciona en un Windows sin .NET instalado. Se comprueba en
-# lugar de darlo por hecho, porque instalar por error la version que depende del .NET de la maquina
-# es exactamente el fallo que este script viene a corregir.
+# Self-contained = carries .NET inside = runs on a Windows without .NET installed. This is verified
+# rather than assumed, because installing the framework-dependent build by mistake is exactly the
+# failure this script exists to prevent.
 $runtimeConfig = Join-Path $Source 'Playfront.Helper.runtimeconfig.json'
 if (Test-Path $runtimeConfig) {
     if ((Get-Content $runtimeConfig -Raw) -notmatch 'includedFrameworks') {
-        Fail "La version de $Source NO es autocontenida (depende del .NET instalado en la maquina). Usa build\Publish-Playfront.ps1."
+        Fail "The build in $Source is NOT self-contained (it depends on the machine's .NET). Use build\Publish-Playfront.ps1."
     }
 }
 $sourceVersion = (Get-Item $sourceExe).VersionInfo.ProductVersion
-Write-Ok "$ExeName version $sourceVersion (autocontenido) en $Source"
+Write-Ok "$ExeName version $sourceVersion (self-contained) in $Source"
 
-# --- Baja, copia y alta ---------------------------------------------------------------------------
+# --- Deregister, copy, register -------------------------------------------------------------------
 Remove-HelperService
 
-Write-Step "Copiando a $Destination"
+Write-Step "Copying to $Destination"
 if (Test-Path $Destination) { Remove-Item -Recurse -Force $Destination }
 New-Item -ItemType Directory -Path $Destination -Force | Out-Null
 Copy-Item -Path (Join-Path $Source '*') -Destination $Destination -Recurse -Force
 $destExe = Join-Path $Destination $ExeName
-if (-not (Test-Path $destExe)) { Fail "La copia termino pero no hay $ExeName en $Destination" }
+if (-not (Test-Path $destExe)) { Fail "Copy finished but there is no $ExeName in $Destination" }
 $fileCount = (Get-ChildItem -Recurse -File $Destination).Count
 $sizeMB = [math]::Round(((Get-ChildItem -Recurse -File $Destination | Measure-Object -Property Length -Sum).Sum / 1MB), 1)
-Write-Ok "$fileCount ficheros, $sizeMB MB"
+Write-Ok "$fileCount files, $sizeMB MB"
 
-Write-Step 'Registrando el servicio desde su nueva ubicacion'
+Write-Step 'Registering the service from its new location'
 & $destExe --install
-if ($LASTEXITCODE -ne 0) { Fail "'$ExeName --install' devolvio $LASTEXITCODE" }
+if ($LASTEXITCODE -ne 0) { Fail "'$ExeName --install' returned $LASTEXITCODE" }
 
-# --- Verificacion: que quede probado, no supuesto -------------------------------------------------
-Write-Step 'Verificando'
+# --- Verification: proven, not assumed ------------------------------------------------------------
+Write-Step 'Verifying'
 $svc = Get-HelperService
-if (-not $svc) { Fail 'El servicio no aparece registrado despues de instalarlo.' }
+if (-not $svc) { Fail 'The service is not registered after installing it.' }
 
-# PathName llega entre comillas; se quitan para comparar la ruta de verdad.
+# PathName comes back quoted; strip them to compare the real path.
 $registered = $svc.PathName.Trim('"')
-if ($registered -ne $destExe) { Fail "El servicio quedo apuntando a '$registered' en vez de '$destExe'." }
-Write-Ok "Apunta a $registered"
+if ($registered -ne $destExe) { Fail "The service points at '$registered' instead of '$destExe'." }
+Write-Ok "Points to $registered"
 
-if ($registered -like "*$repoRoot*") { Fail 'El servicio sigue apuntando dentro del repositorio.' }
-Write-Ok 'Ya NO depende de la carpeta del repositorio'
+if ($registered -like "*$repoRoot*") { Fail 'The service still points inside the repository.' }
+Write-Ok 'No longer depends on the repository folder'
 
 $deadline = (Get-Date).AddSeconds(30)
 while ((Get-Date) -lt $deadline) {
@@ -174,11 +175,11 @@ while ((Get-Date) -lt $deadline) {
     if ($svc.State -eq 'Running') { break }
     Start-Sleep -Milliseconds 500
 }
-if ($svc.State -ne 'Running') { Fail "El servicio quedo en estado '$($svc.State)' en vez de 'Running'." }
-Write-Ok "En marcha (arranque: $($svc.StartMode)), como $($svc.StartName)"
+if ($svc.State -ne 'Running') { Fail "The service ended up '$($svc.State)' instead of 'Running'." }
+Write-Ok "Running (start: $($svc.StartMode)), as $($svc.StartName)"
 
-# Prueba de extremo a extremo: hablarle por la MISMA tuberia que usa la interfaz de Playfront. Que el
-# servicio este "Running" no demuestra que atienda peticiones; esto si.
+# End-to-end check: talk to it over the SAME pipe the Playfront UI uses. A service being "Running"
+# does not prove it serves requests; this does.
 $pipeOk = $false
 try {
     $pipe = New-Object System.IO.Pipes.NamedPipeClientStream('.', 'PlayfrontHelper', [System.IO.Pipes.PipeDirection]::InOut)
@@ -191,18 +192,18 @@ try {
     $pipe.Dispose()
     if ($reply -match '"[Oo]k":\s*true') {
         $pipeOk = $true
-        Write-Ok "Responde por su tuberia: $reply"
+        Write-Ok "Replies on its pipe: $reply"
     } else {
-        Write-Note "Respuesta inesperada por la tuberia: $reply"
+        Write-Note "Unexpected reply on the pipe: $reply"
     }
 } catch {
-    Write-Note "No se pudo hablar con el servicio por la tuberia: $($_.Exception.Message)"
+    Write-Note "Could not talk to the service over the pipe: $($_.Exception.Message)"
 }
-if (-not $pipeOk) { Fail 'El servicio esta en marcha pero no atiende peticiones por su tuberia.' }
+if (-not $pipeOk) { Fail 'The service is running but does not answer requests on its pipe.' }
 
-Write-Step 'Listo'
-Write-Host "    Playfront Helper $sourceVersion instalado en $Destination"
-Write-Host '    Ya puedes mover, limpiar o borrar la carpeta del repositorio sin romper el servicio.'
+Write-Step 'Done'
+Write-Host "    Playfront Helper $sourceVersion installed in $Destination"
+Write-Host '    You can now move, clean or delete the repository folder without breaking the service.'
 Write-Host ''
-Write-Host '    Para quitarlo:  powershell -ExecutionPolicy Bypass -File build\Install-Helper.ps1 -Uninstall'
+Write-Host '    To remove it:  powershell -ExecutionPolicy Bypass -File build\Install-Helper.ps1 -Uninstall'
 Write-Host ''

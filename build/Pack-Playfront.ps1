@@ -1,34 +1,34 @@
 <#
 .SYNOPSIS
-  Empaqueta Playfront para repartir: el paquete de la app (con su actualizador) y, aparte, el paquete
-  de assets pesados.
+  Packages Playfront for distribution: the app package (with its updater), the privileged service, and
+  separately the heavy asset package.
 
 .DESCRIPTION
-  Produce lo que el instalador tendra que descargar y lo que se cuelga de una release:
+  Produces everything the installer downloads and everything attached to a release:
 
-    1. Playfront-win-Setup.exe        el programa, ~55 MB (lleva la app dentro, comprimida)
-    2. Playfront-<version>-full.nupkg  + delta   lo que consume el boton de actualizar
-    3. PlayfrontAssets-Games.zip     los fondos y el arte de juegos, ~416 MB
+    1. PlayfrontShell-win-Setup.exe            the program, ~55 MB (carries the app inside)
+    2. PlayfrontShell-<version>-full.nupkg + delta   what the in-app updater consumes
+    3. PlayfrontHelper.zip                     the privileged service
+    4. PlayfrontAssets-Games.zip               game backgrounds and artwork, ~416 MB
 
-  Los assets van APARTE a proposito. El motivo esta en src/Playfront.App/AssetPaths.cs: el sistema de
-  actualizacion reemplaza la carpeta del programa cada vez, asi que meter 416 MB ahi dentro convertiria
-  una actualizacion de 70 KB en una de 470 MB. Ademas asi pueden ser opcionales y se puede dejar de
-  repartir un fichero concreto sin romper ninguna instalacion.
+  The assets ship SEPARATELY on purpose; the reasoning lives in src/Playfront.App/AssetPaths.cs. The
+  updater replaces the program folder every time, so putting 416 MB in there would turn a 70 KB update
+  into a 470 MB one. It also makes them optional, and lets a single file be withdrawn without breaking
+  any installation.
 
-  El instalador los descomprime en %ProgramData%\Playfront\Assets, que es el segundo sitio donde la app
-  los busca.
+  The installer unpacks them into %ProgramData%\Playfront\Assets, the second place the app looks.
 
 .PARAMETER Runtime
-  Plataforma de destino. win-x64 es la de la ROG Ally y la de cualquier PC normal.
+  Target platform. win-x64 covers the ROG Ally and any normal PC.
 
 .PARAMETER Output
-  Carpeta donde se deja el resultado. Por defecto 'dist\release' (fuera de git).
+  Where to leave the result. Defaults to 'dist\release' (outside git).
 
 .PARAMETER Clean
-  Borra la carpeta de salida antes de empezar.
+  Delete the output folder before starting.
 
 .PARAMETER SkipAssets
-  No genera el zip de assets (tarda, son 416 MB). Util al iterar sobre el programa.
+  Skip the asset zip (it is 416 MB and takes a while). Useful when iterating on the program.
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File build\Pack-Playfront.ps1 -Clean
@@ -45,34 +45,32 @@ param(
 $ErrorActionPreference = 'Stop'
 
 # ---------------------------------------------------------------------------------------------------
-#  IDENTIFICADOR DEL PAQUETE: no lo cambies a la ligera, y sobre todo NO lo pongas igual que el nombre
-#  de la carpeta de datos.
+#  PACKAGE ID: do not change it lightly, and above all do NOT make it match the data folder name.
 #
-#  Velopack, si nadie le dice otra cosa, instala en %LocalAppData%\<identificador>. Y al desinstalar
-#  BORRA esa carpeta entera (comprobado el 2026-07-26: ejecuta rmdir /s /q sobre ella). La app guarda
-#  los ajustes del usuario y su sesion de YouTube en %LocalAppData%\Playfront, asi que un identificador
-#  "Playfront" haria que instalar y desinstalar se llevara por delante los datos de quien lo tenga
-#  puesto. Con "PlayfrontShell" eso es imposible aunque alguien olvide decirle donde instalar.
+#  Left to itself, Velopack installs into %LocalAppData%\<packId>, and on uninstall it DELETES that
+#  folder wholesale (verified: it runs rmdir /s /q over it). The app keeps user settings and the
+#  YouTube session in %LocalAppData%\Playfront, so a packId of "Playfront" would make install and
+#  uninstall take the user's data with them. With "PlayfrontShell" that is impossible even if someone
+#  forgets to pass an install location.
 #
-#  El usuario nunca ve este nombre: lo que se ve en el menu de inicio y en "programas instalados" es
-#  $packTitle.
+#  Users never see this name: the Start menu and "installed apps" show $packTitle.
 #
-#  Cambiarlo DESPUES de publicar una version romperia las actualizaciones de quien ya la tenga (para
-#  Velopack seria otra aplicacion distinta).
+#  Changing it AFTER publishing a version would break updates for anyone already on it — to Velopack
+#  it would be a different application.
 # ---------------------------------------------------------------------------------------------------
 $packId    = 'PlayfrontShell'
 $packTitle = 'Playfront'
 
-# Nombre de la carpeta de datos de la app (src/Playfront.App/AppData.cs). Solo esta aqui para poder
-# comprobar que no coincide con $packId.
+# The app's data folder name (src/Playfront.App/AppData.cs). Here only so the check below can prove it
+# does not collide with $packId.
 $dataFolderName = 'Playfront'
 
-# Donde el instalador debe instalar. Se imprime al final para que no se pierda: hay que pasarselo al
-# Setup.exe con --installto. Sin esto instalaria en %LocalAppData%\PlayfrontShell, que funciona pero
-# deja una carpeta con un nombre que el usuario no reconoce.
+# Where the installer must install. Printed at the end so it doesn't get lost: it has to be passed to
+# Setup.exe with --installto. Without it the folder is %LocalAppData%\PlayfrontShell, which works but
+# leaves a name the user doesn't recognise.
 $recommendedInstallDir = '%LocalAppData%\Programs\Playfront'
 
-# Subcarpeta de los assets pesados dentro de la publicacion. Se saca del paquete de la app.
+# Heavy-asset subfolder inside the publish output. Pulled out of the app package.
 $heavyAssetsRelative = 'Assets\Backgrounds\Games'
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -88,71 +86,71 @@ function SizeMB     { param([string] $Path)
     return [math]::Round($sum / 1MB, 1)
 }
 
-# --- La comprobacion que evita el borrado de datos ------------------------------------------------
+# --- The check that prevents wiping user data -----------------------------------------------------
 if ($packId -ieq $dataFolderName) {
     Fail @"
-El identificador del paquete ('$packId') es igual al nombre de la carpeta de datos de la app.
-Eso hace que Velopack instale ENCIMA de los datos del usuario y los BORRE al desinstalar.
-Pon un identificador distinto (por ejemplo 'PlayfrontShell') antes de seguir.
+The package id ('$packId') is the same as the app's data folder name.
+That makes Velopack install ON TOP of the user's data and DELETE it on uninstall.
+Pick a different id (for example 'PlayfrontShell') before continuing.
 "@
 }
 
-# --- Version: del unico sitio donde se define ------------------------------------------------------
+# --- Version, from the single place it is defined -------------------------------------------------
 $propsPath = Join-Path $repoRoot 'Directory.Build.props'
-if (-not (Test-Path $propsPath)) { Fail "No se encuentra Directory.Build.props en $repoRoot" }
+if (-not (Test-Path $propsPath)) { Fail "Directory.Build.props not found in $repoRoot" }
 $version = ([xml](Get-Content $propsPath)).Project.PropertyGroup.PlayfrontVersion | Where-Object { $_ }
-if ([string]::IsNullOrWhiteSpace($version)) { Fail 'No se pudo leer PlayfrontVersion de Directory.Build.props' }
+if ([string]::IsNullOrWhiteSpace($version)) { Fail 'Could not read PlayfrontVersion from Directory.Build.props' }
 
-# --- Nada de ceros a la izquierda ------------------------------------------------------------------
-#  Comprobado el 2026-07-27 empaquetando de verdad: con PlayfrontVersion = 0.1.001, el .exe conserva
-#  "0.1.001" pero Velopack normaliza y genera "PlayfrontShell-0.1.1-full.nupkg". O sea que 0.1.001 y
-#  0.1.1 son LA MISMA version para el actualizador.
+# --- No leading zeros -----------------------------------------------------------------------------
+#  Verified by actually packaging: with PlayfrontVersion = 0.1.001 the .exe keeps "0.1.001" but
+#  Velopack normalises it and produces "PlayfrontShell-0.1.1-full.nupkg". So 0.1.001 and 0.1.1 are THE
+#  SAME version as far as the updater is concerned.
 #
-#  Por que se para aqui en vez de dejarlo pasar: el fallo no da ningun error. Si algun dia salen las
-#  dos, la app de quien tenga una NO se actualizara a la otra y no dira por que. Y mientras tanto,
-#  Ajustes mostraria un numero (0.1.001) distinto del de la release (0.1.1).
+#  Why this stops here instead of letting it through: the failure is silent. If both ever shipped,
+#  anyone on one would not update to the other and would never be told why. Meanwhile Settings would
+#  show a number (0.1.001) different from the release's (0.1.1).
 #
-#  Numeracion del proyecto: se sube el tercer numero en cada entrega, sin tope y sin rellenar
-#  (0.1.1, 0.1.2 ... 0.1.87). Ordena bien sola: 0.1.10 va DESPUES de 0.1.9, la comparacion es
-#  numerica, no alfabetica. El del medio se sube cuando el cambio es gordo.
+#  Project numbering: bump the third number on every release, with no cap and no padding (0.1.1,
+#  0.1.2 ... 0.1.87). It sorts correctly on its own — 0.1.10 comes AFTER 0.1.9, the comparison is
+#  numeric, not alphabetical. The middle number moves when the change is large.
 if ($version -match '(^|\.)0\d') {
     Fail @"
-La version '$version' lleva ceros a la izquierda, y eso rompe las actualizaciones.
+Version '$version' has leading zeros, and that breaks updates.
 
-Velopack los borra: '$version' acabaria empaquetada como otra version distinta de la que pone
-Directory.Build.props, y dos numeros que parecen distintos serian el mismo para el actualizador.
+Velopack strips them: '$version' would be packaged as a different version from the one in
+Directory.Build.props, and two numbers that look different would be the same to the updater.
 
-Quita los ceros de delante. Para muchas entregas seguidas basta con subir el tercer numero:
-0.1.1, 0.1.2, 0.1.3 ... 0.1.87  (no hay tope, y ordena bien sin rellenar).
+Drop the leading zeros. For many consecutive releases, bumping the third number is enough:
+0.1.1, 0.1.2, 0.1.3 ... 0.1.87  (no cap, and it sorts correctly without padding).
 "@
 }
 
 Write-Host ''
-Write-Host "  Playfront $version  -  paquetes para repartir ($Runtime, $Configuration)" -ForegroundColor White
-Write-Host "  Salida: $Output"
+Write-Host "  Playfront $version  -  distribution packages ($Runtime, $Configuration)" -ForegroundColor White
+Write-Host "  Output: $Output"
 
-# --- Herramientas necesarias -----------------------------------------------------------------------
-Write-Step 'Comprobando herramientas'
+# --- Required tools -----------------------------------------------------------------------
+Write-Step 'Checking tools'
 $null = (& dotnet --version 2>$null)
-if ($LASTEXITCODE -ne 0) { Fail 'No se encuentra "dotnet". Hace falta el SDK de .NET 10.' }
-Write-Ok 'SDK de .NET'
+if ($LASTEXITCODE -ne 0) { Fail 'No "dotnet" found. The .NET 10 SDK is required.' }
+Write-Ok '.NET SDK'
 
-# Se comprueba que el comando EXISTA, no se ejecuta: "vpk" sin subcomando devuelve error a proposito.
+# Only the command's EXISTENCE is checked, it is not run: "vpk" with no subcommand exits non-zero.
 if (-not (Get-Command vpk -ErrorAction SilentlyContinue)) {
-    Fail 'No se encuentra "vpk" (el empaquetador de Velopack). Instalalo con:  dotnet tool install -g vpk'
+    Fail 'No "vpk" found (the Velopack packager). Install it with:  dotnet tool install -g vpk'
 }
 Write-Ok 'vpk (Velopack)'
 
 if ($Clean -and (Test-Path $Output)) {
-    Write-Step 'Borrando la salida anterior'
+    Write-Step 'Deleting the previous output'
     Remove-Item -Recurse -Force $Output
     Write-Ok $Output
 }
 $null = New-Item -ItemType Directory -Force $Output
 
-# --- 1. Publicar la app autocontenida --------------------------------------------------------------
+# --- 1. Publish the app, self-contained --------------------------------------------------------------
 $stage = Join-Path $Output 'stage'
-Write-Step 'Publicando la app (autocontenida: lleva su propio .NET dentro)'
+Write-Step 'Publishing the app (self-contained: carries its own .NET)'
 if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
 
 & dotnet publish (Join-Path $repoRoot 'src\Playfront.App\Playfront.App.csproj') `
@@ -162,45 +160,45 @@ if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
     --output $stage `
     --nologo `
     -verbosity:minimal
-if ($LASTEXITCODE -ne 0) { Fail 'Fallo la publicacion de la app' }
+if ($LASTEXITCODE -ne 0) { Fail 'Publishing the app failed' }
 
 $exePath = Join-Path $stage 'Playfront.App.exe'
-if (-not (Test-Path $exePath)) { Fail "La publicacion termino pero no hay Playfront.App.exe en $stage" }
+if (-not (Test-Path $exePath)) { Fail "Publish finished but there is no Playfront.App.exe in $stage" }
 
 $stamped = (Get-Item $exePath).VersionInfo.ProductVersion
 Write-Ok "Playfront.App.exe  -  version $stamped  -  $(SizeMB $stage) MB"
 
-# Fuera los simbolos de depuracion de librerias AJENAS (100 MB de codigo que no es nuestro y que no
-# vamos a depurar). Se conservan los nuestros: son los que hacen que un fallo diga en que linea paso.
+# Third-party debug symbols are dropped: 100 MB of code we will never debug. Ours are kept, because
+# they are what make a failure report the line it happened on.
 $foreignPdb = Get-ChildItem -Path $stage -Filter *.pdb -File |
     Where-Object { $_.Name -ne 'Playfront.App.pdb' }
 if ($foreignPdb) {
     $freed = [math]::Round((($foreignPdb | Measure-Object -Property Length -Sum).Sum / 1MB), 1)
     $foreignPdb | Remove-Item -Force
-    Write-Ok "Quitados $($foreignPdb.Count) simbolos de terceros ($freed MB)"
+    Write-Ok "Dropped $($foreignPdb.Count) third-party symbol files ($freed MB)"
 }
 
-# --- 2. Separar los assets pesados del paquete de la app -------------------------------------------
-Write-Step 'Separando los assets pesados del paquete de la app'
+# --- 2. Split the heavy assets out of the app package -------------------------------------------
+Write-Step 'Splitting the heavy assets out of the app package'
 $heavyInStage = Join-Path $stage $heavyAssetsRelative
 $heavyTemp    = Join-Path $Output 'assets-stage\Backgrounds\Games'
 
 if (Test-Path $heavyInStage) {
     $null = New-Item -ItemType Directory -Force (Split-Path -Parent $heavyTemp)
     Move-Item $heavyInStage $heavyTemp
-    Write-Ok "$(SizeMB $heavyTemp) MB fuera del paquete de la app"
-    Write-Note 'La app los buscara en %ProgramData%\Playfront\Assets (ver AssetPaths.cs)'
+    Write-Ok "$(SizeMB $heavyTemp) MB moved out of the app package"
+    Write-Note 'The app will look for them in %ProgramData%\Playfront\Assets (see AssetPaths.cs)'
 } else {
-    # Pasa en una copia limpia del repositorio: los assets no estan en git (ver .gitignore).
-    Write-Note "No hay assets pesados en la publicacion ($heavyAssetsRelative)."
-    Write-Note 'Normal en una compilacion desde una copia limpia del repositorio. El programa se'
-    Write-Note 'empaqueta igual y arranca sin ellos; solo no se generara su zip.'
+    # Happens on a clean clone: the assets are not in git (see .gitignore).
+    Write-Note "No heavy assets in the publish output ($heavyAssetsRelative)."
+    Write-Note 'Normal when building from a clean clone. The program is packaged anyway and starts'
+    Write-Note 'without them; only their zip is skipped.'
 }
 
-Write-Ok "El paquete de la app se queda en $(SizeMB $stage) MB"
+Write-Ok "The app package is down to $(SizeMB $stage) MB"
 
 # --- 3. Empaquetar el programa con Velopack --------------------------------------------------------
-Write-Step "Empaquetando el programa con Velopack (identificador '$packId')"
+Write-Step "Packaging the program with Velopack (id '$packId')"
 & vpk pack `
     --packId      $packId `
     --packVersion $version `
@@ -209,21 +207,21 @@ Write-Step "Empaquetando el programa con Velopack (identificador '$packId')"
     --packTitle   $packTitle `
     --packAuthors $packTitle `
     --outputDir   $Output
-if ($LASTEXITCODE -ne 0) { Fail 'Fallo el empaquetado con Velopack' }
+if ($LASTEXITCODE -ne 0) { Fail 'Velopack packaging failed' }
 
 $setup = Get-ChildItem -Path $Output -Filter '*-Setup.exe' -File | Select-Object -First 1
-if (-not $setup) { Fail "El empaquetado termino pero no hay ningun *-Setup.exe en $Output" }
+if (-not $setup) { Fail "Packaging finished but there is no *-Setup.exe in $Output" }
 Write-Ok "$($setup.Name)  -  $([math]::Round($setup.Length/1MB,1)) MB"
 
-# --- 3b. El servicio ayudante ----------------------------------------------------------------------
-#  Va en su PROPIO paquete, no dentro del de la app, por dos motivos:
-#    1. Se instala en 'Program Files' y como servicio de Windows: eso necesita permisos de
-#       administrador. La app NO los necesita (vive en la carpeta del usuario) y no debe pedirlos,
-#       porque si los pidiera no podria actualizarse sola y en silencio.
-#    2. El actualizador reemplaza la carpeta de la app en cada version. Meter aqui 79 MB que casi
-#       nunca cambian convertiria cada actualizacion pequeña en una descarga enorme.
-#  Quien lo registra como servicio es el propio ejecutable ('--install'), no un script aparte.
-Write-Step 'Publicando el servicio ayudante (paquete aparte)'
+# --- 3b. The helper service ----------------------------------------------------------------------
+#  Ships as its OWN package, not inside the app's, for two reasons:
+#    1. It installs into 'Program Files' and as a Windows service, which needs administrator
+#       rights. The app does NOT need them (it lives in the user folder) and must not ask, because
+#       if it did it could not update itself silently.
+#    2. The updater replaces the app folder on every version. Putting 79 MB that almost never change
+#       in there would turn every small update into a huge download.
+#  The executable registers itself as a service ('--install'); no separate script does it.
+Write-Step 'Publishing the helper service (separate package)'
 $helperStage = Join-Path $Output 'helper-stage'
 if (Test-Path $helperStage) { Remove-Item -Recurse -Force $helperStage }
 
@@ -234,12 +232,12 @@ if (Test-Path $helperStage) { Remove-Item -Recurse -Force $helperStage }
     --output $helperStage `
     --nologo `
     -verbosity:minimal
-if ($LASTEXITCODE -ne 0) { Fail 'Fallo la publicacion del servicio ayudante' }
+if ($LASTEXITCODE -ne 0) { Fail 'Publishing the helper service failed' }
 
 $helperExe = Join-Path $helperStage 'Playfront.Helper.exe'
-if (-not (Test-Path $helperExe)) { Fail "La publicacion termino pero no hay Playfront.Helper.exe en $helperStage" }
+if (-not (Test-Path $helperExe)) { Fail "Publish finished but there is no Playfront.Helper.exe in $helperStage" }
 
-# Mismos simbolos de terceros fuera que en la app: son megas de codigo ajeno que no vamos a depurar.
+# Same third-party symbols dropped as for the app: megabytes of code we will never debug.
 $helperForeignPdb = Get-ChildItem -Path $helperStage -Filter *.pdb -File |
     Where-Object { $_.Name -ne 'Playfront.Helper.pdb' }
 if ($helperForeignPdb) { $helperForeignPdb | Remove-Item -Force }
@@ -247,18 +245,18 @@ if ($helperForeignPdb) { $helperForeignPdb | Remove-Item -Force }
 $helperZip = Join-Path $Output 'PlayfrontHelper.zip'
 if (Test-Path $helperZip) { Remove-Item -Force $helperZip }
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-# Aqui SI se comprime (al reves que los assets): son DLL, y bajan de ~79 MB a la mitad larga.
+# This one IS compressed, unlike the assets: they are DLLs and drop from ~79 MB to well under half.
 [IO.Compression.ZipFile]::CreateFromDirectory($helperStage, $helperZip, [IO.Compression.CompressionLevel]::Optimal, $false)
-Write-Ok "PlayfrontHelper.zip  -  $([math]::Round((Get-Item $helperZip).Length/1MB,1)) MB (sin comprimir: $(SizeMB $helperStage) MB)"
+Write-Ok "PlayfrontHelper.zip  -  $([math]::Round((Get-Item $helperZip).Length/1MB,1)) MB (uncompressed: $(SizeMB $helperStage) MB)"
 
-# --- 4. Comprimir los assets pesados ---------------------------------------------------------------
+# --- 4. Compress the heavy assets ---------------------------------------------------------------
 if (-not $SkipAssets -and (Test-Path $heavyTemp)) {
-    Write-Step 'Comprimiendo los assets pesados'
+    Write-Step 'Compressing the heavy assets'
     $assetsZip = Join-Path $Output 'PlayfrontAssets-Games.zip'
     if (Test-Path $assetsZip) { Remove-Item -Force $assetsZip }
 
-    # Sin compresion: son videos y JPG, ya estan comprimidos. Comprimirlos otra vez tardaria minutos
-    # para ahorrar casi nada, y el instalador tiene que descomprimirlo en la maquina del usuario.
+    # No compression: these are video and JPEG, already compressed. Recompressing would take minutes
+    # to save almost nothing, and the installer has to unpack it on the user's machine.
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     [IO.Compression.ZipFile]::CreateFromDirectory(
         (Split-Path -Parent (Split-Path -Parent $heavyTemp)),
@@ -268,26 +266,26 @@ if (-not $SkipAssets -and (Test-Path $heavyTemp)) {
 
     Write-Ok "PlayfrontAssets-Games.zip  -  $([math]::Round((Get-Item $assetsZip).Length/1MB,1)) MB"
 } elseif ($SkipAssets) {
-    Write-Step 'Assets pesados: saltados (-SkipAssets)'
+    Write-Step 'Heavy assets: skipped (-SkipAssets)'
 }
 
-# --- 5. Limpieza de lo intermedio ------------------------------------------------------------------
+# --- 5. Clean up intermediates ------------------------------------------------------------------
 Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue
 Remove-Item -Recurse -Force $helperStage -ErrorAction SilentlyContinue
 Remove-Item -Recurse -Force (Join-Path $Output 'assets-stage') -ErrorAction SilentlyContinue
 
-# --- Resumen ---------------------------------------------------------------------------------------
-Write-Step 'Listo'
+# --- Summary ---------------------------------------------------------------------------------------
+Write-Step 'Done'
 Get-ChildItem -Path $Output -File | Sort-Object Length -Descending | ForEach-Object {
     Write-Host ("    {0,10} MB   {1}" -f [math]::Round($_.Length/1MB,1), $_.Name)
 }
 Write-Host ''
-Write-Host '    Estos ficheros se cuelgan de una release de GitHub. Quien los junta y los instala es' -ForegroundColor White
-Write-Host '    build\installer\Playfront.iss (Inno Setup), que produce un unico .exe de 2 MB:'
+Write-Host '    These files are attached to a GitHub release. What pulls them together and installs them' -ForegroundColor White
+Write-Host '    is build\installer\Playfront.iss (Inno Setup), which produces a single 2 MB .exe:'
 Write-Host ''
-Write-Host "      1. La app     -> $recommendedInstallDir  (carpeta del usuario, SIN permisos)"
-Write-Host '      2. El ayudante -> %ProgramFiles%\Playfront\Helper + servicio  (CON permisos)'
-Write-Host '      3. Arte/videos -> %ProgramData%\Playfront\Assets'
+Write-Host "      1. The app     -> $recommendedInstallDir  (user folder, NO admin rights)"
+Write-Host '      2. The helper  -> %ProgramFiles%\Playfront\Helper + service  (admin rights)'
+Write-Host '      3. Artwork     -> %ProgramData%\Playfront\Assets'
 Write-Host ''
-Write-Host '    Al sacar una version nueva hay que cambiar ReleaseTag en ese .iss y recompilarlo.'
+Write-Host '    When cutting a new version, change ReleaseTag in that .iss and rebuild it.'
 Write-Host ''
