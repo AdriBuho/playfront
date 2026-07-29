@@ -19,6 +19,49 @@
         <Color x:Key="AccentColor">#439941</Color>
         <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
         <SolidColorBrush x:Key="AccentFadedBrush" Color="{StaticResource AccentColor}" Opacity="0" />
+
+        <!-- The reference UI's own typeface, not Segoe UI. It ships as a font file inside the
+             installed Xbox app (Microsoft.GamingApp\Assets\Fonts), the same place the icons came
+             from, and the file is bundled here so it works on machines without that app.
+
+             It is NOT interchangeable with Segoe UI even though the two are metrically close:
+             across the thirteen labels of the Settings screen both land within ~1 px, but at
+             heading sizes the letterforms and the spacing diverge visibly. Anything meant to look
+             like the reference uses this; the icon glyphs keep using Segoe Fluent Icons.
+
+             Referenced as a resource rather than repeating the avares:// string: the "#Segoe Sans
+             Text" suffix after the file path is the family name inside the .ttf and is required -
+             without it the font silently falls back to the default and nothing reports an error.
+             The suffix must be the family name the file actually declares, which is not always the
+             filename: Segoe-Sans-Text-Semibold.ttf declares "Segoe Sans Text Semibold" as a family
+             of its own, not a Semibold weight of "Segoe Sans Text". Setting FontWeight instead of
+             using these families gets a synthesised fake bold.
+
+             THREE cuts, and which one goes where is measured, not guessed. Matching a candidate
+             against the reference by ink width alone cannot tell weights apart (in this family
+             Regular at 26 and Semibold at 25 produce the same widths). Overlaying the glyph shapes
+             - both blurred equally, since the reference is compressed video - does: across the
+             title and the body labels the Semibold cuts win by a wide margin and Light comes last.
+             The reference UI is Semibold, not Regular. -->
+        <FontFamily x:Key="XboxFontFamily">avares://Playfront.App/Assets/Fonts/Segoe-Sans-Text.ttf#Segoe Sans Text</FontFamily>
+        <FontFamily x:Key="XboxFontSemibold">avares://Playfront.App/Assets/Fonts/Segoe-Sans-Text-Semibold.ttf#Segoe Sans Text Semibold</FontFamily>
+        <!-- Display cut, for headings only. Optical size: Display is drawn for large type, Text for
+             body. Using Text large (or Display small) is what makes a heading look almost-right. -->
+        <FontFamily x:Key="XboxFontDisplaySemibold">avares://Playfront.App/Assets/Fonts/Segoe-Sans-Display-Semibold.ttf#Segoe Sans Display Semibold</FontFamily>
+
+        <!-- The reference UI's ICON set, which is NOT Segoe Fluent Icons. It also ships inside the
+             installed Xbox app. Segoe Fluent has near-misses for a lot of these - a bell without
+             the "zZ", a robot without its speech tail, a person whose badge holds a plus instead of
+             an arrow - and every one of those was a card that could not be finished until this file
+             turned up. Where a drawing exists here, it is the drawing, not an approximation.
+
+             Finding it took a detour worth writing down: the file lives under a path with spaces,
+             and the browser used to render the glyph sheets silently refuses to load a @font-face
+             from such a URL - every glyph came out as the empty-box "missing glyph" and the font
+             looked like it had no letters at all. Copy it somewhere without spaces first.
+             To list what a font actually defines, do not guess codepoint ranges: read
+             System.Windows.Media.GlyphTypeface(...).CharacterToGlyphMap. -->
+        <FontFamily x:Key="XboxIconFont">avares://Playfront.App/Assets/Fonts/XboxFluent2.ttf#Xbox Fluent v2</FontFamily>
     </Application.Resources>
 
     <Application.Styles>

@@ -1,0 +1,115 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Playfront.App.Views.SystemLanguageView"
+             Width="1920" Height="1080">
+    <!-- "System Language & location": opened with A on the "Language & location" tile of Settings >
+         System, closed with B. A FULL screen, mounted on demand.
+
+         Measured 1:1. It reuses the tile grid the Personalization family uses - cards 438x98 at
+         columns 112/622/1132 with pitch 114 - starting at y=272, with a section label above each
+         column. Inside a two-line card the label's ink sits 18 down and 23 in, the value 63 down, and
+         the chevron is the same one the tile-count dropdown uses (391,45). "Restart now" is a
+         single-line card: its ink is vertically centred, 42 down.
+
+         VISUAL ONLY. Nothing here does anything: the three dropdowns do not open, the values are the
+         reference's own and are not read from anywhere, and "Restart now" does not restart.
+
+         ONE STRING HAS TO GO before this reaches anyone: the paragraph on the right says to restart
+         "your XBOX console", which whoever runs Playfront does not have. It is here because the screen
+         was replicated verbatim. Same case as the data-collection checkbox on Console info. -->
+    <UserControl.Styles>
+        <Style Selector="Border.lgCard">
+            <Setter Property="Background" Value="#303030" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Width" Value="438" />
+            <Setter Property="Height" Value="98" />
+        </Style>
+        <Style Selector="Border.lgCard.selected">
+            <Setter Property="Background" Value="#444444" />
+            <Setter Property="ZIndex" Value="2" />
+        </Style>
+        <Style Selector="TextBlock.lgLabel">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="TextBlock.lgValue">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="#C4C4C4" />
+        </Style>
+        <Style Selector="TextBlock.lgSection">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="Path.lgChevron">
+            <Setter Property="Stroke" Value="White" />
+            <Setter Property="StrokeThickness" Value="2.5" />
+            <Setter Property="StrokeLineCap" Value="Round" />
+            <Setter Property="StrokeJoin" Value="Round" />
+            <Setter Property="Data" Value="M0,0 L8.5,8.5 L17,0" />
+        </Style>
+    </UserControl.Styles>
+
+    <Canvas Width="1920" Height="1080">
+        <Rectangle Width="1920" Height="1080" Fill="#201F1F" />
+
+        <TextBlock Canvas.Left="110" Canvas.Top="56" FontSize="45" Foreground="White">
+            <Run Text="System " FontFamily="{StaticResource XboxFontDisplaySemibold}" />
+            <Run Text="Language &amp; location" FontFamily="{StaticResource XboxFontFamily}" />
+        </TextBlock>
+
+        <TextBlock Classes="lgSection" Canvas.Left="114" Canvas.Top="215" Text="System" />
+        <TextBlock Classes="lgSection" Canvas.Left="624" Canvas.Top="215" Text="Input" />
+
+        <Border Classes="lgCard" x:Name="LgCard0" Canvas.Left="112" Canvas.Top="272">
+            <Canvas>
+                <TextBlock Classes="lgLabel" Canvas.Left="21" Canvas.Top="11" Text="Language" />
+                <TextBlock Classes="lgValue" Canvas.Left="21" Canvas.Top="56" Text="English" />
+                <Path Classes="lgChevron" Canvas.Left="391" Canvas.Top="45" />
+            </Canvas>
+        </Border>
+        <Border Classes="selectionRing" x:Name="LgRing0" Canvas.Left="104" Canvas.Top="264" Width="454" Height="114" />
+
+        <Border Classes="lgCard" x:Name="LgCard1" Canvas.Left="112" Canvas.Top="386">
+            <Canvas>
+                <TextBlock Classes="lgLabel" Canvas.Left="21" Canvas.Top="11" Text="Language region" />
+                <TextBlock Classes="lgValue" Canvas.Left="21" Canvas.Top="56" Text="English (United States)" />
+                <Path Classes="lgChevron" Canvas.Left="391" Canvas.Top="45" />
+            </Canvas>
+        </Border>
+        <Border Classes="selectionRing" x:Name="LgRing1" Canvas.Left="104" Canvas.Top="378" Width="454" Height="114" />
+
+        <Border Classes="lgCard" x:Name="LgCard2" Canvas.Left="112" Canvas.Top="500">
+            <Canvas>
+                <TextBlock Classes="lgLabel" Canvas.Left="21" Canvas.Top="11" Text="Location" />
+                <TextBlock Classes="lgValue" Canvas.Left="21" Canvas.Top="56" Text="Spain" />
+                <Path Classes="lgChevron" Canvas.Left="391" Canvas.Top="45" />
+            </Canvas>
+        </Border>
+        <Border Classes="selectionRing" x:Name="LgRing2" Canvas.Left="104" Canvas.Top="492" Width="454" Height="114" />
+
+        <Border Classes="lgCard" x:Name="LgCard3" Canvas.Left="622" Canvas.Top="272">
+            <Canvas>
+                <TextBlock Classes="lgLabel" Canvas.Left="21" Canvas.Top="11" Text="Keyboard &amp; dictation" />
+                <TextBlock Classes="lgValue" Canvas.Left="21" Canvas.Top="56" Text="English (United States)" />
+                <Path Classes="lgChevron" Canvas.Left="391" Canvas.Top="45" />
+            </Canvas>
+        </Border>
+        <Border Classes="selectionRing" x:Name="LgRing3" Canvas.Left="614" Canvas.Top="264" Width="454" Height="114" />
+
+        <Border Classes="lgCard" x:Name="LgCard4" Canvas.Left="1132" Canvas.Top="272">
+            <Canvas>
+                <TextBlock Classes="lgLabel" Canvas.Left="19" Canvas.Top="35" Text="Restart now" />
+            </Canvas>
+        </Border>
+        <Border Classes="selectionRing" x:Name="LgRing4" Canvas.Left="1124" Canvas.Top="264" Width="454" Height="114" />
+
+        <!-- Breaks written out, same reason as on Storage devices: this font fits more per line than
+             the reference's, so wrapping alone lands them somewhere else. -->
+        <TextBlock Canvas.Left="1132" Canvas.Top="388" LineHeight="35"
+                   FontFamily="{StaticResource XboxFontFamily}" FontSize="26" Foreground="White"
+                   Text="You'll need to restart your XBOX&#10;console after changing your language&#10;or location." />
+    </Canvas>
+</UserControl>

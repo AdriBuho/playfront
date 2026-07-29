@@ -41,6 +41,10 @@ it is licensed to us.** It is included because the interface is meaningless with
 | Game cover art | `src/Playfront.App/Assets/Library/` | the publisher of each game |
 | Game backgrounds and videos | shipped in releases, not in this repository | the publisher of each game |
 | `Segoe-Sans-Text.ttf` | `src/Playfront.App/Assets/Fonts/` | Microsoft |
+| `Segoe-Sans-Text-Semibold.ttf` | `src/Playfront.App/Assets/Fonts/` | Microsoft |
+| `Segoe-Sans-Display-Semibold.ttf` | `src/Playfront.App/Assets/Fonts/` | Microsoft |
+| `XboxFluent2.ttf` | `src/Playfront.App/Assets/Fonts/` | Microsoft |
+| Xbox sphere (the vector from `Xenon.svg`, inlined) | `src/Playfront.App/Views/SystemConsoleInfoView.axaml` | Microsoft |
 
 Each icon was taken from its original file rather than cropped from a screenshot, so the
 provenance above is exact.

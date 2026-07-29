@@ -8,61 +8,61 @@
         Title="Playfront"
         WindowStartupLocation="Manual"
         WindowDecorations="None"
+        CanResize="False"
         Background="Black">
 
     <Window.Styles>
-        <!-- Casillas de la home. Geometria y comportamiento REMEDIDOS el 2026-07-17 sobre 5 capturas
-             reales de la home de Xbox. Lo que hacia antes Playfront y era falso:
-               - escalaba la casilla con una transformacion, anclada por su centro-abajo;
-               - las vecinas no se movian (la seleccionada crecia por encima de ellas);
-               - la etiqueta con el nombre se veia siempre.
-             Lo que hace Xbox de verdad, medido sobre capturas de referencia:
-               - la casilla seleccionada crece anclada por su esquina INFERIOR IZQUIERDA;
-               - las casillas SIGUIENTES se apartan a la derecha justo lo que crece la seleccionada;
-               - la etiqueta solo aparece en la seleccionada, sobre la caratula.
-             NO se usa una transformacion de escala, sino un cambio de Width/Height de verdad. No es
-             un capricho: medido en las capturas, el radio de las esquinas NO crece con la seleccion
-             (~5.5px en las capturas tanto seleccionada como no). Con una escala creceria, y el texto
-             de la etiqueta ademas saldria borroso por estar rasterizado a otro tamaño. -->
+        <!-- Home tiles. Geometry and behaviour re-measured against 5 real Xbox home captures. What
+             this used to do, and was wrong:
+               - scaled the tile with a transform, anchored at its bottom-centre;
+               - the neighbours did not move (the selected one grew over them);
+               - the name label was always visible.
+             What Xbox actually does, measured on the references:
+               - the selected tile grows anchored at its BOTTOM LEFT corner;
+               - the FOLLOWING tiles shift right by exactly how much the selected one grows;
+               - the label appears only on the selected tile, over the cover art.
+             This does NOT use a scale transform, it changes Width/Height for real. Not a whim:
+             measured on the captures, the corner radius does NOT grow with selection (~5.5px both
+             selected and not). A scale would grow it, and the label text would also come out blurry
+             from being rasterised at a different size. -->
         <Style Selector="Border.tile">
             <Setter Property="Background" Value="#2A2E36" />
-            <!-- Radio bajado de 12 a 9 (peticion expresa: esquinas menos curvadas, mas
-                 esquinadas, comparando con la referencia real de Xbox). Las capturas nuevas dan
-                 ~8.1, o sea que el 9 estaba bien. -->
+            <!-- Radius lowered from 12 to 9: less curved, squarer corners, matching the real Xbox
+                 reference. Later captures measure ~8.1, so 9 was right. -->
             <Setter Property="CornerRadius" Value="9" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="BorderBrush" Value="Transparent" />
-            <!-- True para que la franja de la etiqueta se recorte con las esquinas redondeadas de la
-                 casilla en vez de asomar por ellas. -->
+            <!-- True so the label band is clipped by the tile's rounded corners instead of poking
+                 out of them. -->
             <Setter Property="ClipToBounds" Value="True" />
             <Setter Property="ZIndex" Value="0" />
             <Setter Property="Transitions">
                 <Transitions>
-                    <!-- Width/Height animados = el crecimiento de la seleccionada. Como las casillas
-                         se colocan con Canvas.Left + Canvas.Bottom, crecer de tamaño las hace crecer
-                         hacia arriba y a la derecha solas: eso ES el ancla inferior-izquierda. -->
+                    <!-- Animated Width/Height = the growth of the selected tile. Since tiles are
+                         placed with Canvas.Left + Canvas.Bottom, growing makes them expand up and to
+                         the right on their own: that IS the bottom-left anchor. -->
                     <DoubleTransition Property="Width" Duration="0:0:0.2" Easing="QuadraticEaseInOut" />
                     <DoubleTransition Property="Height" Duration="0:0:0.2" Easing="QuadraticEaseInOut" />
-                    <!-- RenderTransform = el empuje lateral de las casillas siguientes. Se hace con
-                         translateX y no moviendo Canvas.Left porque las propiedades adjuntas de
-                         Canvas no se pueden animar con transiciones. -->
+                    <!-- RenderTransform = the sideways push of the following tiles. Done with
+                         translateX rather than moving Canvas.Left because Canvas attached properties
+                         cannot be animated with transitions. -->
                     <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="QuadraticEaseInOut" />
                 </Transitions>
             </Setter>
         </Style>
-        <!-- ZIndex 2 = por delante de los anillos de seleccion (que van en el 1) ademas de por
-             delante de las casillas vecinas (que se quedan en el 0). Lo primero hace que el
-             degradado del anillo no tiña la casilla seleccionada pero si a las vecinas, igual que
-             en Ajustes - ver el comentario largo de Border.settingsCard.selected. -->
+        <!-- ZIndex 2 = in front of the selection rings (which sit at 1) as well as in front of the
+             neighbouring tiles (which stay at 0). The first part is what keeps the ring's gradient
+             from tinting the selected tile while still tinting the neighbours, same as in Settings -
+             see the long comment on Border.settingsCard.selected. -->
         <Style Selector="Border.tile.selected">
             <Setter Property="ZIndex" Value="2" />
         </Style>
 
-        <!-- Etiqueta con el nombre del juego: SOLO aparece en la casilla seleccionada, y va DENTRO
-             de ella, sobre la caratula, no debajo. Franja de negro al 70% (medido despejando la
-             mezcla sobre dos caratulas de color plano distinto: sobre verde 124->37 y sobre rojo
-             134->41, las dos dan 0.70). La franja no tiene alto fijo: se ajusta al texto (medido
-             37.6px con una linea y 57.7 con dos, en la escala de las capturas). -->
+        <!-- Game name label: appears ONLY on the selected tile, and sits INSIDE it, over the cover
+             art, not below. Black band at 70% (measured by solving the blend over two flat-coloured
+             covers: over green 124->37 and over red 134->41, both give 0.70). The band has no fixed
+             height: it fits the text (measured 37.6px with one line and 57.7 with two, at the
+             captures' scale). -->
         <Style Selector="Border.tileLabel">
             <Setter Property="Background" Value="#B3000000" />
             <Setter Property="VerticalAlignment" Value="Bottom" />
@@ -76,8 +76,8 @@
         <Style Selector="Border.tileLabel TextBlock">
             <Setter Property="Foreground" Value="White" />
             <Setter Property="FontSize" Value="25" />
-            <!-- Interlineado medido (28), mas apretado que el que pondria la fuente por defecto
-                 (~33): con dos lineas la diferencia se ve. -->
+            <!-- Measured line height (28), tighter than what the font would default to (~33): with
+                 two lines the difference shows. -->
             <Setter Property="LineHeight" Value="28" />
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
@@ -93,140 +93,176 @@
         <Style Selector="Border.navcircle.selected">
             <Setter Property="Background" Value="#99000000" />
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-            <!-- El halo es el acento a media opacidad. BoxShadow necesita un color, no un pincel, y
-                 no se puede sacar de un recurso via XAML, asi que se genera por codigo en
-                 AccentTheme (recurso NavCircleShadow) y se consume con DynamicResource para que
-                 cambie en caliente al cambiar de tema. -->
+            <!-- The halo is the accent at half opacity. BoxShadow needs a colour, not a brush, and
+                 it cannot be pulled from a resource via XAML, so it is generated in code in
+                 AccentTheme (NavCircleShadow resource) and consumed with DynamicResource so it
+                 updates live when the theme changes. -->
             <Setter Property="BoxShadow" Value="{DynamicResource NavCircleShadow}" />
         </Style>
 
-        <!-- Pantalla de Ajustes (2026-07-16), calcada de una captura real de la Xbox del
-             usuario ("1.png") - misma disposicion: barra lateral con lista de categorias +
-             rejilla de 6 tarjetas para "General". La referencia usa rojo porque el dueño de esa
-             Xbox tiene el tema en rojo; aqui va en verde, el unico color de acento que usa
-             Playfront. -->
+        <!-- Settings screen, traced from a real Xbox capture - same layout: sidebar with the category
+             list + a 6-card grid for "General". The reference is red because that console's theme is
+             red; here it follows the app's accent theme. -->
+        <!-- Sidebar row box. 482 wide x 64 tall, measured off the reference: the selected row's
+             accent block spans x 0..481 (it paints OVER the sidebar divider at x 480-481) and
+             y 276..339. Rows repeat every 68, so 64 of row plus a 4 px gap. -->
         <Style Selector="Border.settingsNavItem">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Width" Value="478" />
-            <Setter Property="Height" Value="62" />
+            <Setter Property="Width" Value="482" />
+            <Setter Property="Height" Value="64" />
             <Setter Property="CornerRadius" Value="4" />
         </Style>
+        <!-- FONT: XboxFontFamily EXPLICITLY (see App.axaml), like the header above it. The app
+             default is Inter (Program.cs calls WithInterFont); leaving it to the default made every
+             label the wrong shape and, at any size, wrong by a different amount per word.
+             Rendering at 22..28 px and comparing ink widths against the reference settles the size:
+             26 lands within ~1 px on average across all seven labels ("Recommendations" 211/211,
+             "Devices & connections" 258/259, "Preferences" 131/131) - no other size gets close.
+
+             Margin 108 is the sidebar's single left edge, shared with the header's gear
+             (Canvas.Left 108 there). Reference ink starts at 109-110 depending on the glyph's own
+             left bearing, which is what an origin of 108 produces.
+
+             REGULAR, NOT SEMIBOLD, and how that was settled matters because the first answer was
+             wrong. Overlaying blurred glyph shapes against the reference ranked the Semibold cuts
+             far ahead - so the body ran Semibold at 25 for a while. That test is unreliable here:
+             the reference is compressed video, compression thickens strokes, and blurring both
+             sides does not cancel it, so the metric systematically prefers heavier weights.
+             Measuring INK WIDTH over the screen's thirteen real labels does not have that bias,
+             and it puts Regular at 26 within 0.9 px per label while Semibold at 25 is off by more
+             than twice that. Thirteen words beat one glyph shape.
+
+             The top margin is NOT padding, it is a nudge: centring in a 64-tall box leaves every
+             label above the reference, on all eight rows. How far a given margin moves the text
+             depends on the font's line height against the box height. Re-check it after any change
+             of face or size - it was tuned for Semibold 25 and the face has changed since. -->
         <Style Selector="Border.settingsNavItem TextBlock">
             <Setter Property="Foreground" Value="White" />
-            <Setter Property="FontSize" Value="22" />
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Margin" Value="100,0,0,0" />
+            <Setter Property="Margin" Value="108,5,0,0" />
         </Style>
         <Style Selector="Border.settingsCard">
             <Setter Property="Background" Value="#303030" />
-            <!-- Bajado de 8 a 3 (peticion expresa: esquinas mucho mas rectas que lo que
-                 teniamos, comparando con la referencia real). -->
+            <!-- Lowered from 8 to 3: much squarer corners than before, matching the real
+                 reference. -->
             <Setter Property="CornerRadius" Value="3" />
-            <!-- Padding de 3 y no un BorderThickness de 3: la tarjeta ya no pinta borde propio
-                 (la seleccion es ahora un anillo aparte, ver Border.selectionRing), pero el borde
-                 que habia antes empujaba el contenido 3px hacia dentro. Se conserva ese desplazo
-                 como Padding para no mover ni un pixel los iconos y textos ya calibrados. -->
+            <!-- Padding of 3 rather than a BorderThickness of 3: the card no longer paints its own
+                 border (selection is a separate ring now, see Border.selectionRing), but the old
+                 border used to push the content 3px inwards. That offset is kept as Padding so the
+                 already-calibrated icons and text do not move by a single pixel. -->
             <Setter Property="Padding" Value="3" />
         </Style>
-        <!-- La tarjeta seleccionada se aclara de #303030 a #444444, igual que las casillas de
-             Personalization. Medido en "2.png": las tarjetas sin seleccionar son (48,48,48) y la
-             seleccionada (68,68,68). Faltaba - Ajustes solo pintaba el borde.
+        <!-- The selected card lightens from #303030 to #444444, same as the Personalization tiles.
+             Measured on the reference: unselected cards are (48,48,48) and the selected one
+             (68,68,68). This was missing - Settings only painted the border.
 
-             ZIndex 1 SOLO cuando esta seleccionada, y esto es mas sutil de lo que parece. El
-             degradado del anillo (su BoxShadow, ver Border.selectionRing) se pinta por todo el
-             interior del anillo ademas de por fuera, asi que invadiria la tarjeta que rodea y la
-             tiñaria de verde varios pixeles hacia dentro. Medido en la Xbox real:
-               - la tarjeta SELECCIONADA no recibe nada de degradado (a 1px de su borde ya esta en
-                 su gris limpio) -> tiene que pintarse POR DELANTE del anillo, tapando el sobrante;
-               - las tarjetas VECINAS si reciben el degradado (les sube el verde ~12) -> tienen que
-                 quedarse POR DETRAS del anillo.
-             O sea que la Xbox "levanta" la tarjeta seleccionada por encima de su propio halo. De ahi
-             que el ZIndex vaya en el selector .selected y no en Border.settingsCard: si se sube a
-             todas, las vecinas dejan de recibir el halo; si no se sube a ninguna, la seleccionada
-             sale verdosa. -->
+             ZIndex 1 ONLY when selected, and this is subtler than it looks. The ring's gradient (its
+             BoxShadow, see Border.selectionRing) paints across the whole inside of the ring as well
+             as outside, so it would bleed into the card it surrounds and tint it several pixels
+             inwards. Measured on the real Xbox:
+               - the SELECTED card receives no gradient at all (1px from its edge it is already its
+                 clean grey) -> it must paint IN FRONT of the ring, covering the overspill;
+               - the NEIGHBOURING cards do receive the gradient (their green rises ~12) -> they must
+                 stay BEHIND the ring.
+             So Xbox "lifts" the selected card above its own halo. Hence the ZIndex lives on the
+             .selected selector and not on Border.settingsCard: raise it on all of them and the
+             neighbours stop receiving the halo; raise it on none and the selected one goes green. -->
         <Style Selector="Border.settingsCard.selected">
             <Setter Property="Background" Value="#444444" />
             <Setter Property="ZIndex" Value="2" />
         </Style>
-        <Style Selector="Border.settingsCard TextBlock">
+        <!-- Same face and size as the sidebar labels: XboxFontFamily at 26. Confirmed by comparing
+             ink widths against the reference's six labels - 26 is within ~1 px on average ("Volume
+             & audio output" 271/271, "Power options" 162/162), every other size is off by 7 or
+             more. It was Inter 24 (the app default face). -->
+        <!-- "> StackPanel >" is not decoration: it restricts this to the card's LABEL. A plain
+             descendant selector also matches the icon glyphs, which are TextBlocks too (inside
+             their 36x36 Grid), and the Margin below then pushed every glyph down inside its box and
+             clipped its top. The glyphs set their own font and alignment, so narrowing the selector
+             changes nothing else. -->
+        <Style Selector="Border.settingsCard > StackPanel > TextBlock">
             <Setter Property="Foreground" Value="White" />
-            <Setter Property="FontSize" Value="24" />
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
             <Setter Property="VerticalAlignment" Value="Center" />
+            <!-- Vertical nudge, same idea as the sidebar labels: centring against the 36 px icon
+                 leaves the line above the reference on all six cards. It moves the text by HALF
+                 the margin, so 6 buys 3 px - do not read this as "7 px of padding". -->
+            <Setter Property="Margin" Value="0,6,0,0" />
         </Style>
 
-        <!-- Anillo de seleccion, compartido por las tarjetas de Ajustes y por las casillas de
-             Personalization (2026-07-17). Medido sobre "2.png", el recorte que paso el usuario de
-             los botones de General: el trazo verde NO es el borde del boton, va por FUERA con un
-             hueco - centro del trazo a ~6px del borde del boton en la escala del recorte (~8.5 a
-             1920) y grosor ~4. El anillo vive en un elemento aparte superpuesto, no en el borde del
-             propio boton, porque tiene que poder salirse de el.
+        <!-- Selection ring, shared by the Settings cards and the Personalization tiles. Measured on a
+             crop of the General buttons: the accent stroke is NOT the button's border, it runs
+             OUTSIDE it with a gap - stroke centre ~6px from the button edge at the crop's scale
+             (~8.5 at 1920) and thickness ~4. The ring lives in a separate overlaid element, not on
+             the button's own border, because it has to be able to extend past it.
 
-             OJO CON EL RADIO (3, el mismo que el del boton): la tentacion es hacerlo "concentrico",
-             o sea a distancia constante del boton, que por geometria pide radio = el del boton + el
-             vuelo (3 + 10.5 = 13.5). Se probo asi y quedaba visiblemente mas curvo que la Xbox
-             real. Midiendo el borde exterior del trazo en el recorte: el tramo recto de la
-             izquierda arranca ~8px por debajo de la esquina y el de arriba ~7px a su derecha, o sea
-             radio ~8 en la escala del recorte, cuando el concentrico exacto serian ~10.5. La Xbox
-             cierra las esquinas MAS de lo que pide la geometria, y el usuario lo confirmo mirando
-             la app en marcha. Efecto secundario asumido: en las esquinas el anillo se separa un
-             poco mas del boton que en los lados rectos.
+             MIND THE RADIUS (3, the same as the button's): the temptation is to make it "concentric",
+             i.e. at constant distance from the button, which geometrically wants radius = button
+             radius + offset (3 + 10.5 = 13.5). That was tried and looked visibly rounder than the
+             real Xbox. Measuring the stroke's outer edge on the crop: the left straight run starts
+             ~8px below the corner and the top one ~7px to its right, i.e. radius ~8 at the crop's
+             scale, where exact concentricity would be ~10.5. Xbox closes the corners MORE than the
+             geometry asks for. Accepted side effect: at the corners the ring sits slightly further
+             from the button than along the straight sides.
 
-             TODAS LAS COORDENADAS DEL ANILLO Y DEL BOTON VAN EN ENTEROS, y el anillo es el
-             rectangulo del boton "inflado" exactamente 8 por cada lado (o sea +16 de ancho y de
-             alto), lo que deja el centro del trazo a 6 del borde del boton. No es manía: Avalonia
-             redondea la disposicion a pixeles enteros (UseLayoutRounding), asi que una coordenada
-             acabada en .5 se desplaza media unidad al pintarse. Cuando el anillo estaba en x=1015.5
-             se redondeaba a 1016 mientras el boton (en entero) no se movia, y el hueco quedaba 8 por
-             la izquierda y 9 por la derecha: 1px de asimetria, que el usuario detecto a simple vista.
-             Con todo en enteros y un inflado PAR el hueco sale identico en los 4 lados.
-             Si alguna vez se recolocan estos botones, sus Canvas.Left/Top tienen que seguir siendo
-             enteros (y el inflado par) o volvera la asimetria.
+             ALL RING AND BUTTON COORDINATES ARE INTEGERS, and the ring is the button rectangle
+             "inflated" by exactly 8 per side (i.e. +16 width and height), which puts the stroke
+             centre 6 from the button edge. This is not fussiness: Avalonia rounds layout to whole
+             pixels (UseLayoutRounding), so a coordinate ending in .5 shifts half a unit when
+             painted. When the ring was at x=1015.5 it rounded to 1016 while the button (an integer)
+             did not move, leaving a gap of 8 on the left and 9 on the right: 1px of asymmetry,
+             visible to the naked eye. With everything integral and an EVEN inflation the gap comes
+             out identical on all 4 sides. If these buttons are ever repositioned, their
+             Canvas.Left/Top must stay integers (and the inflation even) or the asymmetry returns.
 
-             El vuelo empezo en 10 (6.2 medidos del recorte x1.43 = 8.6, redondeado) y el usuario
-             pidio 2 menos mirandolo en el aparato: 8. El anillo se queda dentro del hueco entre
-             botones (8 de vuelo contra huecos de 13-14 en Ajustes y 18 en Personalization), asi que
-             nunca toca al vecino - que es justo lo que pedia. Ojo si algun dia se aprietan esas
-             separaciones: es el margen que impide el solape.
+             The offset started at 10 (6.2 measured on the crop x1.43 = 8.6, rounded) and was dropped
+             by 2 after looking at it on the device: 8. The ring stays inside the gap between buttons
+             (8 of offset against gaps of 13-14 in Settings and 18 in Personalization), so it never
+             touches a neighbour. Watch out if those gaps are ever tightened: this is the margin that
+             prevents overlap.
 
-             EL HALO ("espada laser"): dos BoxShadow IDENTICOS hacia fuera + los mismos dos hacia
-             dentro (inset). Detalles que no son arbitrarios:
-             - El color (#007800, verde oscuro casi puro) NO es el de la linea. Comparando en el
-               recorte una fila con anillo contra otra sin el, la seleccion OSCURECE el rojo y el
-               azul de alrededor (hasta -16) mientras sube el verde (+40): el halo de Xbox es mas
-               oscuro y mas saturado que la linea, no mas claro. El contraste entre el nucleo claro
-               y ese halo oscuro es lo que da el efecto de espada laser.
-             - Van DOS iguales porque uno solo se queda a ~0.6x de la intensidad de la referencia y
-               la opacidad no puede pasar de 1. Al apilarlos la opacidad compone (1-(1-a)^2) y
-               cuadra: medido contra el recorte, a 4.5 y 5.5px del centro del trazo sale (18,70,18)
-               y (21,62,20) contra (17,70,18) y (20,62,22) de la referencia. Dos gaussianas se
-               funden sin escalones, que es justo lo que pidio el usuario ("sin que se vean capas").
-             - Desenfoque 20 y spread 0: el radio grande no es para que el halo se vea lejos, sino
-               para que DECAIGA despacio, como en la referencia (que mantiene tinte verde hasta ~7px).
-               Con radios pequeños el halo moria a los 4px y quedaba corto.
-             - "inset" da el degradado hacia dentro. El comentario de Border.outer (fila de la home)
-               dice que Avalonia no lo pinta: es falso, comprobado aqui.
-             Nota: a 2.5-3.5px del trazo la referencia mide mas claro que nosotros; es la compresion
-             de la captura difuminando la linea brillante hacia fuera, no una diferencia real. Por eso
-             el ajuste se hizo contra los puntos limpios (4.5px en adelante). -->
+             THE HALO ("lightsaber"): two IDENTICAL outward BoxShadows + the same two inward (inset).
+             Details that are not arbitrary:
+             - The colour (#007800, near-pure dark green) is NOT the line's colour. Comparing a row
+               with a ring against one without on the crop, selection DARKENS the surrounding red and
+               blue (down to -16) while raising green (+40): the Xbox halo is darker and more
+               saturated than the line, not lighter. The contrast between the bright core and that
+               dark halo is what produces the lightsaber effect.
+             - There are TWO identical ones because a single shadow only reaches ~0.6x the
+               reference's intensity and opacity cannot exceed 1. Stacking them composes the opacity
+               (1-(1-a)^2) and matches: measured against the crop, at 4.5 and 5.5px from the stroke
+               centre it gives (18,70,18) and (21,62,20) against (17,70,18) and (20,62,22) in the
+               reference. Two gaussians blend without banding, which is the point - no visible layers.
+             - Blur 20 and spread 0: the large radius is not so the halo reaches far, it is so it
+               DECAYS slowly, like the reference (which keeps a green tint out to ~7px). With small
+               radii the halo died at 4px and looked stunted.
+             - "inset" gives the inward gradient. The comment on Border.outer (home row) claims
+               Avalonia does not paint it: that is wrong, verified here.
+             Note: at 2.5-3.5px from the stroke the reference measures lighter than ours; that is the
+             capture's compression smearing the bright line outwards, not a real difference. Hence
+             the fit was done against the clean points (4.5px onwards). -->
         <Style Selector="Border.selectionRing">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="{DynamicResource AccentFadedBrush}" />
             <Setter Property="BorderThickness" Value="4" />
             <Setter Property="CornerRadius" Value="3" />
             <Setter Property="IsHitTestVisible" Value="False" />
-            <!-- Por delante de los botones sin seleccionar (ZIndex 0), para que el degradado si los
-                 tiña; el boton seleccionado sube al 2 y se pone por delante del anillo, para que a
-                 el no lo tiña. Ver el comentario largo de Border.settingsCard.selected. En la home
-                 hace falta declararlo porque casillas y anillos van intercalados en el XAML; en
-                 Ajustes bastaba el orden de declaracion, pero se deja explicito en los dos sitios
-                 para que la regla se lea igual en todas las pantallas. -->
+            <!-- In front of the unselected buttons (ZIndex 0), so the gradient does tint them; the
+                 selected button rises to 2 and sits in front of the ring, so it is not tinted. See
+                 the long comment on Border.settingsCard.selected. On the home this has to be
+                 declared because tiles and rings are interleaved in the XAML; in Settings the
+                 declaration order was enough, but it is explicit in both places so the rule reads
+                 the same across every screen. -->
             <Setter Property="ZIndex" Value="1" />
             <Setter Property="Transitions">
                 <Transitions>
                     <BrushTransition Property="BorderBrush" Duration="0:0:0.15" />
-                    <!-- Solo lo usa la home, donde la casilla seleccionada crece y el anillo tiene
-                         que crecer con ella. En Ajustes/Personalization no hay escalado y esta
-                         transicion no llega a dispararse. -->
+                    <!-- Only the home uses this, where the selected tile grows and the ring has to
+                         grow with it. Settings/Personalization do not scale, so this transition
+                         never fires there. -->
                     <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="QuadraticEaseInOut" />
                 </Transitions>
             </Setter>
@@ -236,27 +272,27 @@
             <Setter Property="BoxShadow" Value="{DynamicResource SettingsRingShadow}" />
         </Style>
 
-        <!-- Variante del anillo para la home. Diferencias con el de Ajustes, todas medidas sobre las
-             5 capturas reales:
-               - Grosor 7 (en Ajustes 4): el trazo de la home es bastante mas gordo.
-               - Vuelo 10, o sea el centro del trazo a 6.5 del borde de la casilla.
-               - CornerRadius 19 = radio de la casilla (9) + vuelo (10). En la home el anillo de Xbox
-                 SI es concentrico con la casilla, al reves que en Ajustes: medido, el radio del
-                 CENTRO del trazo coincide con radio_casilla + vuelo. Por eso aqui no se aplica la
-                 regla de "misma angulacion que el boton" que pidio el usuario para Ajustes - la
-                 referencia de la home dice otra cosa. Ojo: al cambiar el grosor cambia esta cuenta.
-             NO lleva RenderTransformOrigin ni escala. El anillo cambia de Width/Height igual que su
-             casilla (se lo fija el code-behind), y como esta colocado con Canvas.Left + Canvas.Bottom,
-             crece anclado por su esquina inferior izquierda el solo. El RenderTransform que si lleva
-             es para el empuje lateral, no para escalar. -->
-        <!-- CLAVE del efecto "espada laser" (remedido el 2026-07-17 sobre el
-             video real): el nucleo brillante es MUY FINO (2.5, no 6). Un trazo
-             grueso pinta un color plano y macizo con bordes duros - fisicamente no puede desvanecer,
-             que es justo lo que fallaba. Todo el ANCHO del borde sale del DESENFOQUE de las sombras
-             (ver BoxShadow en .selected), no del grosor del trazo. El trazo solo aporta el pico
-             brillante fino; las sombras oscuras hacen el fade a los dos lados y rellenan el hueco.
-             CornerRadius 14: el anillo va sobredimensionado respecto a la casilla (inflado 7) para
-             abrir un hueco real entre casilla y trazo, medido en la referencia. -->
+        <!-- Home variant of the ring. Differences from the Settings one, all measured on the 5 real
+             captures:
+               - Thickness 7 (4 in Settings): the home stroke is noticeably heavier.
+               - Offset 10, i.e. stroke centre 6.5 from the tile edge.
+               - CornerRadius 19 = tile radius (9) + offset (10). On the home the Xbox ring IS
+                 concentric with the tile, unlike in Settings: measured, the radius of the stroke
+                 CENTRE matches tile_radius + offset. So the "same corner angle as the button" rule
+                 used in Settings does not apply here - the home reference says otherwise. Note that
+                 changing the thickness changes this arithmetic.
+             It carries NO RenderTransformOrigin and no scale. The ring changes Width/Height along
+             with its tile (the code-behind sets it), and since it is placed with Canvas.Left +
+             Canvas.Bottom it grows anchored at its bottom-left corner on its own. The
+             RenderTransform it does carry is for the sideways push, not for scaling. -->
+        <!-- KEY to the "lightsaber" effect (re-measured against the real video): the bright core is
+             VERY THIN (2.5, not 6). A thick stroke paints a flat, solid colour with hard edges - it
+             physically cannot fade out, which is exactly what was wrong. All of the border's WIDTH
+             comes from the shadows' BLUR (see BoxShadow on .selected), not from the stroke
+             thickness. The stroke only contributes the thin bright peak; the dark shadows do the
+             fade on both sides and fill the gap.
+             CornerRadius 14: the ring is oversized relative to the tile (inflated by 7) to open a
+             real gap between tile and stroke, measured on the reference. -->
         <Style Selector="Border.selectionRing.homeRing">
             <Setter Property="BorderThickness" Value="3" />
             <Setter Property="CornerRadius" Value="14" />
@@ -270,27 +306,28 @@
                 </Transitions>
             </Setter>
         </Style>
-        <!-- El halo NO esta desplazado hacia abajo (correccion del 2026-07-17, remedido a fondo
-             sobre el video real): es SIMETRICO (~12px por lado). La sesion anterior lo bajo
-             porque arriba parece medir ~0, pero eso es un artefacto del FONDO: encima de la casilla el
-             video es casi negro, y un glow verde-oscuro (aditivo) apenas registra sobre negro. Sobre
-             fondo claro/olive de los lados si se ve. Asi que se emite simetrico y el fondo modula lo
-             que se aprecia - nada de OffsetY forzado.
+        <!-- The halo is NOT offset downwards (re-measured thoroughly against the real video): it is
+             SYMMETRIC (~12px per side). An earlier version pushed it down because the top appears to
+             measure ~0, but that is an artefact of the BACKGROUND: above the tile the video is nearly
+             black, and a dark-green (additive) glow barely registers over black. Over the lighter
+             olive background at the sides it does show. So it is emitted symmetrically and the
+             background modulates what you perceive - no forced OffsetY.
 
-             La pila de sombras reproduce el perfil medido perpendicular al borde (casilla -> fuera):
-             verde-oscuro en el hueco -> pico verde brillante fino -> valle verde-oscuro -> fade largo.
-             Orden Avalonia: [inset] offsetX offsetY blur spread color.
-               1) 0 0 3 0  #B3439941  -> bloom brillante fino: redondea los bordes duros del trazo = el
-                  pico con fade cerca del nucleo (H2). El brillo SOLO aparece aqui y en el trazo.
-               2) 0 0 6 1  #CC007800  -> flanco verde-oscuro pegado al nucleo por los dos lados (H3).
-               3) 0 0 12 2 #99006400  -> glow exterior medio.
-               4) 0 0 20 3 #4D004B00  -> cola exterior tenue que desvanece a nada (H2 hacia fuera).
-               5) inset 0 0 7 1 #CC007800 -> glow verde-oscuro hacia DENTRO: rellena el hueco entre
-                  casilla y trazo con el tono oscuro (H1), por eso se lee banda oscura y no fondo vacio.
-               6) inset 0 0 2 0 #80439941 -> leve sangrado brillante hacia dentro.
-             Regla: el color CLARO solo en trazo + bloom 1; todo lo ancho va en verde OSCURO
-             (#007800/#006400/#004B00) con alpha bajando = fade continuo a los dos lados, no un bloque.
-             Ratio de brillo glow/nucleo objetivo ~0.68 (medido). -->
+             The shadow stack reproduces the profile measured perpendicular to the edge (tile ->
+             outwards): dark green in the gap -> thin bright green peak -> dark green valley -> long
+             fade. Avalonia order: [inset] offsetX offsetY blur spread color.
+               1) 0 0 3 0  #B3439941  -> thin bright bloom: rounds the stroke's hard edges = the peak
+                  with a fade near the core. Brightness appears ONLY here and in the stroke.
+               2) 0 0 6 1  #CC007800  -> dark green flank hugging the core on both sides.
+               3) 0 0 12 2 #99006400  -> mid outer glow.
+               4) 0 0 20 3 #4D004B00  -> faint outer tail fading to nothing.
+               5) inset 0 0 7 1 #CC007800 -> dark green glow INWARDS: fills the gap between tile and
+                  stroke with the dark tone, which is why it reads as a dark band and not empty
+                  background.
+               6) inset 0 0 2 0 #80439941 -> slight bright bleed inwards.
+             Rule: the LIGHT colour only in the stroke + bloom 1; everything wide goes in DARK green
+             (#007800/#006400/#004B00) with falling alpha = a continuous fade on both sides, not a
+             block. Target glow/core brightness ratio ~0.68 (measured). -->
         <Style Selector="Border.selectionRing.homeRing.selected">
             <Setter Property="BoxShadow" Value="{DynamicResource HomeRingShadow}" />
         </Style>
@@ -301,49 +338,51 @@
             <Setter Property="StrokeJoin" Value="Round" />
         </Style>
 
-        <!-- Pantalla "General Personalization" (2026-07-17), medida pixel a pixel contra una
-             captura real de la Xbox del usuario ("general personalization.png", 1382x778 -> todo
-             lo de abajo esta escalado por 1920/1382 = 1.3893). A diferencia de las tarjetas de
-             "General", esta pantalla NO es contenido dentro del panel derecho: ocupa la pantalla
-             entera y hace desaparecer tanto la barra lateral de categorias como la cabecera
-             (engranaje + avatar + nombre). Confirmado midiendo la referencia: la mitad derecha de
-             la captura no tiene ni un solo pixel que no sea el fondo. -->
-        <!-- Seleccion: la misma que la de las tarjetas de General, a peticion expresa del usuario
-             (el anillo compartido Border.selectionRing de mas arriba). Un primer intento calcaba el
-             halo/degradado verde de la referencia y se descarto: desentonaba con el resto de
-             Ajustes. Prima la coherencia con la pantalla de la que cuelga, no el calco. -->
+        <!-- "General Personalization" screen, measured pixel by pixel against a real Xbox capture
+             (1382x778 -> everything below is scaled by 1920/1382 = 1.3893). Unlike the "General"
+             cards, this screen is NOT content inside the right-hand panel: it fills the whole screen
+             and makes both the category sidebar and the header (gear + avatar + name) disappear.
+             Confirmed by measuring the reference: the right half of the capture does not have a
+             single pixel that is not background. -->
+        <!-- Selection: the same as the General cards (the shared Border.selectionRing above). An
+             early attempt traced the reference's green halo/gradient and was dropped: it clashed
+             with the rest of Settings. Consistency with the screen it hangs off wins over an exact
+             trace. -->
         <Style Selector="Border.pzTile">
             <Setter Property="Background" Value="#303030" />
             <Setter Property="CornerRadius" Value="3" />
-            <Setter Property="Width" Value="440" />
-            <Setter Property="Height" Value="96" />
+            <Setter Property="Width" Value="438" />
+            <Setter Property="Height" Value="98" />
         </Style>
-        <!-- La casilla seleccionada no cambia de tamaño (medido: su relleno ocupa exactamente el
-             mismo rectangulo que el de las demas), solo se aclara de #303030 a #444444. El ZIndex 1
-             solo al seleccionar la pone por delante del anillo, para que el degradado de este no la
-             tiña pero si tiña a las vecinas - mismo motivo que en Border.settingsCard, ver alli. -->
+        <!-- The selected tile does not change size (measured: its fill occupies exactly the same
+             rectangle as the others), it only lightens from #303030 to #444444. Raising ZIndex only
+             while selected puts it in front of the ring, so the ring's gradient does not tint it but
+             does tint the neighbours - same reason as Border.settingsCard, see there. -->
         <Style Selector="Border.pzTile.selected">
             <Setter Property="Background" Value="#444444" />
             <Setter Property="ZIndex" Value="2" />
         </Style>
         <Style Selector="Border.pzTile TextBlock">
             <Setter Property="Foreground" Value="White" />
-            <Setter Property="FontSize" Value="25" />
+            <!-- Same face and size as every other label in Settings. It used to inherit the app
+                 default (Inter) at 25, which was both the wrong shape and ~7 px narrow on the
+                 longer labels. -->
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
             <Setter Property="VerticalAlignment" Value="Center" />
-            <!-- El margen de arriba no es un hueco decorativo: con VerticalAlignment=Center, 8
-                 arriba y 0 abajo baja el texto 4px respecto al centro exacto de la casilla. Hace
-                 falta porque centrar por metricas de la fuente lo dejaba 4px mas alto que en la
-                 referencia real (medido comparando la misma palabra en las dos capturas). -->
-            <Setter Property="Margin" Value="20,8,0,0" />
+            <!-- The top margin is not decorative spacing: with VerticalAlignment=Center it pushes
+                 the line below the tile's exact centre, which is where the reference puts it.
+                 Left 20 lands the ink on 21 in from the tile edge, as measured. -->
+            <Setter Property="Margin" Value="20,4,0,0" />
         </Style>
 
-        <!-- Pantalla "My color & theme" (2026-07-18), calcada de "1.png" del escritorio del usuario
-             (1365x700, factor 1920/1365 = 1.4066). Tarjetas de dos lineas (etiqueta + valor) + un
-             elemento a la derecha (circulo del color de acento / chevron). Mismo mecanismo de
-             seleccion que el resto de Ajustes: se aclara de #303030 a #444444 y sube a ZIndex 2 para
-             que el degradado del anillo la rodee sin teñirla (ver Border.settingsCard.selected). La
-             referencia esta mas clara (fondo #2B2B2B, tarjetas #393939/#4B4B4B) por como se capturo;
-             aqui se usa la paleta ya establecida de la app para que case con las demas pantallas. -->
+        <!-- "My color & theme" screen, traced from a reference capture (1365x700, factor
+             1920/1365 = 1.4066). Two-line cards (label + value) + an element on the right (accent
+             colour circle / chevron). Same selection mechanism as the rest of Settings: lightens
+             from #303030 to #444444 and rises to ZIndex 2 so the ring's gradient surrounds it
+             without tinting it (see Border.settingsCard.selected). The reference is lighter
+             (background #2B2B2B, cards #393939/#4B4B4B) because of how it was captured; here the
+             app's established palette is used so it matches the other screens. -->
         <Style Selector="Border.ctCard">
             <Setter Property="Background" Value="#303030" />
             <Setter Property="CornerRadius" Value="3" />
@@ -353,9 +392,8 @@
             <Setter Property="ZIndex" Value="2" />
         </Style>
 
-        <!-- Boton "OK" del selector de color (pantalla ColorPickerScreen, calcada de "2.png").
-             Colores calcados de la captura: #393939 normal, #4B4B4B al
-             seleccionar. Mismo patron de aclarado + ZIndex 2 que las tarjetas. -->
+        <!-- "OK" button of the colour picker (ColorPickerScreen). Colours traced from the reference:
+             #393939 normal, #4B4B4B when selected. Same lighten + ZIndex 2 pattern as the cards. -->
         <Style Selector="Border.okButton">
             <Setter Property="Background" Value="#393939" />
             <Setter Property="CornerRadius" Value="3" />
@@ -365,9 +403,113 @@
             <Setter Property="ZIndex" Value="2" />
         </Style>
 
-        <!-- Miniaturas de "Dynamic backgrounds" (pantalla DynamicBackgroundsScreen). Por ahora son
-             placeholders grises (los fondos/miniaturas reales se meten despues). Tamaño 262x146
-             (16:9), medido del frame. Se generan por code-behind (BuildDynRail). -->
+        <!-- Cards and buttons of "Solid colors - Custom" (CustomColorScreen). Measured 1:1: #303030,
+             #454545 when selected - the same palette as the rest of Settings, so no separate trace.
+             Sizes vary per card, hence no Width/Height here. -->
+        <Style Selector="Border.ccCard">
+            <Setter Property="Background" Value="#303030" />
+            <Setter Property="CornerRadius" Value="3" />
+        </Style>
+        <Style Selector="Border.ccCard.selected">
+            <Setter Property="Background" Value="#454545" />
+            <Setter Property="ZIndex" Value="2" />
+        </Style>
+        <!-- Slider label inside those cards. -->
+        <Style Selector="Border.ccCard TextBlock.ccLabel">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+
+        <!-- "General - Home" (PersonalizationHomeScreen). Explanation card, its control, the control
+             label and the checkbox. Two greys on purpose: #2B2B2B for the explanation, #303030 for
+             the control, both measured. -->
+        <Style Selector="Border.phInfo">
+            <Setter Property="Background" Value="#2B2B2B" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Width" Value="438" />
+        </Style>
+        <Style Selector="Border.phInfo TextBlock.phInfoText">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Width" Value="390" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="LineHeight" Value="34.5" />
+            <Setter Property="Margin" Value="24,29,0,0" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+        </Style>
+        <Style Selector="Border.phCtrl">
+            <Setter Property="Background" Value="#303030" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Width" Value="438" />
+            <Setter Property="Height" Value="98" />
+        </Style>
+        <Style Selector="Border.phCtrl.selected">
+            <Setter Property="Background" Value="#454545" />
+            <Setter Property="ZIndex" Value="2" />
+        </Style>
+        <Style Selector="Border.phCtrl TextBlock.phCtrlText">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <!-- A row of the tile-count dropdown: 434 wide (the panel minus its 2 px border) and 56 tall.
+             The active one is filled #454545 from the code-behind. -->
+        <Style Selector="Border.phOpt">
+            <Setter Property="Width" Value="434" />
+            <Setter Property="Height" Value="56" />
+            <Setter Property="Canvas.Left" Value="0" />
+        </Style>
+        <Style Selector="Border.phOpt TextBlock.phOptText">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="22,5,0,0" />
+        </Style>
+
+        <!-- Empty checkbox: 32x32 outline, same as the one on My background. -->
+        <Style Selector="Border.phCheck">
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="BorderBrush" Value="White" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="2" />
+        </Style>
+
+        <!-- Source cards of "Where do you want to start?" (CustomImageScreen). Its palette is its own
+             and darker than the Settings one: #2A2A2A, #3F3F3F when selected. Measured, not inherited. -->
+        <Style Selector="Border.ciCard">
+            <Setter Property="Background" Value="#2A2A2A" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Width" Value="438" />
+            <Setter Property="Height" Value="98" />
+        </Style>
+        <Style Selector="Border.ciCard.selected">
+            <Setter Property="Background" Value="#3F3F3F" />
+            <Setter Property="ZIndex" Value="2" />
+        </Style>
+        <!-- Label: vertically centred, indented 22, wrapping inside 394 (438 minus 22 each side). -->
+        <Style Selector="Border.ciCard TextBlock.ciLabel">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Width" Value="394" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="LineHeight" Value="36" />
+            <!-- Top 4, not 2: on a vertically centred child the margin only eats half the slack, so
+                 it lands 2 px down, which is what the reference has. -->
+            <Setter Property="Margin" Value="22,4,0,0" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <!-- "Dynamic backgrounds" thumbnails (DynamicBackgroundsScreen). Grey placeholders for now
+             (real backgrounds/thumbnails come later). Size 262x146 (16:9), measured from the frame.
+             Generated in the code-behind (BuildDynRail). -->
         <Style Selector="Border.dynThumb">
             <Setter Property="Background" Value="#2A2E36" />
             <Setter Property="CornerRadius" Value="9" />
@@ -375,7 +517,7 @@
             <Setter Property="Height" Value="146" />
         </Style>
 
-        <!-- Pestañas Games / Xbox / Abstract: la activa va en blanco y negrita, las demas en gris. -->
+        <!-- Games / Xbox / Abstract tabs: the active one is white and bold, the rest grey. -->
         <Style Selector="TextBlock.dynTab">
             <Setter Property="FontSize" Value="30" />
             <Setter Property="Foreground" Value="#B8B8B8" />
@@ -390,36 +532,36 @@
     <Viewbox Stretch="Uniform">
         <Grid Width="1920" Height="1080" ClipToBounds="True">
 
-            <!-- Fondo: video animado decodificado por hardware (ver Video/HardwareVideoBackgroundControl.cs).
-                 El control de video se crea desde el code-behind (necesita la ruta del video como
-                 parametro al construirse) y se inserta aqui dentro, SOBRE el poster de abajo. -->
+            <!-- Background: animated video decoded in hardware (see
+                 Video/HardwareVideoBackgroundControl.cs). The video control is created from the
+                 code-behind (it needs the video path as a constructor argument) and inserted here,
+                 ON TOP of the poster below. -->
             <Panel x:Name="BackgroundHost" Width="1920" Height="1080">
-                <!-- Primer fotograma (poster) del video de fondo, SIEMPRE detras del video. Cuando el
-                     video esta cargado lo tapa; cuando se descarga (la home no esta a la vista: hay
-                     Ajustes delante, un juego en primer plano, etc.) queda esta imagen fija, asi el
-                     fondo no se queda en negro y al recargar el video -que arranca por su fotograma 0-
-                     no se nota el salto. El code-behind (ApplyBackground) le pone el poster del fondo
-                     activo. -->
+                <!-- First frame (poster) of the background video, ALWAYS behind the video. While the
+                     video is loaded it covers this; when the video is unloaded (the home is not on
+                     screen: Settings is in front, a game is in the foreground, etc.) this still image
+                     remains, so the background does not go black and reloading the video - which
+                     starts at its frame 0 - shows no jump. The code-behind (ApplyBackground) sets the
+                     active background's poster. -->
                 <Image x:Name="HomeBackgroundPoster" Width="1920" Height="1080" Stretch="UniformToFill" IsVisible="False" />
             </Panel>
 
-            <!-- Fondo de color solido: tapa el video cuando el usuario elige un "Solid color" (ver
-                 SolidColorsScreen). El code-behind (ApplyBackground) le pone el color y lo hace
-                 visible; con el fondo dinamico queda oculto. Va SOBRE el video pero DEBAJO del velo
-                 oscuro de abajo, para que reciba el mismo oscurecido que el video y el texto/tiles
-                 se lean igual encima. -->
+            <!-- Solid colour background: covers the video when a "Solid color" is chosen (see
+                 SolidColorsScreen). The code-behind (ApplyBackground) sets its colour and makes it
+                 visible; with a dynamic background it stays hidden. Sits ON TOP of the video but
+                 BELOW the dark veil below, so it gets the same darkening as the video and text and
+                 tiles read the same over it. -->
             <Rectangle x:Name="SolidBackgroundLayer" Width="1920" Height="1080" IsVisible="False" />
 
-            <!-- Velo oscuro sutil para que el texto/tiles resalten sobre el video -->
+            <!-- Subtle dark veil so text and tiles stand out over the video -->
             <Rectangle Width="1920" Height="1080" Fill="#20000000" />
 
-            <!-- Degradado oscuro adicional pegado al borde superior (igual que el original de
-                 Xbox), para que los iconos y el texto de la barra de arriba se lean bien pase
-                 lo que pase en el fondo en ese momento. Solo tiene sentido mientras el foco
-                 esta en esa fila (avatar/nav) - si el foco esta en los juegos de abajo no hace
-                 falta oscurecer el fondo ahi arriba, asi que entra/sale con fundido segun
-                 _row (ver UpdateSelection en el code-behind). Empieza en Opacity=1 porque la
-                 app arranca con el foco en esa fila (ver comentario en el constructor). -->
+            <!-- Extra dark gradient hugging the top edge (same as the Xbox original), so the top
+                 bar's icons and text stay readable whatever the background is doing at that moment.
+                 It only makes sense while focus is on that row (avatar/nav) - with focus on the games
+                 below there is no need to darken up there, so it fades in and out based on _row (see
+                 UpdateSelection in the code-behind). Starts at Opacity=1 because the app starts with
+                 focus on that row (see the comment in the constructor). -->
             <Rectangle x:Name="TopBarGradient" Width="1920" Height="230" VerticalAlignment="Top" Opacity="1">
                 <Rectangle.Transitions>
                     <Transitions>
@@ -436,22 +578,20 @@
 
             <Canvas Width="1920" Height="1080">
 
-                <!-- Avatar. Desplazado de 96 a 103 (2026-07-17): TODO el layout de la home estaba
-                     ~7px a la izquierda del de Xbox. Medido en el video a pantalla completa, el
-                     avatar de Xbox empieza en x~105 y las dos filas de contenido en x~110; las
-                     nuestras estaban en 96 y 103. Se desplaza la parte anclada a la izquierda
-                     (avatar, nombre, las dos filas) los mismos 7px. El cluster de navegacion
-                     central y el de estado de la derecha NO se tocan: van centrados / anclados a la
-                     derecha, no al margen izquierdo. -->
+                <!-- Avatar. Moved from 96 to 103: the ENTIRE home layout was ~7px left of Xbox's.
+                     Measured on the full-screen video, the Xbox avatar starts at x~105 and the two
+                     content rows at x~110; ours were at 96 and 103. Everything anchored to the left
+                     (avatar, name, both rows) shifts by the same 7px. The centre navigation cluster
+                     and the right-hand status cluster are NOT touched: they are centred / anchored
+                     right, not to the left margin. -->
                 <Border Canvas.Left="103" Canvas.Top="79" Width="59" Height="59" CornerRadius="30" ClipToBounds="True">
                     <Image Source="/Assets/Icons/avatar.png" Stretch="UniformToFill" />
                 </Border>
                 <TextBlock x:Name="UserNameText" Canvas.Left="181" Canvas.Top="97" Foreground="White" FontSize="20"
-                           FontFamily="avares://Playfront.App/Assets/Fonts/Segoe-Sans-Text.ttf#Segoe Sans Text" />
+                           FontFamily="{StaticResource XboxFontFamily}" />
 
-                <!-- Cluster de navegacion central. El circulo de seleccion es notablemente mas
-                     grande que el avatar (no del mismo tamaño) y los 5 iconos van mucho mas
-                     juntos entre si -->
+                <!-- Centre navigation cluster. The selection circle is noticeably larger than the
+                     avatar (not the same size) and the 5 icons sit much closer together -->
                 <Border Classes="navcircle" x:Name="Nav0" Canvas.Left="739" Canvas.Top="73" Width="71" Height="71" CornerRadius="36">
                     <Image Source="/Assets/Icons/nav-home.png" Classes="navIcon" Stretch="Uniform"
                            HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -472,10 +612,10 @@
                     <Image Source="/Assets/Icons/nav-settings.png" Classes="navIcon" Stretch="Uniform"
                            HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
-                <!-- Nombre del icono de navegacion seleccionado. Solo se ve (Opacity 1) mientras el
-                     foco esta en la fila de navegacion (fila 0); al bajar a los juegos se oculta con
-                     fundido, igual que el degradado de arriba. Arranca oculto (Opacity 0) porque la
-                     app arranca en la fila de juegos (Game 1). -->
+                <!-- Name of the selected navigation icon. Visible (Opacity 1) only while focus is on
+                     the navigation row (row 0); moving down to the games fades it out, like the
+                     gradient above. Starts hidden (Opacity 0) because the app starts on the games
+                     row. -->
                 <TextBlock x:Name="NavLabel" Canvas.Left="713" Canvas.Top="151" Width="200" TextAlignment="Center"
                            Text="My games &amp; apps" Foreground="White" FontSize="18" Opacity="0">
                     <TextBlock.Transitions>
@@ -485,30 +625,30 @@
                     </TextBlock.Transitions>
                 </TextBlock>
 
-                <!-- Cluster derecho: estado -->
+                <!-- Right-hand cluster: status -->
                 <Image Canvas.Left="1595" Canvas.Top="90" Width="35" Height="35" Source="/Assets/Icons/status-mic.png" />
 
-                <!-- Icono de bateria: contorno vectorial REAL de Xbox (path de Battery0.svg) + barra
-                     de relleno verde continua dentro, cuyo ancho varia segun el % real (code-behind).
-                     Los SVG originales de TODOS los estados de bateria (niveles 0-4, carga con rayo,
-                     y saver/ahorro) estan guardados en Assets/Icons/Battery por si se usan luego. -->
+                <!-- Battery icon: REAL Xbox vector outline (path from Battery0.svg) + a continuous
+                     green fill bar inside whose width tracks the real percentage (code-behind). The
+                     original SVGs for ALL battery states (levels 0-4, charging with bolt, and saver)
+                     are kept in Assets/Icons/Battery in case they are needed later. -->
                 <Viewbox Canvas.Left="1639" Canvas.Top="85" Width="46" Height="46">
                     <Canvas Width="32" Height="32">
-                        <!-- Relleno verde continuo (% real). Zona de relleno que usa Xbox en
-                             Battery4 (x 4..24, y 10..22, esquinas ~1.5). Va DETRAS del contorno y
-                             asoma por su hueco. Verde propio #4FB84D. BatteryFillMaxWidth
-                             (code-behind) = 20 (el Width al 100%). -->
+                        <!-- Continuous green fill (real %). The fill area Xbox uses in Battery4
+                             (x 4..24, y 10..22, corners ~1.5). Sits BEHIND the outline and shows
+                             through its hole. Fixed green #4FB84D. BatteryFillMaxWidth (code-behind)
+                             = 20 (the Width at 100%). -->
                         <Rectangle x:Name="BatteryFill" Canvas.Left="4" Canvas.Top="10" Width="20" Height="12" RadiusX="1.5" RadiusY="1.5" Fill="#4FB84D" />
-                        <!-- Contorno REAL de Xbox: path vectorial de Battery0.svg (guardado en
-                             Assets/Icons/Battery). Blanco, con nub. "F0" = fill-rule evenodd, que
-                             deja el hueco de la bateria por donde asoma el relleno verde. Sustituye
-                             al rectangulo redondeado aproximado anterior. -->
+                        <!-- REAL Xbox outline: vector path from Battery0.svg (kept in
+                             Assets/Icons/Battery). White, with the nub. "F0" = evenodd fill rule,
+                             which leaves the battery hollow so the green fill shows through. Replaces
+                             the earlier approximated rounded rectangle. -->
                         <Path x:Name="BatteryOutline" Fill="White" Data="F0 M32 17C32 17.5521 31.8021 18.026 31.4062 18.4219C31.0208 18.8073 30.5521 19 30 19H28V21.1094C28 21.7656 27.8698 22.3906 27.6094 22.9844C27.349 23.5781 26.9948 24.0938 26.5469 24.5312C26.099 24.9688 25.5781 25.3229 24.9844 25.5938C24.3906 25.8646 23.7656 26 23.1094 26H4.89062C4.23438 26 3.60938 25.8698 3.01562 25.6094C2.42188 25.349 1.90625 24.9948 1.46875 24.5469C1.03125 24.099 0.677083 23.5781 0.40625 22.9844C0.135417 22.3906 0 21.7656 0 21.1094V10.8906C0 10.2344 0.130208 9.60938 0.390625 9.01562C0.651042 8.42188 1.00521 7.90625 1.45312 7.46875C1.90104 7.03125 2.42188 6.67708 3.01562 6.40625C3.60938 6.13542 4.23438 6 4.89062 6H23.1094C23.776 6 24.401 6.13021 24.9844 6.39062C25.5677 6.65104 26.0833 7.00521 26.5312 7.45312C26.9792 7.90104 27.3281 8.42188 27.5781 9.01562C27.8281 9.60938 27.9688 10.2344 28 10.8906V13H30C30.2708 13 30.526 13.0521 30.7656 13.1562C31.0052 13.2604 31.2188 13.4062 31.4062 13.5938C31.5938 13.7812 31.7396 13.9948 31.8438 14.2344C31.9479 14.474 32 14.7292 32 15V17ZM26 11C26 10.5938 25.9219 10.2083 25.7656 9.84375C25.6094 9.47917 25.3958 9.16146 25.125 8.89062C24.8542 8.61979 24.5312 8.40104 24.1562 8.23438C23.7812 8.06771 23.3958 7.98958 23 8H5C4.59375 8 4.20833 8.07812 3.84375 8.23438C3.47917 8.39062 3.16146 8.60417 2.89062 8.875C2.61979 9.14583 2.40104 9.46875 2.23438 9.84375C2.06771 10.2188 1.98958 10.6042 2 11V21C2 21.4062 2.07812 21.7917 2.23438 22.1562C2.39062 22.5208 2.60417 22.8385 2.875 23.1094C3.14583 23.3802 3.46875 23.599 3.84375 23.7656C4.21875 23.9323 4.60417 24.0104 5 24H23C23.4062 24 23.7917 23.9219 24.1562 23.7656C24.5208 23.6094 24.8385 23.3958 25.1094 23.125C25.3802 22.8542 25.599 22.5312 25.7656 22.1562C25.9323 21.7812 26.0104 21.3958 26 21V11Z" />
-                        <!-- Estado CARGANDO (visible solo con cargador conectado, ver code-behind):
-                             contorno con MUESCA por donde sale el rayo + el rayo, ambos del
-                             Battery4Charging.svg real de Xbox. Reemplazan al contorno normal de
-                             arriba. El relleno verde de detras sigue mostrando el % (el rayo blanco
-                             tapa su esquina superior izquierda, como hace Xbox). -->
+                        <!-- CHARGING state (visible only with the charger connected, see code-behind):
+                             outline with a NOTCH where the bolt comes out + the bolt, both from the
+                             real Xbox Battery4Charging.svg. They replace the normal outline above.
+                             The green fill behind still shows the percentage (the white bolt covers
+                             its top left corner, as Xbox does). -->
                         <Path x:Name="BatteryOutlineCharging" IsVisible="False" Fill="White" Data="F0 M23 8H10.8828L11.122 7.51922C11.3698 7.02107 11.4345 6.49359 11.3526 6H23.1094C23.776 6 24.401 6.13021 24.9844 6.39062C25.5677 6.65104 26.0833 7.00521 26.5312 7.45312C26.9792 7.90104 27.3281 8.42188 27.5781 9.01562C27.8281 9.60938 27.9688 10.2344 28 10.8906V13H30C30.2708 13 30.526 13.0521 30.7656 13.1562C31.0052 13.2604 31.2188 13.4062 31.4062 13.5938C31.5938 13.7812 31.7396 13.9948 31.8438 14.2344C31.9479 14.474 32 14.7292 32 15V17C32 17.5521 31.8021 18.026 31.4062 18.4219C31.0208 18.8073 30.5521 19 30 19H28V21.1094C28 21.7656 27.8698 22.3906 27.6094 22.9844C27.349 23.5781 26.9948 24.0938 26.5469 24.5312C26.099 24.9688 25.5781 25.3229 24.9844 25.5938C24.3906 25.8646 23.7656 26 23.1094 26H4.89062C4.23438 26 3.60938 25.8698 3.01562 25.6094C2.42188 25.349 1.90625 24.9948 1.46875 24.5469C1.03125 24.099 0.677083 23.5781 0.40625 22.9844C0.135417 22.3906 0 21.7656 0 21.1094V11.8731C0.160747 11.9051 0.32846 11.922 0.502093 11.922H1.69308V11.9233H2V21C2 21.4062 2.07812 21.7917 2.23438 22.1562C2.39062 22.5208 2.60417 22.8385 2.875 23.1094C3.14583 23.3802 3.46875 23.599 3.84375 23.7656C4.21875 23.9323 4.60417 24.0104 5 24H23C23.4062 24 23.7917 23.9219 24.1562 23.7656C24.5208 23.6094 24.8385 23.3958 25.1094 23.125C25.3802 22.8542 25.599 22.5312 25.7656 22.1562C25.9323 21.7812 26.0104 21.3958 26 21V11C26 10.5938 25.9219 10.2083 25.7656 9.84375C25.6094 9.47917 25.3958 9.16146 25.125 8.89062C24.8542 8.61979 24.5312 8.40104 24.1562 8.23438C23.7812 8.06771 23.3958 7.98958 23 8Z" />
                         <Path x:Name="BatteryBolt" IsVisible="False" Fill="White" Data="M5.69308 5.90113V0.669804C5.69308 -0.0302734 4.75422 -0.253064 4.44276 0.373105L0.0548814 9.1946C-0.111344 9.52878 0.130403 9.92198 0.502095 9.92198H3.69308V15.1533C3.69308 15.8534 4.63194 16.0762 4.9434 15.45L9.33128 6.6285C9.4975 6.29432 9.25576 5.90113 8.88406 5.90113H5.69308Z" />
                     </Canvas>
@@ -516,23 +656,22 @@
 
                 <TextBlock x:Name="ClockText" Canvas.Left="1709" Canvas.Top="94" Text="00:00" Foreground="White" FontSize="24" />
 
-                <!-- Fila 1: 9 casillas de juego. Geometria REMEDIDA el 2026-07-17 sobre un VIDEO de la
-                     home de Xbox a pantalla completa (2560x1440, factor 0.75 a nuestro lienzo), con un
-                     midiendo frame a frame.
-                     Casilla 154x154. EN REPOSO (nada seleccionado) van con pitch 195 (hueco 41),
-                     repartidas para llenar 110..1824 alineadas con la fila de abajo. Al seleccionar una,
-                     el code-behind las comprime hacia ella (hueco ~29) manteniendo los dos extremos
-                     clavados en 110 y 1824 - asi no se amontonan al principio ni se sale nada.
-                     Cada casilla son 2 elementos: ella misma y su anillo de seleccion.
-                     POSICIONADAS CON Canvas.Left + Canvas.Bottom, no Top: la casilla seleccionada crece
-                     anclada por su esquina INFERIOR IZQUIERDA (medido: al seleccionar, ni su borde
-                     izquierdo ni el inferior se mueven ni un pixel). Con Canvas.Bottom, cambiar el alto
-                     hace que crezca hacia arriba sola. El empuje lateral a las siguientes lo hace el
-                     code-behind con translateX. -->
-                <!-- TEMPORAL: en el sitio de "Game 1" va de momento el boton de instalar Steam (se movera
-                     a su sitio definitivo al montar la pantalla de biblioteca). La etiqueta se fuerza
-                     visible (IsVisible=True) para que se lea siempre, no solo al seleccionar. Reutiliza
-                     el look de casilla existente. -->
+                <!-- Row 1: 9 game tiles. Geometry re-measured frame by frame against a full-screen
+                     VIDEO of the Xbox home (2560x1440, factor 0.75 to our canvas).
+                     Tile 154x154. AT REST (nothing selected) they use pitch 195 (gap 41), laid out to
+                     fill 110..1824 aligned with the row below. On selection the code-behind squeezes
+                     them towards it (gap ~29) while pinning both ends at 110 and 1824 - so they
+                     neither bunch up at the start nor overflow.
+                     Each tile is 2 elements: the tile itself and its selection ring.
+                     POSITIONED WITH Canvas.Left + Canvas.Bottom, not Top: the selected tile grows
+                     anchored at its BOTTOM LEFT corner (measured: on selection neither its left nor
+                     its bottom edge moves a single pixel). With Canvas.Bottom, changing the height
+                     makes it grow upwards on its own. The sideways push on the following tiles is
+                     done by the code-behind with translateX. -->
+                <!-- TEMPORARY: the "Game 1" slot currently holds the install-Steam button (it moves to
+                     its proper place when the library screen is built). The label is forced visible
+                     (IsVisible=True) so it always reads, not only when selected. Reuses the existing
+                     tile look. -->
                 <Border Classes="tile" x:Name="Tile0" Canvas.Left="110" Canvas.Bottom="291" Width="154" Height="154">
                     <Border Classes="tileLabel" IsVisible="True"><TextBlock x:Name="SteamButtonLabel" Text="Install Steam" /></Border>
                 </Border>
@@ -570,10 +709,10 @@
                 </Border>
                 <Border Classes="selectionRing homeRing" x:Name="Ring8" Canvas.Left="1661" Canvas.Bottom="282" Width="172" Height="172" />
 
-                <!-- Fila 2: 4 recuadros anchos. Mismo mecanismo (ancla inferior-izquierda + empuje a
-                     las siguientes), y mismo span horizontal que la fila de arriba (110 a 1824, medido en
-                     el video). Su escala de seleccion (1.12) NO esta medida: el video solo mueve la fila
-                     de juegos. -->
+                <!-- Row 2: 4 wide tiles. Same mechanism (bottom-left anchor + push on the following
+                     ones), and the same horizontal span as the row above (110 to 1824, measured on
+                     the video). Their selection scale (1.12) is NOT measured: the video only moves
+                     the games row. -->
                 <Border Classes="tile" x:Name="Tile9" Canvas.Left="110" Canvas.Bottom="31" Width="400" Height="230">
                     <Border Classes="tileLabel"><TextBlock Text="Your games" /></Border>
                 </Border>
@@ -592,231 +731,379 @@
                 <Border Classes="selectionRing homeRing" x:Name="Ring12" Canvas.Left="1415" Canvas.Bottom="22" Width="418" Height="248" />
             </Canvas>
 
-            <!-- Pantalla de Ajustes: oculta por defecto, se muestra desde el code-behind al
-                 pulsar A/Enter con el icono de Ajustes del menu central seleccionado. Calcada
-                 pixel a pixel de una captura real de la Xbox del usuario ("1.png" en su
-                 escritorio): barra lateral con lista de categorias + rejilla de 6 tarjetas para
-                 "General". La referencia usa rojo porque esa Xbox tiene el tema en rojo; aqui va
-                 en verde (el unico acento que usa Playfront). Fondo solido, no el video de la home -
-                 asi es la pantalla de ajustes real de Xbox tambien. Solo "General" tiene
-                 contenido real por ahora; el resto de categorias son placeholders en la lista,
-                 igual que "Game 1..9" lo son en la home. -->
-            <!-- Host de Ajustes: VACIO al arrancar. La vista SettingsView (Views/SettingsView.axaml) se
-                 monta aqui BAJO DEMANDA al entrar en Ajustes (code-behind EnterSettings) y se libera al
-                 salir (ExitSettings). Asi la Home es lo unico que se construye al arrancar el shell; ver
-                 la nota de arquitectura de rendimiento del proyecto. La pantalla de carga
-                 (SettingsLoadingScreen) tapa la construccion, asi que no se ve el montaje. -->
+            <!-- Settings screen: hidden by default, shown from the code-behind on pressing A/Enter
+                 with the Settings icon of the centre menu selected. Traced pixel by pixel from a real
+                 Xbox capture: sidebar with the category list + a 6-card grid for "General". The
+                 reference is red because that console's theme is red; here it follows the app accent.
+                 Solid background, not the home video - that is how the real Xbox settings screen is
+                 too. Only "General" has real content for now; the rest of the categories are
+                 placeholders in the list, just like "Game 1..9" are on the home. -->
+            <!-- Settings host: EMPTY at startup. The SettingsView (Views/SettingsView.axaml) is built
+                 here ON DEMAND when entering Settings (code-behind EnterSettings) and released on exit
+                 (ExitSettings), so the Home is the only thing constructed when the shell starts. The
+                 loading screen (SettingsLoadingScreen) covers the construction, so the build is never
+                 visible. -->
             <Panel x:Name="SettingsHost" Width="1920" Height="1080" />
 
-            <!-- Host de "System Updates" (Ajustes > System > Updates). Mismo patron: se monta al
-                 abrirla y se libera al volver con B. Va DESPUES de SettingsHost a proposito: en un
-                 Grid, el orden de declaracion decide que queda encima, y esta pantalla tapa Ajustes. -->
+            <!-- "System Updates" host (Settings > System > Updates). Same pattern: built on opening,
+                 released on returning with B. Declared AFTER SettingsHost on purpose: in a Grid the
+                 declaration order decides what sits on top, and this screen covers Settings. -->
             <Panel x:Name="UpdatesHost" Width="1920" Height="1080" />
 
-            <!-- Host de la TIENDA: VACIO al arrancar. La vista StoreView (Views/StoreView.axaml) se
-                 monta aqui BAJO DEMANDA al pulsar A sobre el icono de tienda del menu superior
-                 (code-behind EnterStore) y se libera al salir con B (ExitStore) - mismo patron que
-                 SettingsHost (arquitectura de rendimiento: nada se construye antes de abrirse). -->
+            <!-- STORE host: EMPTY at startup. The StoreView (Views/StoreView.axaml) is built here ON
+                 DEMAND on pressing A over the store icon of the top menu (code-behind EnterStore) and
+                 released on exit with B (ExitStore) - same pattern as SettingsHost (performance
+                 architecture: nothing is constructed before it is opened). -->
             <Panel x:Name="StoreHost" Width="1920" Height="1080" />
 
-            <!-- Host de la PAGINA DE CATEGORIA de la Tienda (Apps > Music apps). Mismo patron: se
-                 monta al abrirla desde la barra lateral de la Tienda y se libera al volver con B.
-                 Mientras esta puesta, StoreHost se oculta para no pintar la Tienda por debajo. -->
+            <!-- Store CATEGORY PAGE host (Apps > Music apps). Same pattern: built when opened from
+                 the Store sidebar and released on returning with B. While it is mounted, StoreHost is
+                 hidden so the Store is not painted underneath. -->
             <Panel x:Name="CategoryHost" Width="1920" Height="1080" />
 
-            <!-- Host de la FICHA DE PRODUCTO de una app (Music apps > YouTube). Se monta encima de la
-                 pagina de categoria al pulsar A sobre una tarjeta y se libera al volver con B.
-                 Mientras esta puesta, CategoryHost se oculta: la ficha es opaca y pintar la pagina de
-                 categoria por debajo seria trabajo tirado. -->
+            <!-- App PRODUCT PAGE host (Music apps > YouTube). Built over the category page on
+                 pressing A on a card, released on returning with B. While it is mounted, CategoryHost
+                 is hidden: the product page is opaque and painting the category page underneath would
+                 be wasted work. -->
             <Panel x:Name="AppHost" Width="1920" Height="1080" />
 
-            <!-- Host de la BIBLIOTECA ("My games & apps"): VACIO al arrancar. La vista LibraryView
-                 (Views/LibraryView.axaml) se monta bajo demanda al pulsar A sobre el icono "My games &
-                 apps" (fila de navegacion, col 0) y se libera al salir con B. Pantalla completa opaca
-                 que tapa la home, como Ajustes/Tienda. -->
+            <!-- LIBRARY host ("My games & apps"): EMPTY at startup. The LibraryView
+                 (Views/LibraryView.axaml) is built on demand on pressing A over the "My games & apps"
+                 icon (navigation row, col 0) and released on exit with B. Opaque full screen that
+                 covers the home, like Settings/Store. -->
             <Panel x:Name="LibraryHost" Width="1920" Height="1080" />
 
-            <!-- Pantalla "General Personalization": se abre con A sobre la tarjeta
-                 "Personalization" de la categoria General, y se cierra con B (que devuelve a la
-                 rejilla, con esa misma tarjeta seleccionada). Ocupa la pantalla entera y tapa la
-                 de Ajustes - no es un panel dentro de ella: en la referencia real no queda ni
-                 rastro de la barra lateral de categorias ni de la cabecera (engranaje + avatar +
-                 nombre). Va despues de SettingsScreen en el XAML a proposito: en un Grid, sin
-                 ZIndex explicito, el orden de declaracion decide que queda encima.
+            <!-- "General Personalization" screen: opens with A on the "Personalization" card of the
+                 General category, closes with B (returning to the grid with that same card
+                 selected). Fills the whole screen and covers Settings - it is not a panel inside it:
+                 in the real reference there is no trace of the category sidebar or the header (gear +
+                 avatar + name). Declared after SettingsScreen in the XAML on purpose: in a Grid,
+                 without an explicit ZIndex, declaration order decides what sits on top.
 
-                 Coordenadas medidas pixel a pixel sobre la referencia (1382x778) y escaladas por
-                 1920/1382 = 1.3893: casillas de 440x96 en x=108, la primera en y=264.5 y las
-                 demas cada 114.3 (o sea, 18.3 de separacion entre ellas). El acento sale de
-                 AccentColor (App.axaml), que desde 2026-07-17 es justamente el verde medido de
-                 esta misma referencia. -->
+                 REBUILT after the reference screen changed: it used to be ONE column of six tiles,
+                 it is now THREE columns of 3 + 3 + 1, and the wording moved with it ("Customize the
+                 guide" -> "Guide", "Profile" -> "My profile", "My home Xbox" -> "My home XBOX").
+                 "Home" is new. The old numbers also came from a 1382x778 crop scaled by 1.3893;
+                 everything below is measured directly on a 1920x1080 capture, no conversion:
+                   tile      438 x 98
+                   columns   x 112, 622, 1132   (step 510)
+                   rows      y 264, 378, 492    (step 114, so 16 of gap)
+                   label ink starts 21 in from the tile's left edge
+                 The accent comes from AccentColor (App.axaml). -->
             <Canvas x:Name="PersonalizationScreen" Width="1920" Height="1080" IsVisible="False">
                 <Rectangle Width="1920" Height="1080" Fill="#201F1F" />
 
-                <!-- "General" en negrita y "Personalization" en normal, dentro de un unico
-                     TextBlock con dos Runs (no dos TextBlocks sueltos): asi el espacio entre las
-                     dos palabras lo coloca la propia fuente, sin tener que medir a mano donde
-                     empieza la segunda. -->
-                <TextBlock Canvas.Left="106" Canvas.Top="59" FontSize="46" Foreground="White">
-                    <Run Text="General" FontWeight="Bold" />
-                    <Run Text="Personalization" />
+                <!-- Breadcrumb title: "General" heavy, "Personalization" regular, SAME SIZE - both
+                     halves measure 34 px of ink height in the reference, so the difference is weight
+                     only. Two Runs inside one TextBlock rather than two TextBlocks, so the font
+                     itself places the space between the words instead of it being measured by hand.
+
+                     Reference ink: "General" 165 wide, "Personalization" 326. What is here falls
+                     ~7% short on both, which is the known typeface problem tracked on the Settings
+                     category title - not a size that needs nudging. Fix that there and this follows.
+
+                     Canvas.Top is set so the ink lands on y 69..102, as measured. -->
+                <TextBlock Canvas.Left="110" Canvas.Top="56" FontSize="45" Foreground="White">
+                    <Run Text="General " FontFamily="{StaticResource XboxFontDisplaySemibold}" />
+                    <Run Text="Personalization" FontFamily="{StaticResource XboxFontFamily}" />
                 </TextBlock>
 
-                <!-- Tops redondeados a entero (la medida daba 264.5 y saltos de 114.3): con .5 o
-                     decimales, Avalonia redondea la disposicion por su cuenta y el anillo y la
-                     casilla acaban desplazandose distinto, dejando el hueco asimetrico. El error
-                     que se introduce al redondear es de medio pixel como mucho - invisible - y a
-                     cambio los bordes salen nitidos. Ver el comentario de Border.selectionRing. -->
-                <Border Classes="pzTile selected" x:Name="PzTile0" Canvas.Left="108" Canvas.Top="265"><TextBlock Text="Customize the guide" /></Border>
-                <Border Classes="pzTile" x:Name="PzTile1" Canvas.Left="108" Canvas.Top="379"><TextBlock Text="Games &amp; apps" /></Border>
-                <Border Classes="pzTile" x:Name="PzTile2" Canvas.Left="108" Canvas.Top="493"><TextBlock Text="Profile" /></Border>
-                <Border Classes="pzTile" x:Name="PzTile3" Canvas.Left="108" Canvas.Top="607"><TextBlock Text="My color &amp; theme" /></Border>
-                <Border Classes="pzTile" x:Name="PzTile4" Canvas.Left="108" Canvas.Top="722"><TextBlock Text="My background" /></Border>
-                <Border Classes="pzTile" x:Name="PzTile5" Canvas.Left="108" Canvas.Top="836"><TextBlock Text="My home Xbox" /></Border>
+                <!-- Column-major: tiles 0-2 are the left column, 3-5 the middle, 6 the right one.
+                     The code-behind navigates by (column, row), not by this flat number, so the
+                     order here can change without touching the navigation. -->
+                <Border Classes="pzTile selected" x:Name="PzTile0" Canvas.Left="112" Canvas.Top="264"><TextBlock Text="Home" /></Border>
+                <Border Classes="pzTile" x:Name="PzTile1" Canvas.Left="112" Canvas.Top="378"><TextBlock Text="Guide" /></Border>
+                <Border Classes="pzTile" x:Name="PzTile2" Canvas.Left="112" Canvas.Top="492"><TextBlock Text="Games &amp; apps" /></Border>
+                <Border Classes="pzTile" x:Name="PzTile3" Canvas.Left="622" Canvas.Top="264"><TextBlock Text="My profile" /></Border>
+                <Border Classes="pzTile" x:Name="PzTile4" Canvas.Left="622" Canvas.Top="378"><TextBlock Text="My color &amp; theme" /></Border>
+                <Border Classes="pzTile" x:Name="PzTile5" Canvas.Left="622" Canvas.Top="492"><TextBlock Text="My background" /></Border>
+                <Border Classes="pzTile" x:Name="PzTile6" Canvas.Left="1132" Canvas.Top="264"><TextBlock Text="My home XBOX" /></Border>
 
-                <!-- Mismo anillo que en Ajustes: la casilla (440x96) inflada 8 por cada lado. -->
-                <Border Classes="selectionRing selected" x:Name="PzRing0" Canvas.Left="100" Canvas.Top="257" Width="456" Height="112" />
-                <Border Classes="selectionRing" x:Name="PzRing1" Canvas.Left="100" Canvas.Top="371" Width="456" Height="112" />
-                <Border Classes="selectionRing" x:Name="PzRing2" Canvas.Left="100" Canvas.Top="485" Width="456" Height="112" />
-                <Border Classes="selectionRing" x:Name="PzRing3" Canvas.Left="100" Canvas.Top="599" Width="456" Height="112" />
-                <Border Classes="selectionRing" x:Name="PzRing4" Canvas.Left="100" Canvas.Top="714" Width="456" Height="112" />
-                <Border Classes="selectionRing" x:Name="PzRing5" Canvas.Left="100" Canvas.Top="828" Width="456" Height="112" />
+                <!-- Same ring as in Settings: the tile (438x98) inflated by 8 per side. -->
+                <Border Classes="selectionRing selected" x:Name="PzRing0" Canvas.Left="104" Canvas.Top="256" Width="454" Height="114" />
+                <Border Classes="selectionRing" x:Name="PzRing1" Canvas.Left="104" Canvas.Top="370" Width="454" Height="114" />
+                <Border Classes="selectionRing" x:Name="PzRing2" Canvas.Left="104" Canvas.Top="484" Width="454" Height="114" />
+                <Border Classes="selectionRing" x:Name="PzRing3" Canvas.Left="614" Canvas.Top="256" Width="454" Height="114" />
+                <Border Classes="selectionRing" x:Name="PzRing4" Canvas.Left="614" Canvas.Top="370" Width="454" Height="114" />
+                <Border Classes="selectionRing" x:Name="PzRing5" Canvas.Left="614" Canvas.Top="484" Width="454" Height="114" />
+                <Border Classes="selectionRing" x:Name="PzRing6" Canvas.Left="1124" Canvas.Top="256" Width="454" Height="114" />
             </Canvas>
 
-            <!-- Pantalla "My background": se abre con A sobre la tarjeta "My background" de
-                 Personalization (PzTile4), y se cierra con B (que devuelve a Personalization).
-                 Ocupa la pantalla entera y tapa a Personalization, igual que "My color & theme".
-                 Va DESPUES de PersonalizationScreen en el XAML a proposito: en un Grid, el orden
-                 de declaracion decide que queda encima.
+            <!-- "My background" screen: opens with A on the "My background" card of Personalization
+                 (PzTile4), closes with B (returning to Personalization). Fills the whole screen and
+                 covers Personalization, like "My color & theme". Declared AFTER PersonalizationScreen
+                 in the XAML on purpose: in a Grid, declaration order decides what sits on top.
 
-                 Calcada pixel a pixel del video real del usuario ("How to Change your Background on
-                 Xbox Series X", frame del segundo 26). Medido sobre el frame a 2560x1440 y escalado
-                 por 1920/2560 = 0.75. Estructura medida: columna izquierda de 5 casillas (las 5
-                 fuentes de fondo) + un unico boton "Restore default background" a la derecha
-                 alineado con la primera casilla; la mitad derecha inferior esta vacia.
+                 Traced pixel by pixel from a reference video frame, measured at 2560x1440 and scaled
+                 by 1920/2560 = 0.75. Measured structure: left column of 5 tiles (the 5 background
+                 sources) + a single "Restore default background" button on the right aligned with the
+                 first tile; the lower right half is empty.
 
-                 La geometria de las casillas resulto ser LA MISMA que la lista de "General
-                 Personalization" (top 265, pitch 114, 440x96): medido en el frame da left~112,
-                 ancho~438, alto~98, pitch 114 - Xbox reutiliza el mismo layout de lista. Por eso se
-                 reusa el estilo pzTile y sus anillos, para que las dos pantallas queden alineadas al
-                 pixel cuando el usuario pasa de una a otra (prima la coherencia entre las dos sobre
-                 clavar el medio pixel del frame). Colores identicos a los ya medidos en el resto de
-                 Ajustes: fondo #201F1F, casilla #303030, seleccionada #444444.
+                 The tile geometry turned out to be THE SAME as the "General Personalization" list
+                 (top 265, pitch 114, 440x96): measured on the frame it gives left~112, width~438,
+                 height~98, pitch 114 - Xbox reuses the same list layout. Hence the pzTile style and
+                 its rings are reused, so both screens stay pixel-aligned when moving between them
+                 (consistency between the two beats nailing the frame's half pixel). Colours identical
+                 to those already measured elsewhere in Settings: background #201F1F, tile #303030,
+                 selected #444444.
 
-                 La fuente de fondo ACTIVA lleva un triangulo blanco con un check en su esquina
-                 superior derecha (medido cateto ~71px en el frame -> ~53 en el lienzo). Se genera
-                 por code-behind (BuildMyBackgroundCheck) sobre la casilla _myBackgroundActiveIndex,
-                 por defecto 4 = "Dynamic backgrounds", que es lo que Playfront muestra ahora mismo.
-                 Cuando "Solid colors" pase a ser funcional, el check se movera solo. -->
+                 The ACTIVE background source carries a white triangle with a check in its top right
+                 corner (measured leg ~71px on the frame -> ~53 on the canvas). Generated in the
+                 code-behind (BuildMyBackgroundCheck) over tile _myBackgroundActiveIndex, default
+                 4 = "Dynamic backgrounds", which is what the app shows right now. Once "Solid colors"
+                 becomes functional, the check moves on its own. -->
             <Canvas x:Name="MyBackgroundScreen" Width="1920" Height="1080" IsVisible="False">
                 <Rectangle Width="1920" Height="1080" Fill="#201F1F" />
 
-                <!-- "Personalization" (padre, negrita) + "My background" (pantalla actual, normal),
-                     mismo estilo que el resto de titulos de Ajustes. -->
-                <TextBlock Canvas.Left="106" Canvas.Top="59" FontSize="46" Foreground="White">
-                    <Run Text="Personalization" FontWeight="Bold" />
-                    <Run Text="My background" />
+                <!-- Breadcrumb: the root is always "General", not the screen you came from. -->
+                <TextBlock Canvas.Left="110" Canvas.Top="56" FontSize="45" Foreground="White">
+                    <Run Text="General " FontFamily="{StaticResource XboxFontDisplaySemibold}" />
+                    <Run Text="My background" FontFamily="{StaticResource XboxFontFamily}" />
                 </TextBlock>
 
-                <!-- Columna izquierda: 5 fuentes de fondo. Tops 265 + i*114 (medido pitch 114). -->
-                <Border Classes="pzTile selected" x:Name="MbTile0" Canvas.Left="108" Canvas.Top="265"><TextBlock Text="Solid colors" /></Border>
-                <Border Classes="pzTile" x:Name="MbTile1" Canvas.Left="108" Canvas.Top="379"><TextBlock Text="Achievement art" /></Border>
-                <Border Classes="pzTile" x:Name="MbTile2" Canvas.Left="108" Canvas.Top="493"><TextBlock Text="Custom image" /></Border>
-                <Border Classes="pzTile" x:Name="MbTile3" Canvas.Left="108" Canvas.Top="607"><TextBlock Text="Screenshots" /></Border>
-                <Border Classes="pzTile" x:Name="MbTile4" Canvas.Left="108" Canvas.Top="721"><TextBlock Text="Dynamic backgrounds" /></Border>
+                <!-- REBUILT after the reference screen changed: it used to be one column of five
+                     sources plus a lone "Restore" button, it is now TWO columns of 3 + 2, and two
+                     sources are gone. "Achievement art" and "Screenshots" were removed - neither did
+                     anything here. "Show selected game art" is new.
 
-                <!-- Boton "Restore default background", alineado con la primera casilla. Left 611 y
-                     Top 265 (814,348 en el frame x0.75, el top se alinea con la casilla 0). Mismo
-                     tamaño y estilo que una casilla. -->
-                <Border Classes="pzTile" x:Name="MbRestore" Canvas.Left="611" Canvas.Top="265"><TextBlock Text="Restore default background" /></Border>
+                     Same grid as Personalization, measured again on this screen: tiles 438x98,
+                     columns x 112 and 622, rows y 264/378/492 (step 114). The old numbers were
+                     440x96 at x=108/611. -->
+                <Border Classes="pzTile selected" x:Name="MbTile0" Canvas.Left="112" Canvas.Top="264"><TextBlock Text="Solid colors" /></Border>
+                <Border Classes="pzTile" x:Name="MbTile1" Canvas.Left="112" Canvas.Top="378"><TextBlock Text="Custom image" /></Border>
+                <Border Classes="pzTile" x:Name="MbTile2" Canvas.Left="112" Canvas.Top="492"><TextBlock Text="Dynamic backgrounds" /></Border>
 
-                <!-- Anillos: casilla (440x96) inflada 8 por lado -> 456x112, esquina 8 arriba/izq. -->
-                <Border Classes="selectionRing selected" x:Name="MbRing0" Canvas.Left="100" Canvas.Top="257" Width="456" Height="112" />
-                <Border Classes="selectionRing" x:Name="MbRing1" Canvas.Left="100" Canvas.Top="371" Width="456" Height="112" />
-                <Border Classes="selectionRing" x:Name="MbRing2" Canvas.Left="100" Canvas.Top="485" Width="456" Height="112" />
-                <Border Classes="selectionRing" x:Name="MbRing3" Canvas.Left="100" Canvas.Top="599" Width="456" Height="112" />
-                <Border Classes="selectionRing" x:Name="MbRing4" Canvas.Left="100" Canvas.Top="713" Width="456" Height="112" />
-                <Border Classes="selectionRing" x:Name="MbRestoreRing" Canvas.Left="603" Canvas.Top="257" Width="456" Height="112" />
+                <!-- Right column. The tick box is 32x32 at 384,36 inside the card - the same place
+                     the schedule screen puts its own, and CHECKED here in the reference. -->
+                <Border Classes="pzTile" x:Name="MbGameArt" Canvas.Left="622" Canvas.Top="264">
+                    <Canvas>
+                        <!-- Margin 0 ON PURPOSE: Border.pzTile TextBlock carries a 20,4 margin that
+                             would add to Canvas.Left and push this label 20 px right of every other
+                             tile's. -->
+                        <TextBlock Text="Show selected game art" Canvas.Left="20" Canvas.Top="34" Margin="0"
+                                   FontFamily="{StaticResource XboxFontFamily}" FontSize="26" Foreground="White" />
+                        <Border Canvas.Left="384" Canvas.Top="36" Width="32" Height="32" CornerRadius="2"
+                                BorderBrush="White" BorderThickness="2" Background="Transparent">
+                            <Path Stroke="White" StrokeThickness="2.5" StrokeLineCap="Round" StrokeJoin="Round"
+                                  Data="M 7,15 L 12,20 L 22,8" />
+                        </Border>
+                    </Canvas>
+                </Border>
 
-                <!-- El triangulo del check ("fondo activo") se genera por code-behind y se añade a
-                     este Canvas (por encima de casillas y anillos). -->
+                <!-- DIMMED in the reference, not just unselected: its fill reads #272626 against the
+                     #303030 of a normal card, and its label #4D4D4D against white. That is the
+                     disabled look, and it is kept - the button does nothing until a background other
+                     than the default is actually set. -->
+                <Border Classes="pzTile" x:Name="MbRestore" Canvas.Left="622" Canvas.Top="378" Background="#272626">
+                    <TextBlock Text="Restore default background" Foreground="#4D4D4D" />
+                </Border>
+
+                <!-- Rings: tile (438x98) inflated by 8 per side -> 454x114. -->
+                <Border Classes="selectionRing selected" x:Name="MbRing0" Canvas.Left="104" Canvas.Top="256" Width="454" Height="114" />
+                <Border Classes="selectionRing" x:Name="MbRing1" Canvas.Left="104" Canvas.Top="370" Width="454" Height="114" />
+                <Border Classes="selectionRing" x:Name="MbRing2" Canvas.Left="104" Canvas.Top="484" Width="454" Height="114" />
+                <Border Classes="selectionRing" x:Name="MbGameArtRing" Canvas.Left="614" Canvas.Top="256" Width="454" Height="114" />
+                <Border Classes="selectionRing" x:Name="MbRestoreRing" Canvas.Left="614" Canvas.Top="370" Width="454" Height="114" />
+
+                <!-- The check triangle ("active background") is generated in the code-behind and
+                     added to this Canvas (above tiles and rings). -->
             </Canvas>
 
-            <!-- Pantalla "My color & theme": se abre con A sobre la tarjeta "My color & theme" de
-                 Personalization, y se cierra con B (que devuelve a Personalization). Ocupa la
-                 pantalla entera y tapa a Personalization. Va DESPUES de PersonalizationScreen en el
-                 XAML a proposito: en un Grid, sin ZIndex explicito, el orden de declaracion decide
-                 que queda encima. Calcada de "1.png" (ver estilo Border.ctCard). Ortografia
-                 americana ("color", "Personalization") como el resto de la app; el acento es el
-                 verde de Playfront (#439941), asi que el circulo va verde y el valor pone "Green". -->
+            <!-- "My color & theme" screen: opens with A on the "My color & theme" card of
+                 Personalization, closes with B (returning to Personalization). Fills the whole screen
+                 and covers Personalization. Declared AFTER PersonalizationScreen in the XAML on
+                 purpose: in a Grid, without an explicit ZIndex, declaration order decides what sits
+                 on top. Traced from the reference (see the Border.ctCard style). American spelling
+                 ("color", "Personalization") like the rest of the app; the default accent is the
+                 app's green (#439941), so the circle is green and the value reads "Green". -->
             <Canvas x:Name="ColorThemeScreen" Width="1920" Height="1080" IsVisible="False">
                 <Rectangle Width="1920" Height="1080" Fill="#201F1F" />
 
-                <!-- Titulo: "Personalization" (padre, negrita) + "My color & theme" (pantalla
-                     actual, normal), mismo estilo que el titulo de General Personalization. -->
-                <TextBlock Canvas.Left="106" Canvas.Top="59" FontSize="46" Foreground="White">
-                    <Run Text="Personalization" FontWeight="Bold" />
-                    <Run Text="My color &amp; theme" />
+                <!-- Breadcrumb: the root is always "General", NOT the screen you came from. The
+                     reference reads "General My color & theme" even though this hangs off
+                     Personalization - it used to say "Personalization" here, which was wrong. -->
+                <TextBlock Canvas.Left="110" Canvas.Top="56" FontSize="45" Foreground="White">
+                    <Run Text="General " FontFamily="{StaticResource XboxFontDisplaySemibold}" />
+                    <Run Text="My color &amp; theme" FontFamily="{StaticResource XboxFontFamily}" />
                 </TextBlock>
 
-                <!-- Tarjeta 1: My color (con circulo del acento a la derecha) -->
-                <Border Classes="ctCard selected" x:Name="CtCard0" Canvas.Left="108" Canvas.Top="265" Width="450" Height="108">
-                    <Grid>
-                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left" Margin="24,0,0,0">
-                            <TextBlock Text="My color" Foreground="White" FontSize="24" />
-                            <TextBlock x:Name="CtColorValue" Text="Green" Foreground="#9A9A9A" FontSize="20" Margin="0,5,0,0" />
-                        </StackPanel>
-                        <Ellipse Width="36" Height="36" Fill="{DynamicResource AccentBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,22,0" />
-                    </Grid>
+                <!-- Cards 438x98 at x=112, y=265 and 384 (step 119) - the same tile size as
+                     Personalization, measured on the reference. They used to be 450x108 at x=108.
+                     Contents placed on a Canvas rather than a StackPanel: both lines and the
+                     right-hand element have measured positions, and a stack would derive them from
+                     line heights instead. Rel to the card:
+                       label   ink cap top 16, ink left 21
+                       value   ink cap top 61
+                       swatch  40x40 at 382,29        chevron  ink 391..408 x 43..52 -->
+                <Border Classes="ctCard selected" x:Name="CtCard0" Canvas.Left="112" Canvas.Top="265" Width="438" Height="98">
+                    <Canvas>
+                        <TextBlock Text="My color" Canvas.Left="20" Canvas.Top="10"
+                                   FontFamily="{StaticResource XboxFontFamily}" FontSize="26" Foreground="White" />
+                        <!-- #C4C4C4 measured on the reference's UNSELECTED card. On the selected one
+                             it reads white, so this is the resting colour, not the focused one. -->
+                        <TextBlock x:Name="CtColorValue" Text="Bright green" Canvas.Left="20" Canvas.Top="55"
+                                   FontFamily="{StaticResource XboxFontFamily}" FontSize="26" Foreground="#C4C4C4" />
+                        <!-- A ROUNDED SQUARE, not a circle. Measured: the fill is 40 px wide on
+                             every row except the top and bottom two, where it drops to 36 - that is
+                             a ~4 px corner radius. It was an Ellipse. -->
+                        <Border Canvas.Left="382" Canvas.Top="29" Width="40" Height="40" CornerRadius="4"
+                                Background="{DynamicResource AccentBrush}" />
+                    </Canvas>
                 </Border>
-                <Border Classes="selectionRing selected" x:Name="CtRing0" Canvas.Left="100" Canvas.Top="257" Width="466" Height="124" />
+                <Border Classes="selectionRing selected" x:Name="CtRing0" Canvas.Left="104" Canvas.Top="257" Width="454" Height="114" />
 
-                <!-- Tarjeta 2: System theme (con chevron desplegable a la derecha) -->
-                <Border Classes="ctCard" x:Name="CtCard1" Canvas.Left="108" Canvas.Top="389" Width="450" Height="108">
-                    <Grid>
-                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left" Margin="24,0,0,0">
-                            <TextBlock Text="System theme" Foreground="White" FontSize="24" />
-                            <TextBlock Text="Dark" Foreground="#9A9A9A" FontSize="20" Margin="0,5,0,0" />
-                        </StackPanel>
-                        <TextBlock Text="&#xE70D;" FontFamily="Segoe Fluent Icons" FontSize="22" Foreground="White"
-                                   HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,22,0" />
-                    </Grid>
+                <Border Classes="ctCard" x:Name="CtCard1" Canvas.Left="112" Canvas.Top="384" Width="438" Height="98">
+                    <Canvas>
+                        <TextBlock Text="System theme" Canvas.Left="20" Canvas.Top="10"
+                                   FontFamily="{StaticResource XboxFontFamily}" FontSize="26" Foreground="White" />
+                        <TextBlock x:Name="CtThemeValue" Text="Dark" Canvas.Left="20" Canvas.Top="55"
+                                   FontFamily="{StaticResource XboxFontFamily}" FontSize="26" Foreground="#C4C4C4" />
+                        <TextBlock Text="&#xE70D;" FontFamily="Segoe Fluent Icons" FontSize="20" Foreground="White"
+                                   Canvas.Left="386" Canvas.Top="36" />
+                    </Canvas>
                 </Border>
-                <Border Classes="selectionRing" x:Name="CtRing1" Canvas.Left="100" Canvas.Top="381" Width="466" Height="124" />
+                <Border Classes="selectionRing" x:Name="CtRing1" Canvas.Left="104" Canvas.Top="376" Width="454" Height="114" />
 
-                <!-- Texto descriptivo de la tarjeta seleccionada (a su derecha). Cambia por tarjeta
-                     (ver UpdateColorThemeSelection). El de la referencia dice "for your Xbox
-                     console"; aqui adaptado a Playfront. -->
-                <TextBlock x:Name="CtDescription" Canvas.Left="636" Canvas.Top="280" Width="380"
-                           FontSize="20" Foreground="#D0D0D0" TextWrapping="Wrap"
-                           Text="Choose an accent color for Playfront." />
+                <!-- System theme dropdown. Opening it REPLACES the "System theme" card rather than
+                     pushing it aside: in the reference the card is gone and this panel starts 20 px
+                     lower than it did, at y=404.
+
+                     Measured: panel 438 wide (the same as the cards) at x=112, three rows of 56.33
+                     filling 169, option ink starting 27 in from the panel edge - MORE indented than
+                     the cards' 21, which is deliberate in the reference.
+
+                     The open/close animation is a Height transition with ClipToBounds, so the rows
+                     are revealed by the panel growing over them instead of each one animating. That
+                     is what makes it read as unfolding rather than as three things appearing. -->
+                <!-- ZIndex, and it is load-bearing: the schedule cards are declared AFTER this in
+                     the XAML, so in a Canvas they would paint over the dropdown. Reopening the
+                     dropdown while "Scheduled" is set has to cover them, not hide behind them. -->
+                <Border x:Name="CtThemeDropdown" Canvas.Left="112" Canvas.Top="404" Width="438" Height="0" ZIndex="10"
+                        Background="#303030" CornerRadius="3" ClipToBounds="True" IsVisible="False">
+                    <Border.Transitions>
+                        <Transitions>
+                            <DoubleTransition Property="Height" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                        </Transitions>
+                    </Border.Transitions>
+                    <!-- The list slides INSIDE the panel while the panel itself grows. Both moves at
+                         once are what makes the selected row stay put while the others unfold around
+                         it; animating only the panel would slide the whole list. -->
+                    <Canvas x:Name="CtThemeList">
+                        <Canvas.Transitions>
+                            <Transitions>
+                                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                            </Transitions>
+                        </Canvas.Transitions>
+                        <Border x:Name="CtOpt0" Canvas.Left="0" Canvas.Top="0" Width="438" Height="56.33" Background="#454545">
+                            <TextBlock Text="Dark" VerticalAlignment="Center" Margin="26,4,0,0"
+                                       FontFamily="{StaticResource XboxFontFamily}" FontSize="26" Foreground="White" />
+                        </Border>
+                        <Border x:Name="CtOpt1" Canvas.Left="0" Canvas.Top="56.33" Width="438" Height="56.33" Background="Transparent">
+                            <TextBlock Text="Light" VerticalAlignment="Center" Margin="26,4,0,0"
+                                       FontFamily="{StaticResource XboxFontFamily}" FontSize="26" Foreground="White" />
+                        </Border>
+                        <Border x:Name="CtOpt2" Canvas.Left="0" Canvas.Top="112.67" Width="438" Height="56.33" Background="Transparent">
+                            <TextBlock Text="Scheduled" VerticalAlignment="Center" Margin="26,4,0,0"
+                                       FontFamily="{StaticResource XboxFontFamily}" FontSize="26" Foreground="White" />
+                        </Border>
+                    </Canvas>
+                </Border>
+                <!-- The rings sit OUTSIDE the panel: they are drawn past its edge, so clipping them
+                     to it would cut the halo. Each is its row inflated 8 per side. -->
+                <Border Classes="selectionRing" x:Name="CtOptRing0" Canvas.Left="104" Canvas.Top="396" Width="454" Height="72.33" ZIndex="11" IsVisible="False" />
+                <Border Classes="selectionRing" x:Name="CtOptRing1" Canvas.Left="104" Canvas.Top="452.33" Width="454" Height="72.33" ZIndex="11" IsVisible="False" />
+                <Border Classes="selectionRing" x:Name="CtOptRing2" Canvas.Left="104" Canvas.Top="508.67" Width="454" Height="72.33" ZIndex="11" IsVisible="False" />
+
+                <!-- ================================================================================
+                     Extra cards that appear ONLY when the theme is "Scheduled". Same 438x98 card at
+                     x=112, continuing the 114 step: y 498, 611, 725.
+
+                     NOT INTERACTIVE YET - they are placed, not wired: the gamepad cannot reach them,
+                     the checkbox does not toggle and the times do not change.
+
+                     Measured on a reference capture that was in LIGHT MODE (choosing "Scheduled"
+                     switched the console's theme). Only the geometry is taken from it; the colours
+                     stay on this app's dark palette. Checked that the light background does not
+                     shift the measurements: the two cards above read at exactly the same pixels in
+                     both captures.
+
+                     Their two-line layout is NOT the same as "My color" / "System theme" above,
+                     which is easy to miss: there the label sits 17 from the card top and the value
+                     62, here it is 23 and 59 - the two lines are packed closer and centred.
+                     ================================================================================ -->
+                <Border Classes="ctCard" x:Name="CtSched0" Canvas.Left="112" Canvas.Top="498" Width="438" Height="98" IsVisible="False">
+                    <Canvas>
+                        <TextBlock Text="Use sunrise and sunset times" Canvas.Left="20" Canvas.Top="33"
+                                   FontFamily="{StaticResource XboxFontFamily}" FontSize="26" Foreground="White" />
+                        <!-- Empty tick box, 32x32 with a 2 px stroke, measured at 384,35 inside the
+                             card. Unchecked in the reference. -->
+                        <Border Canvas.Left="384" Canvas.Top="35" Width="32" Height="32" CornerRadius="2"
+                                BorderBrush="White" BorderThickness="2" Background="Transparent" />
+                    </Canvas>
+                </Border>
+                <Border Classes="ctCard" x:Name="CtSched1" Canvas.Left="112" Canvas.Top="611" Width="438" Height="98" IsVisible="False">
+                    <Canvas>
+                        <TextBlock Text="Light theme starts at" Canvas.Left="20" Canvas.Top="16"
+                                   FontFamily="{StaticResource XboxFontFamily}" FontSize="26" Foreground="White" />
+                        <TextBlock Text="8:00" Canvas.Left="20" Canvas.Top="52"
+                                   FontFamily="{StaticResource XboxFontFamily}" FontSize="26" Foreground="#C4C4C4" />
+                    </Canvas>
+                </Border>
+                <Border Classes="ctCard" x:Name="CtSched2" Canvas.Left="112" Canvas.Top="725" Width="438" Height="98" IsVisible="False">
+                    <Canvas>
+                        <TextBlock Text="Light theme ends at" Canvas.Left="20" Canvas.Top="16"
+                                   FontFamily="{StaticResource XboxFontFamily}" FontSize="26" Foreground="White" />
+                        <TextBlock Text="20:00" Canvas.Left="20" Canvas.Top="52"
+                                   FontFamily="{StaticResource XboxFontFamily}" FontSize="26" Foreground="#C4C4C4" />
+                    </Canvas>
+                </Border>
+
+                <!-- Same ring rule as everywhere: the card inflated 8 per side. -->
+                <Border Classes="selectionRing" x:Name="CtSchedRing0" Canvas.Left="104" Canvas.Top="490" Width="454" Height="114" />
+                <Border Classes="selectionRing" x:Name="CtSchedRing1" Canvas.Left="104" Canvas.Top="603" Width="454" Height="114" />
+                <Border Classes="selectionRing" x:Name="CtSchedRing2" Canvas.Left="104" Canvas.Top="717" Width="454" Height="114" />
+
+                <!-- Description of the selected card (see UpdateColorThemeSelection). Reference:
+                     ink starts x=622, first line cap top y=273, wraps to four lines with a 34.5
+                     line pitch and a longest line of 432 px.
+
+                     THE WORDING IS THE REFERENCE'S AND DESCRIBES BEHAVIOUR PLAYFRONT DOES NOT HAVE
+                     (switching theme on local sunrise/sunset, or on a schedule). It is here so the
+                     block wraps to the same four lines and can be verified against the capture;
+                     it needs replacing with something true before this screen ships. -->
+                <TextBlock x:Name="CtDescription" Canvas.Left="620" Canvas.Top="268" Width="440"
+                           FontFamily="{StaticResource XboxFontFamily}" FontSize="26" Foreground="White"
+                           TextWrapping="Wrap" LineHeight="34.5"
+                           Text="Choose your color scheme. You can also switch between themes based on local sunrise and sunset times, or choose your own schedule." />
             </Canvas>
 
-            <!-- Selector de color ("My color"): se abre con A sobre la tarjeta "My color" de la
-                 pantalla anterior; se cierra con B (u OK). Calcada de "2.png" del escritorio del
-                 usuario (1422x806, factor 1920/1422 = 1.3502). A peticion expresa, los COLORES van
-                 calcados de la captura (fondo #2B2B2B, cabecera #393939, boton #393939/#4B4B4B, y los
-                 14 recuadros con su RGB exacto) - por eso NO usa la paleta #201F1F de las otras
-                 pantallas. Los 14 recuadros de color se generan por code-behind (BuildColorSwatches)
-                 dentro de SwatchHost. La seleccion (recuadros y OK) usa el anillo verde de Playfront. -->
+            <!-- Colour picker ("My color"): opens with A on the "My color" card of the previous
+                 screen; closes with B (or OK). Traced from a reference capture (1422x806, factor
+                 1920/1422 = 1.3502). The COLOURS are traced from the capture (background #2B2B2B,
+                 header #393939, button #393939/#4B4B4B, and the 14 swatches with their exact RGB) -
+                 which is why it does NOT use the #201F1F palette of the other screens. The 14 colour
+                 swatches are generated in the code-behind (BuildColorSwatches) inside SwatchHost.
+                 Selection (swatches and OK) uses the app's accent ring. -->
             <Canvas x:Name="ColorPickerScreen" Width="1920" Height="1080" IsVisible="False">
                 <Rectangle Width="1920" Height="1080" Fill="#2B2B2B" />
 
-                <!-- Cabecera: barra + avatar + gamertag (en la captura sale la cuenta del usuario). -->
+                <!-- Header: bar + avatar + gamertag (the capture shows the console owner's account). -->
                 <Rectangle Width="1920" Height="112" Fill="#393939" />
                 <Border Canvas.Left="100" Canvas.Top="34" Width="44" Height="44" CornerRadius="22" ClipToBounds="True">
                     <Image Source="/Assets/Icons/avatar.png" Stretch="UniformToFill" />
                 </Border>
                 <TextBlock x:Name="ColorPickerUserName" Canvas.Left="162" Canvas.Top="45" Foreground="White" FontSize="22" VerticalAlignment="Center" />
 
-                <!-- Titulo: cambia a "My color - <nombre>" cuando el color aplicado es uno de los 14
-                     (ver RefreshAppliedColorUi). -->
+                <!-- Title: becomes "My color - <name>" when the applied colour is one of the 14 (see
+                     RefreshAppliedColorUi). -->
                 <TextBlock x:Name="ColorPickerTitle" Canvas.Left="101" Canvas.Top="200" Text="My color" Foreground="#E6E6E6" FontSize="44" />
 
-                <!-- Los 14 recuadros de color + sus anillos se generan aqui por code-behind. -->
+                <!-- The 14 colour swatches + their rings are generated here by the code-behind. -->
                 <Canvas x:Name="SwatchHost" />
 
-                <!-- Boton OK (seleccionado por defecto en la captura; aqui el foco arranca en el
-                     primer color, ver EnterColorPicker). -->
+                <!-- OK button (selected by default in the capture; here focus starts on the first
+                     colour, see EnterColorPicker). -->
                 <Border Classes="okButton" x:Name="OkButton" Canvas.Left="96" Canvas.Top="790" Width="305" Height="109">
                     <TextBlock Text="OK" Foreground="White" FontSize="22" FontWeight="Bold"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -824,173 +1111,403 @@
                 <Border Classes="selectionRing" x:Name="OkRing" Canvas.Left="88" Canvas.Top="782" Width="321" Height="125" />
             </Canvas>
 
-            <!-- Selector "Solid colors": se abre con A sobre la casilla "Solid colors" de My
-                 background; se cierra con B (u OK). Calcado del frame del video (pantalla "Solid
-                 colors", ~segundo 31; 2560x1440 escalado por 1920/2560 = 0.75). Estructura idéntica
-                 al selector de acento "My color" (cabecera con avatar + usuario, rejilla 7x2 de 14
-                 recuadros, botón OK abajo-izquierda), pero con los 14 colores del FONDO (calcados
-                 pixel a pixel, ver BackgroundSettings.SolidPalette) y funcion propia: elegir un
-                 color (A) lo pone de FONDO de la home al instante y lo guarda.
+            <!-- "Solid colors" picker: opens with A on the "Solid colors" tile of My background;
+                 closes with B (or OK). Structure of the reference: header strip with avatar + user,
+                 title, 7x2 grid of 14 slots, SAVE button bottom left. Slot 0 is the CUSTOM COLOUR
+                 tile (hue wheel), slots 1..13 are the 13 background colours (sampled pixel by pixel,
+                 see BackgroundSettings.SolidPalette). Choosing a colour (A) applies it as the home
+                 BACKGROUND instantly and saves it; SAVE then just confirms and closes.
 
-                 Geometria medida del frame: recuadros 244x209, columnas cada 260 desde x=100, fila 1
-                 en y=307 y fila 2 en y=532; boton OK en (91,787) 320x116. Los recuadros + anillos + la
-                 marca de "aplicado" se generan por code-behind (BuildSolidColorSwatches) dentro de
-                 SolidSwatchHost. La seleccion (recuadros y OK) usa el anillo verde de Playfront (donde el
-                 vídeo lo tiene rojo, por el tema rojo de ese Xbox).
+                 Geometry re-measured 1:1 against the reference (1920x1080): outside #0E0E0E, header
+                 strip #303030 y=50..130, content panel #201F1F y=130..950, title ink at x=100 with
+                 top 204 and height 33, swatches 246x212 with columns every 260 from x=100 and rows
+                 at y=306 / y=530, button fill 300x96 at (101,796). Swatches + rings + the "applied"
+                 mark are generated in the code-behind (BuildSolidColorSwatches) inside
+                 SolidSwatchHost. Selection uses the app's accent ring (the reference console is on a
+                 green theme, hence the green ring there).
 
-                 Va DESPUES de ColorPickerScreen en el XAML (orden = z-order).
+                 Declared AFTER ColorPickerScreen in the XAML (order = z-order).
 
-                 IMPORTANTE: el color elegido SOLO afecta al fondo de la HOME, no a esta pantalla. El
-                 fondo del propio selector es FIJO (como el resto de pantallas de Ajustes), no una
-                 vista previa del color - se probó como preview y el usuario lo rechazó: los ajustes
-                 tienen siempre el mismo fondo; "background" solo cambia la home. -->
+                 IMPORTANT: the chosen colour affects ONLY the HOME background, not this screen. The
+                 picker's own background is FIXED (like every other Settings screen), not a preview of
+                 the colour - it was tried as a live preview and rejected: settings always keep the
+                 same background; "background" only changes the home. -->
             <Canvas x:Name="SolidColorsScreen" Width="1920" Height="1080" IsVisible="False">
-                <!-- Fondo FIJO del selector: oscuro, como en el frame de referencia. No cambia nunca. -->
-                <Rectangle Width="1920" Height="1080" Fill="#161616" />
+                <!-- FIXED picker background. The reference dims everything outside the panel to
+                     #0E0E0E and puts the page on a #201F1F panel that stops at y=950. Never changes. -->
+                <Rectangle Width="1920" Height="1080" Fill="#0E0E0E" />
+                <Rectangle Canvas.Top="130" Width="1920" Height="820" Fill="#201F1F" />
 
-                <!-- Cabecera: barra + avatar + nombre de usuario (en el frame sale el gamertag del
-                     autor "I YOUR SIX I"; aqui va el usuario de Windows, como el selector de acento).
-                     Barra medida en y=50..129 (color #2F2F2F). -->
-                <Rectangle Canvas.Top="50" Width="1920" Height="79" Fill="#2F2F2F" />
-                <Border Canvas.Left="100" Canvas.Top="62" Width="54" Height="54" CornerRadius="27" ClipToBounds="True">
+                <!-- Header: bar + avatar + user name. The reference shows the signed-in Xbox account
+                     on two lines (gamertag + email); here there is no account system, so it is the
+                     Windows user on one centred line. -->
+                <Rectangle Canvas.Top="50" Width="1920" Height="81" Fill="#303030" />
+                <Border Canvas.Left="100" Canvas.Top="63" Width="54" Height="54" CornerRadius="27" ClipToBounds="True">
                     <Image Source="/Assets/Icons/avatar.png" Stretch="UniformToFill" />
                 </Border>
-                <TextBlock x:Name="SolidColorsUserName" Canvas.Left="172" Canvas.Top="77" Foreground="White" FontSize="22" VerticalAlignment="Center" />
+                <TextBlock x:Name="SolidColorsUserName" Canvas.Left="177" Canvas.Top="78" Foreground="White"
+                           FontFamily="{StaticResource XboxFontFamily}" FontSize="26" />
 
-                <!-- Titulo -->
-                <TextBlock Canvas.Left="100" Canvas.Top="194" Text="Solid colors" Foreground="#E6E6E6" FontSize="44" />
+                <!-- Title -->
+                <TextBlock Canvas.Left="98" Canvas.Top="192" Text="Solid colors" Foreground="#E6E6E6"
+                           FontFamily="{StaticResource XboxFontFamily}" FontSize="45" />
 
-                <!-- Los 14 recuadros de color + sus anillos + la marca de aplicado se generan aqui
-                     por code-behind. -->
+                <!-- The custom-colour tile, the 13 colour swatches, their rings and the applied mark
+                     are all generated here by the code-behind. -->
                 <Canvas x:Name="SolidSwatchHost" />
 
-                <!-- Boton OK -->
-                <Border Classes="okButton" x:Name="SolidOkButton" Canvas.Left="91" Canvas.Top="787" Width="320" Height="116">
-                    <TextBlock Text="OK" Foreground="White" FontSize="22" FontWeight="Bold"
+                <!-- SAVE button. Reference ink: 56x17 centred on the fill. Note the colour is already
+                     applied and written to disk when A picks it (leaving with B keeps it), so this
+                     only confirms and closes - it is not the moment the choice is committed. -->
+                <Border Classes="okButton" x:Name="SolidOkButton" Canvas.Left="101" Canvas.Top="796" Width="300" Height="96">
+                    <TextBlock Text="SAVE" Foreground="White" FontSize="24"
+                               FontFamily="{StaticResource XboxFontSemibold}"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
-                <Border Classes="selectionRing" x:Name="SolidOkRing" Canvas.Left="83" Canvas.Top="779" Width="336" Height="132" />
+                <Border Classes="selectionRing" x:Name="SolidOkRing" Canvas.Left="93" Canvas.Top="788" Width="316" Height="112" />
             </Canvas>
 
-            <!-- Pantalla "Custom image": se abre con A sobre la casilla "Custom image" de My
-                 background; se cierra con B. Calcada del frame del video (1:15). SOLO VISUAL (decision
-                 del usuario): replica el aspecto del selector de archivos de Windows ("Open") tal como
-                 sale, pero por ahora NO navega archivos de verdad - es una pantalla estatica. La
-                 version funcional (explorador navegable con mando que elige una imagen y la pone de
-                 fondo) queda para otra tanda.
+            <!-- "Solid colors - Custom": opens with A on the hue-wheel tile (grid slot 0) of Solid
+                 colors, closes with B. Same page chrome as its parent (backdrop #0E0E0E, header strip
+                 #303030 at y=50, panel #201F1F from y=130 to y=950).
 
-                 Se replica la vista "This Device" (la de las carpetas), que es la que se ve como un
-                 explorador; la vista "Recent" (vacia, lo primero que sale) queda para añadir si se
-                 quiere. Medido del frame a 2560x1440 escalado por 0.75. Colores calcados: fondo
-                 exterior #262626, barra "Press..." #666666, sidebar #171717, panel de contenido
-                 #000000, resalte rojo del icono seleccionado #90111D, icono rojo de la app #E20E22,
-                 carpetas amarillas #F2D57E, boton Cancel #515151. Las 6 carpetas (icono+nombre+fecha)
-                 y el recuadro de seleccion de "Documents" se generan por code-behind en FolderHost. -->
-            <Canvas x:Name="CustomImageScreen" Width="1920" Height="1080" IsVisible="False">
-                <Rectangle Width="1920" Height="1080" Fill="#262626" />
+                 VISUAL ONLY for now. The six items are navigable and the ring moves, but A does
+                 nothing, the sliders do not move and the values shown (H 0, S 100%, L 50% = FF0000,
+                 "Red") are the reference state frozen in, which is what makes a 1:1 comparison
+                 possible. Wiring it up means: drive the three thumbs from an HSL value, recolour the
+                 saturation and lightness bars from the current hue, recompute the hex, name the
+                 colour, and have SAVE add it as a background.
 
-                <!-- Icono rojo de la app + chevron + titulo "Open" -->
-                <Border Canvas.Left="113" Canvas.Top="75" Width="71" Height="60" CornerRadius="6" Background="#E20E22">
-                    <!-- Glifo blanco tipo "pila de fotos/carpeta" (aproximado) -->
-                    <Canvas Width="71" Height="60">
-                        <Path Stroke="White" StrokeThickness="3" StrokeJoin="Round"
-                              Data="M20,24 L20,19 Q20,17 22,17 L31,17 L34,20 L49,20 Q51,20 51,22 L51,38 Q51,40 49,40 L22,40 Q20,40 20,38 Z" />
-                        <Path Stroke="White" StrokeThickness="3" StrokeJoin="Round" Data="M26,17 L26,13 Q26,11 28,11 L44,11" />
+                 Geometry measured 1:1. Cards at x=100, 494 wide; the three slider cards are 92 tall
+                 at y=296 / 404 / 512 (pitch 108), the hex card is 98 tall at y=624, and the button
+                 row is 98 tall at y=802 with two 302-wide buttons at x=100 and x=418. Inside a slider
+                 card: label ink 18 in and 19 down, bar 462x16 at (16,57) with fully rounded ends, and
+                 a 6x28 white thumb at y=50 whose left edge runs 16..472. The preview is 412x284 at
+                 (1001,296) and its colour name is centred under it with ink at y=615.
+
+                 The hex card indents its two lines 6 px more than the slider cards do (ink at 24 in,
+                 not 18). Measured, not a slip. -->
+            <Canvas x:Name="CustomColorScreen" Width="1920" Height="1080" IsVisible="False">
+                <Rectangle Width="1920" Height="1080" Fill="#0E0E0E" />
+                <Rectangle Canvas.Top="130" Width="1920" Height="820" Fill="#201F1F" />
+
+                <Rectangle Canvas.Top="50" Width="1920" Height="81" Fill="#303030" />
+                <Border Canvas.Left="100" Canvas.Top="63" Width="54" Height="54" CornerRadius="27" ClipToBounds="True">
+                    <Image Source="/Assets/Icons/avatar.png" Stretch="UniformToFill" />
+                </Border>
+                <TextBlock x:Name="CustomColorUserName" Canvas.Left="177" Canvas.Top="78" Foreground="White"
+                           FontFamily="{StaticResource XboxFontFamily}" FontSize="26" />
+
+                <TextBlock Canvas.Left="98" Canvas.Top="192" Text="Solid colors - Custom" Foreground="White"
+                           FontFamily="{StaticResource XboxFontFamily}" FontSize="45" />
+
+                <!-- Hue: full 0-360 sweep through the six primaries, interpolated in plain RGB. Checked
+                     against the reference at every tenth of the bar. -->
+                <Border Classes="ccCard" x:Name="CcHueCard" Canvas.Left="100" Canvas.Top="296" Width="494" Height="92">
+                    <Canvas>
+                        <TextBlock Classes="ccLabel" Canvas.Left="16" Canvas.Top="12" Text="Hue" />
+                        <Border Canvas.Left="16" Canvas.Top="57" Width="462" Height="16" CornerRadius="8">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
+                                    <GradientStop Color="#FF0000" Offset="0" />
+                                    <GradientStop Color="#FFFF00" Offset="0.1667" />
+                                    <GradientStop Color="#00FF00" Offset="0.3333" />
+                                    <GradientStop Color="#00FFFF" Offset="0.5" />
+                                    <GradientStop Color="#0000FF" Offset="0.6667" />
+                                    <GradientStop Color="#FF00FF" Offset="0.8333" />
+                                    <GradientStop Color="#FF0000" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <Border x:Name="CcHueThumb" Canvas.Left="16" Canvas.Top="50" Width="6" Height="28"
+                                CornerRadius="3" Background="White" />
                     </Canvas>
                 </Border>
-                <TextBlock Canvas.Left="196" Canvas.Top="97" Text="&#xE70D;" FontFamily="Segoe Fluent Icons" FontSize="20" Foreground="White" />
-                <TextBlock Canvas.Left="244" Canvas.Top="74" Text="Open" FontSize="50" Foreground="White" />
+                <Border Classes="selectionRing" x:Name="CcRing0" Canvas.Left="92" Canvas.Top="288" Width="510" Height="108" />
 
-                <!-- Barra "Press [switch] to go in and out of the app" -->
-                <Rectangle Canvas.Left="96" Canvas.Top="167" Width="1727" Height="46" Fill="#666666" />
-                <TextBlock Canvas.Left="114" Canvas.Top="178" Text="Press" FontSize="24" Foreground="White" />
-                <!-- Glifo "cambiar de app" (dos ventanas superpuestas), dibujado -->
-                <Canvas Canvas.Left="180" Canvas.Top="180">
-                    <Path Stroke="White" StrokeThickness="2.5" StrokeJoin="Round" Data="M0,6 L18,6 L18,22 L0,22 Z" />
-                    <Path Stroke="White" StrokeThickness="2.5" StrokeJoin="Round" Data="M7,0 L25,0 L25,16" />
-                </Canvas>
-                <TextBlock Canvas.Left="216" Canvas.Top="178" Text="to go in and out of the app" FontSize="24" Foreground="White" />
-
-                <!-- Cuerpo del dialogo (sidebar + cabecera + barra inferior) -->
-                <Rectangle Canvas.Left="96" Canvas.Top="213" Width="1727" Height="713" Fill="#171717" />
-                <!-- Resalte rojo del icono seleccionado (This Device) en la sidebar -->
-                <Rectangle Canvas.Left="96" Canvas.Top="422" Width="101" Height="90" Fill="#90111D" />
-                <!-- Iconos de la sidebar -->
-                <TextBlock Canvas.Left="124" Canvas.Top="250" Text="&#xE700;" FontFamily="Segoe Fluent Icons" FontSize="27" Foreground="White" />
-                <!-- Reloj (Recent), dibujado -->
-                <Canvas Canvas.Left="126" Canvas.Top="344">
-                    <Ellipse Width="26" Height="26" Stroke="White" StrokeThickness="2" />
-                    <Path Stroke="White" StrokeThickness="2" StrokeLineCap="Round" Data="M13,7 L13,13 L18,16" />
-                </Canvas>
-                <!-- Icono de dispositivo/disco (This Device), dibujado -->
-                <Canvas Canvas.Left="122" Canvas.Top="462">
-                    <Path Stroke="White" StrokeThickness="2" StrokeJoin="Round" Data="M0,3 Q0,1 2,1 L30,1 Q32,1 32,3 L32,13 Q32,15 30,15 L2,15 Q0,15 0,13 Z" />
-                    <Path Stroke="White" StrokeThickness="2" StrokeLineCap="Round" Data="M5,11 L14,11" />
-                </Canvas>
-
-                <!-- Cabecera del contenido: "This Device" + flecha arriba -->
-                <TextBlock Canvas.Left="216" Canvas.Top="250" Text="This Device" FontSize="34" FontWeight="Bold" Foreground="White" />
-                <Path Canvas.Left="1758" Canvas.Top="250" Stroke="White" StrokeThickness="2.5" StrokeLineCap="Round" StrokeJoin="Round"
-                      Data="M11,2 L11,26 M11,2 L3,11 M11,2 L19,11" />
-
-                <!-- Panel de contenido (negro) -->
-                <Rectangle Canvas.Left="197" Canvas.Top="310" Width="1618" Height="527" Fill="#000000" />
-                <!-- "Sort by: Name v" -->
-                <TextBlock Canvas.Left="216" Canvas.Top="337" Text="Sort by:" FontSize="26" Foreground="#9A9A9A" />
-                <TextBlock Canvas.Left="330" Canvas.Top="337" Text="Name" FontSize="26" Foreground="White" />
-                <TextBlock Canvas.Left="420" Canvas.Top="343" Text="&#xE70D;" FontFamily="Segoe Fluent Icons" FontSize="18" Foreground="White" />
-
-                <!-- Las 6 carpetas (icono + nombre + fecha) y el recuadro de seleccion de Documents
-                     se generan aqui por code-behind. -->
-                <Canvas x:Name="FolderHost" />
-
-                <!-- Barra inferior: icono "nueva carpeta" + "..." -->
-                <Canvas Canvas.Left="1660" Canvas.Top="872">
-                    <Path Stroke="White" StrokeThickness="2" StrokeJoin="Round" Data="M2,4 L20,4 L20,30 L2,30 Z" />
-                    <Path Stroke="White" StrokeThickness="2" StrokeLineCap="Round" Data="M11,12 L11,24 M5,18 L17,18" />
-                </Canvas>
-                <TextBlock Canvas.Left="1760" Canvas.Top="866" Text="&#xE712;" FontFamily="Segoe Fluent Icons" FontSize="30" Foreground="White" />
-
-                <!-- Boton Cancel (abajo-derecha, sobre el fondo exterior) -->
-                <Border Canvas.Left="1483" Canvas.Top="955" Width="340" Height="64" Background="#515151">
-                    <TextBlock Text="Cancel" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <!-- Saturation: grey (the hue fully washed out) to the pure hue. -->
+                <Border Classes="ccCard" x:Name="CcSatCard" Canvas.Left="100" Canvas.Top="404" Width="494" Height="92">
+                    <Canvas>
+                        <TextBlock Classes="ccLabel" Canvas.Left="16" Canvas.Top="12" Text="Saturation" />
+                        <Border Canvas.Left="16" Canvas.Top="57" Width="462" Height="16" CornerRadius="8">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
+                                    <GradientStop Color="#808080" Offset="0" />
+                                    <GradientStop Color="#FF0000" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <Border x:Name="CcSatThumb" Canvas.Left="472" Canvas.Top="50" Width="6" Height="28"
+                                CornerRadius="3" Background="White" />
+                    </Canvas>
                 </Border>
+                <Border Classes="selectionRing" x:Name="CcRing1" Canvas.Left="92" Canvas.Top="396" Width="510" Height="108" />
+
+                <!-- Lightness: black to the pure hue at the midpoint to white. -->
+                <Border Classes="ccCard" x:Name="CcLightCard" Canvas.Left="100" Canvas.Top="512" Width="494" Height="92">
+                    <Canvas>
+                        <TextBlock Classes="ccLabel" Canvas.Left="16" Canvas.Top="12" Text="Lightness" />
+                        <Border Canvas.Left="16" Canvas.Top="57" Width="462" Height="16" CornerRadius="8">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
+                                    <GradientStop Color="#000000" Offset="0" />
+                                    <GradientStop Color="#FF0000" Offset="0.5" />
+                                    <GradientStop Color="#FFFFFF" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <Border x:Name="CcLightThumb" Canvas.Left="244" Canvas.Top="50" Width="6" Height="28"
+                                CornerRadius="3" Background="White" />
+                    </Canvas>
+                </Border>
+                <Border Classes="selectionRing" x:Name="CcRing2" Canvas.Left="92" Canvas.Top="504" Width="510" Height="108" />
+
+                <Border Classes="ccCard" x:Name="CcHexCard" Canvas.Left="100" Canvas.Top="624" Width="494" Height="98">
+                    <Canvas>
+                        <TextBlock Classes="ccLabel" Canvas.Left="22" Canvas.Top="16" Text="RGB hex code" />
+                        <TextBlock x:Name="CcHexValue" Canvas.Left="22" Canvas.Top="55" Text="FF0000" Foreground="#D9D9D9"
+                                   FontFamily="{StaticResource XboxFontFamily}" FontSize="26" />
+                    </Canvas>
+                </Border>
+                <Border Classes="selectionRing" x:Name="CcRing3" Canvas.Left="92" Canvas.Top="616" Width="510" Height="114" />
+
+                <Border Classes="ccCard" x:Name="CcSaveButton" Canvas.Left="100" Canvas.Top="802" Width="302" Height="98">
+                    <TextBlock Text="SAVE" Foreground="White" FontSize="24"
+                               FontFamily="{StaticResource XboxFontSemibold}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <Border Classes="selectionRing" x:Name="CcRing4" Canvas.Left="92" Canvas.Top="794" Width="318" Height="114" />
+
+                <Border Classes="ccCard" x:Name="CcMatchButton" Canvas.Left="418" Canvas.Top="802" Width="302" Height="98">
+                    <TextBlock Text="MATCH MY GAMERPIC" Foreground="White" FontSize="24"
+                               FontFamily="{StaticResource XboxFontSemibold}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <Border Classes="selectionRing" x:Name="CcRing5" Canvas.Left="410" Canvas.Top="794" Width="318" Height="114" />
+
+                <!-- Preview + the colour's name. -->
+                <Border x:Name="CcPreview" Canvas.Left="1001" Canvas.Top="296" Width="412" Height="284"
+                        CornerRadius="6" Background="#FF0000" />
+                <TextBlock x:Name="CcColorName" Canvas.Left="1001" Canvas.Top="606" Width="412" Text="Red" Foreground="White"
+                           FontFamily="{StaticResource XboxFontFamily}" FontSize="36" TextAlignment="Center" />
             </Canvas>
 
-            <!-- Pantalla "Dynamic backgrounds": se abre con A sobre la casilla "Dynamic backgrounds"
-                 de My background; se cierra con B. Calcada del frame del video (~2:00). Por ahora es
-                 SOLO LA ESTRUCTURA navegable, de momento: titulo + pestañas Games/Xbox/
-                 Abstract + fila de miniaturas + ayuda, con las miniaturas como PLACEHOLDERS grises.
-                 Los fondos reales (miniaturas + video de cada uno) se meten en otra tanda; aqui se
-                 deja todo listo para engancharlos.
+            <!-- "Custom image" screen: opens with A on the "Custom image" tile of My background;
+                 closes with B. Measured 1:1.
 
-                 Navegacion (solo hay cruceta + A/B, sin bumpers): el foco arranca en la fila de
-                 miniaturas; Arriba sube a las pestañas, Izq/Der cambia de pestaña, Abajo vuelve a las
-                 miniaturas. La miniatura seleccionada va SIEMPRE fija a la izquierda (x=131) y el rail
-                 se desplaza por debajo (carrusel), con el anillo laser fijo en esa posicion.
+                 It used to be a trace of the Windows file picker ("Open"), which is what the console
+                 showed a couple of updates ago. It now shows this instead: a plain "Where do you want
+                 to start?" list of four sources, and the file browser is only one of them.
 
-                 Medido del frame (2560x1440 x0.75): miniatura 262x146, pitch 274; pestañas en y~685
-                 (Games x182, Xbox x416, Abstract x605) con subrayado en y~726; nombre del fondo
-                 encima de la miniatura en y~785. -->
+                 VISUAL ONLY: the four cards take the ring and move with the d-pad, but A does nothing.
+                 None of the four sources exists yet - browsing external storage needs a
+                 gamepad-navigable file picker, and screenshots / achievements / web images have no
+                 equivalent in Playfront at all.
+
+                 Note this screen does NOT use the Settings chrome: no account strip, no panel, and its
+                 own darker card palette (#2A2A2A, #3F3F3F when selected, against #201F1F). Measured,
+                 not inherited. Cards are 438x98 at x=100 from y=282 with pitch 114 - the same tile
+                 size as Personalization, different origin. The label is vertically centred, indented
+                 22, and wraps: the first one is the only two-line card, at a 36 line height. -->
+            <Canvas x:Name="CustomImageScreen" Width="1920" Height="1080" IsVisible="False">
+                <Rectangle Width="1920" Height="1080" Fill="#201F1F" />
+
+                <TextBlock Canvas.Left="99" Canvas.Top="108" Text="Where do you want to start?" Foreground="White"
+                           FontFamily="{StaticResource XboxFontFamily}" FontSize="45" />
+
+                <Border Classes="ciCard" x:Name="CiCard0" Canvas.Left="100" Canvas.Top="282">
+                    <TextBlock Classes="ciLabel" Text="Select an image from external storage" />
+                </Border>
+                <Border Classes="selectionRing" x:Name="CiRing0" Canvas.Left="92" Canvas.Top="274" Width="454" Height="114" />
+
+                <Border Classes="ciCard" x:Name="CiCard1" Canvas.Left="100" Canvas.Top="396">
+                    <TextBlock Classes="ciLabel" Text="Select a screenshot" />
+                </Border>
+                <Border Classes="selectionRing" x:Name="CiRing1" Canvas.Left="92" Canvas.Top="388" Width="454" Height="114" />
+
+                <Border Classes="ciCard" x:Name="CiCard2" Canvas.Left="100" Canvas.Top="510">
+                    <TextBlock Classes="ciLabel" Text="Select an achievement" />
+                </Border>
+                <Border Classes="selectionRing" x:Name="CiRing2" Canvas.Left="92" Canvas.Top="502" Width="454" Height="114" />
+
+                <Border Classes="ciCard" x:Name="CiCard3" Canvas.Left="100" Canvas.Top="624">
+                    <TextBlock Classes="ciLabel" Text="Select an image from the web" />
+                </Border>
+                <Border Classes="selectionRing" x:Name="CiRing3" Canvas.Left="92" Canvas.Top="616" Width="454" Height="114" />
+            </Canvas>
+
+            <!-- "General - Home": opens with A on the "Home" tile of Personalization, closes with B.
+                 Measured 1:1. Four columns, each an explanation card on top of its control; the
+                 fourth carries TWO controls (Edit groups / Edit games) and its explanation card is
+                 shortened by exactly one card plus its gap (114) to make room.
+
+                 VISUAL ONLY: the five controls take the ring and move with the d-pad, but A does
+                 nothing - the checkboxes do not tick, the tile count does not open and neither editor
+                 exists.
+
+                 THE SLIDE. Four 438-wide columns at a 454 pitch start at x=112 and end at x=1911,
+                 which leaves the last one 8 px from the right edge - visibly cramped against the
+                 first one's 112. So when focus reaches the fourth column the whole strip slides LEFT
+                 by 104, giving the last column the same 112 margin the first one has; going back
+                 slides it home. The title does not move, only the strip. Measured on both states:
+                 columns at 112/566/1020/1474 unfocused, 8/462/916/1370 focused.
+
+                 Explanation cards are #2B2B2B here, not the #303030 of the controls - measured, the
+                 two greys really are different on this screen. -->
+            <Canvas x:Name="PersonalizationHomeScreen" Width="1920" Height="1080" IsVisible="False">
+                <Rectangle Width="1920" Height="1080" Fill="#201F1F" />
+
+                <TextBlock Canvas.Left="110" Canvas.Top="55" FontSize="45" Foreground="White">
+                    <Run Text="General " FontFamily="{StaticResource XboxFontDisplaySemibold}" />
+                    <Run Text="Home" FontFamily="{StaticResource XboxFontFamily}" />
+                </TextBlock>
+
+                <Canvas x:Name="PhStrip" Width="1920" Height="1080">
+                    <Canvas.Transitions>
+                        <Transitions>
+                            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.22" Easing="CubicEaseOut" />
+                        </Transitions>
+                    </Canvas.Transitions>
+
+                    <!-- Column 1 -->
+                    <Border Classes="phInfo" Canvas.Left="112" Canvas.Top="271" Height="534">
+                        <TextBlock Classes="phInfoText"
+                                   Text="This will hide system apps from your recently played list in Home. Any system apps you pin to that list will still appear." />
+                    </Border>
+                    <Border Classes="phCtrl" x:Name="PhCtrl0" Canvas.Left="112" Canvas.Top="821">
+                        <Canvas>
+                            <TextBlock Classes="phCtrlText" Canvas.Left="19" Canvas.Top="34" Text="Hide system apps" />
+                            <Border Classes="phCheck" Canvas.Left="384" Canvas.Top="36" />
+                        </Canvas>
+                    </Border>
+                    <Border Classes="selectionRing" x:Name="PhRing0" Canvas.Left="104" Canvas.Top="813" Width="454" Height="114" />
+
+                    <!-- Column 2 -->
+                    <Border Classes="phInfo" Canvas.Left="566" Canvas.Top="271" Height="534">
+                        <TextBlock Classes="phInfoText"
+                                   Text="Choose the number of tiles to show in your recently played list in Home. To show all of your pins, more tiles may be displayed." />
+                    </Border>
+                    <Border Classes="phCtrl" x:Name="PhCtrl1" Canvas.Left="566" Canvas.Top="821">
+                        <Canvas>
+                            <TextBlock Classes="phCtrlText" x:Name="PhTilesValue" Canvas.Left="19" Canvas.Top="34" Text="9 tiles" />
+                            <Path Canvas.Left="392" Canvas.Top="44" Stroke="White" StrokeThickness="2.5"
+                                  StrokeLineCap="Round" StrokeJoin="Round" Data="M0,0 L8.5,8.5 L17,0" />
+                        </Canvas>
+                    </Border>
+                    <Border Classes="selectionRing" x:Name="PhRing1" Canvas.Left="558" Canvas.Top="813" Width="454" Height="114" />
+
+                    <!-- Column 3 -->
+                    <Border Classes="phInfo" Canvas.Left="1020" Canvas.Top="271" Height="534">
+                        <TextBlock Classes="phInfoText"
+                                   Text="This will hide the play history tile from your list of recently played games on Home. An additional game tile will display instead." />
+                    </Border>
+                    <Border Classes="phCtrl" x:Name="PhCtrl2" Canvas.Left="1020" Canvas.Top="821">
+                        <Canvas>
+                            <TextBlock Classes="phCtrlText" Canvas.Left="19" Canvas.Top="34" Text="Hide play history tile" />
+                            <Border Classes="phCheck" Canvas.Left="384" Canvas.Top="36" />
+                        </Canvas>
+                    </Border>
+                    <Border Classes="selectionRing" x:Name="PhRing2" Canvas.Left="1012" Canvas.Top="813" Width="454" Height="114" />
+
+                    <!-- Column 4: shorter explanation, two controls. -->
+                    <Border Classes="phInfo" Canvas.Left="1474" Canvas.Top="271" Height="420">
+                        <TextBlock Classes="phInfoText" Text="Edit and reorder groups and games you've added to Home." />
+                    </Border>
+                    <Border Classes="phCtrl" x:Name="PhCtrl3" Canvas.Left="1474" Canvas.Top="707">
+                        <Canvas>
+                            <TextBlock Classes="phCtrlText" Canvas.Left="19" Canvas.Top="34" Text="Edit groups" />
+                        </Canvas>
+                    </Border>
+                    <Border Classes="selectionRing" x:Name="PhRing3" Canvas.Left="1466" Canvas.Top="699" Width="454" Height="114" />
+                    <Border Classes="phCtrl" x:Name="PhCtrl4" Canvas.Left="1474" Canvas.Top="821">
+                        <Canvas>
+                            <TextBlock Classes="phCtrlText" Canvas.Left="19" Canvas.Top="34" Text="Edit games" />
+                        </Canvas>
+                    </Border>
+                    <Border Classes="selectionRing" x:Name="PhRing4" Canvas.Left="1466" Canvas.Top="813" Width="454" Height="114" />
+
+                    <!-- Tile-count dropdown. Same mechanism as the one on "My color & theme": the
+                         panel REPLACES its card (which hides while open) and the active option always
+                         lands in the slot that card occupied, so with the last option chosen the list
+                         appears to open upwards. Rows are 56 tall, against the card's 98; measured on
+                         the reference, where the highlighted "9 tiles" row is 56 and its ring is that
+                         row inflated 8, not the card's.
+
+                         Panel top = 842 - 56 * (active index): 842 puts the FIRST option in the slot,
+                         and each step up the list pulls the panel one row higher. With "9 tiles" (the
+                         sixth) that gives 562, which is what the reference measures.
+
+                         Unlike the theme one this panel has a visible 2 px #4B4B4B border, so its
+                         inner list is 434 wide and starts 2 px in. -->
+                    <Border x:Name="PhTilesDropdown" Canvas.Left="566" Canvas.Top="842" Width="438" Height="0" ZIndex="10"
+                            Background="#303030" BorderBrush="#4B4B4B" BorderThickness="2" CornerRadius="3"
+                            ClipToBounds="True" IsVisible="False">
+                        <Border.Transitions>
+                            <Transitions>
+                                <DoubleTransition Property="Height" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                            </Transitions>
+                        </Border.Transitions>
+                        <!-- The list slides INSIDE the panel while the panel grows; both moves at once
+                             are what keeps the active row still while the rest unfolds around it. -->
+                        <Canvas x:Name="PhTilesList">
+                            <Canvas.Transitions>
+                                <Transitions>
+                                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                                </Transitions>
+                            </Canvas.Transitions>
+                            <Border Classes="phOpt" x:Name="PhOpt0" Canvas.Top="-2"><TextBlock Classes="phOptText" Text="4 tiles" /></Border>
+                            <Border Classes="phOpt" x:Name="PhOpt1" Canvas.Top="54"><TextBlock Classes="phOptText" Text="5 tiles" /></Border>
+                            <Border Classes="phOpt" x:Name="PhOpt2" Canvas.Top="110"><TextBlock Classes="phOptText" Text="6 tiles" /></Border>
+                            <Border Classes="phOpt" x:Name="PhOpt3" Canvas.Top="166"><TextBlock Classes="phOptText" Text="7 tiles" /></Border>
+                            <Border Classes="phOpt" x:Name="PhOpt4" Canvas.Top="222"><TextBlock Classes="phOptText" Text="8 tiles" /></Border>
+                            <Border Classes="phOpt" x:Name="PhOpt5" Canvas.Top="278"><TextBlock Classes="phOptText" Text="9 tiles" /></Border>
+                        </Canvas>
+                    </Border>
+                    <!-- Option rings live OUTSIDE the panel: inside it they would be clipped away. -->
+                    <Border Classes="selectionRing" x:Name="PhOptRing0" Canvas.Left="560" Width="450" Height="72" ZIndex="11" IsVisible="False" />
+                    <Border Classes="selectionRing" x:Name="PhOptRing1" Canvas.Left="560" Width="450" Height="72" ZIndex="11" IsVisible="False" />
+                    <Border Classes="selectionRing" x:Name="PhOptRing2" Canvas.Left="560" Width="450" Height="72" ZIndex="11" IsVisible="False" />
+                    <Border Classes="selectionRing" x:Name="PhOptRing3" Canvas.Left="560" Width="450" Height="72" ZIndex="11" IsVisible="False" />
+                    <Border Classes="selectionRing" x:Name="PhOptRing4" Canvas.Left="560" Width="450" Height="72" ZIndex="11" IsVisible="False" />
+                    <Border Classes="selectionRing" x:Name="PhOptRing5" Canvas.Left="560" Width="450" Height="72" ZIndex="11" IsVisible="False" />
+                </Canvas>
+            </Canvas>
+
+            <!-- "Dynamic backgrounds" screen: opens with A on the "Dynamic backgrounds" tile of My
+                 background; closes with B. Traced from a reference video frame. For now this is only
+                 the navigable STRUCTURE: title + Games/Xbox/Abstract tabs + thumbnail row + hints,
+                 with the thumbnails as grey PLACEHOLDERS. The real backgrounds (thumbnail + video for
+                 each) come in a separate job; everything here is ready to hook them up.
+
+                 Navigation (only the d-pad + A/B, no bumpers): focus starts on the thumbnail row; Up
+                 goes to the tabs, Left/Right changes tab, Down returns to the thumbnails. The
+                 selected thumbnail is ALWAYS pinned to the left (x=131) and the rail slides
+                 underneath (carousel), with the laser ring fixed at that position.
+
+                 Measured from the frame (2560x1440 x0.75): thumbnail 262x146, pitch 274; tabs at
+                 y~685 (Games x182, Xbox x416, Abstract x605) with the underline at y~726; background
+                 name above the thumbnail at y~785. -->
             <Canvas x:Name="DynamicBackgroundsScreen" Width="1920" Height="1080" IsVisible="False">
-                <!-- Preview a pantalla completa del fondo ENFOCADO (aunque no este aplicado todavia):
-                     imagen fija (poster) al instante + su video encima cuando el foco se posa un
-                     momento sobre la miniatura. Solo UN video decodificando a la vez; lo gestiona el
-                     code-behind (UpdateDynPreview). La base oscura se ve en las miniaturas que aun no
-                     tienen fondo real. -->
+                <!-- Full-screen preview of the FOCUSED background (even if not applied yet): still
+                     image (poster) instantly + its video on top once focus rests on the thumbnail
+                     for a moment. Only ONE video decoding at a time; the code-behind manages it
+                     (UpdateDynPreview). The dark base shows through for thumbnails that do not have a
+                     real background yet. -->
                 <Rectangle Width="1920" Height="1080" Fill="#14181C" />
-                <!-- Mientras el video del fondo enfocado carga, se ve su poster DESENFOCADO (como la
-                     propia Xbox al cambiar de dynamic background, pero sin el circulo de "cargando").
-                     Al llegar el primer fotograma, el video nitido se funde por encima (DynPreviewHost)
-                     y el resultado es "borroso -> nitido". El blur es permanente en el poster porque el
-                     poster solo se ve durante esa carga; luego queda tapado por el video opaco. -->
+                <!-- While the focused background's video loads, its poster shows BLURRED (like Xbox
+                     itself when switching dynamic background, minus the "loading" spinner). When the
+                     first frame arrives, the sharp video fades in on top (DynPreviewHost) and the
+                     result reads as "blurry -> sharp". The blur is permanent on the poster because
+                     the poster is only visible during that load; afterwards the opaque video covers
+                     it. -->
                 <Image x:Name="DynPreviewPoster" Width="1920" Height="1080" Stretch="UniformToFill" IsVisible="False">
                     <Image.Effect>
                         <BlurEffect Radius="26" />
                     </Image.Effect>
                 </Image>
-                <!-- Empieza invisible (Opacity=0) y se funde a 1 cuando el video tiene su primer
-                     fotograma (OnDynPreviewReady); al cambiar de fondo vuelve a 0 (UpdateDynPreview). -->
+                <!-- Starts invisible (Opacity=0) and fades to 1 once the video has its first frame
+                     (OnDynPreviewReady); switching background returns it to 0 (UpdateDynPreview). -->
                 <Panel x:Name="DynPreviewHost" Width="1920" Height="1080" Opacity="0">
                     <Panel.Transitions>
                         <Transitions>
@@ -998,8 +1515,8 @@
                         </Transitions>
                     </Panel.Transitions>
                 </Panel>
-                <!-- Velo para que las pestañas/etiqueta/miniaturas se lean sobre el preview (mas oscuro
-                     abajo, que es donde va la UI). -->
+                <!-- Veil so tabs, label and thumbnails read over the preview (darker at the bottom,
+                     which is where the UI sits). -->
                 <Rectangle Width="1920" Height="1080">
                     <Rectangle.Fill>
                         <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
@@ -1010,29 +1527,29 @@
                     </Rectangle.Fill>
                 </Rectangle>
 
-                <!-- Titulo -->
+                <!-- Title -->
                 <TextBlock Canvas.Left="106" Canvas.Top="59" FontSize="46" Foreground="White">
                     <Run Text="Dynamic backgrounds" FontWeight="Bold" />
                     <Run Text="Your background" />
                 </TextBlock>
 
-                <!-- Pestañas + subrayado (el subrayado lo mueve el code-behind a la pestaña activa) -->
+                <!-- Tabs + underline (the code-behind moves the underline to the active tab) -->
                 <TextBlock Classes="dynTab active" x:Name="DynTabGames" Canvas.Left="182" Canvas.Top="685" Text="Games" />
                 <TextBlock Classes="dynTab" x:Name="DynTabXbox" Canvas.Left="416" Canvas.Top="685" Text="Xbox" />
                 <TextBlock Classes="dynTab" x:Name="DynTabAbstract" Canvas.Left="605" Canvas.Top="685" Text="Abstract" />
-                <!-- Subrayado de la pestaña activa: pastilla blanca del ANCHO REAL de la palabra
-                     (lo mide el code-behind), grosor 6 con puntas totalmente redondeadas (RadiusX/Y
-                     = mitad del alto), calcado de linea.png. Left/Width los pone UpdateTabUnderline. -->
+                <!-- Active tab underline: white pill at the word's REAL WIDTH (the code-behind
+                     measures it), thickness 6 with fully rounded caps (RadiusX/Y = half the height),
+                     traced from the reference. UpdateTabUnderline sets Left/Width. -->
                 <Rectangle x:Name="DynTabUnderline" Canvas.Left="182" Canvas.Top="725" Width="90" Height="6" RadiusX="3" RadiusY="3" Fill="White" />
 
-                <!-- Nombre del fondo seleccionado. El code-behind (UpdateDynLabelPosition) lo centra
-                     horizontalmente sobre la miniatura seleccionada; el Canvas.Left de aqui es solo el
-                     valor inicial antes de la primera medida. -->
+                <!-- Name of the selected background. The code-behind (UpdateDynLabelPosition) centres
+                     it horizontally over the selected thumbnail; the Canvas.Left here is only the
+                     initial value before the first measurement. -->
                 <TextBlock x:Name="DynLabel" Canvas.Left="131" Canvas.Top="770" Text="Background 1" FontSize="24" Foreground="White" />
 
-                <!-- Rail de miniaturas: las miniaturas se generan por code-behind en DynRailHost, que
-                     se desplaza (RenderTransform) para mantener la seleccionada fija a la izquierda.
-                     El anillo laser va fijo (la seleccionada esta siempre en su sitio). -->
+                <!-- Thumbnail rail: the code-behind generates the thumbnails inside DynRailHost, which
+                     slides (RenderTransform) to keep the selected one pinned to the left. The laser
+                     ring is fixed (the selected thumbnail is always in the same place). -->
                 <Canvas x:Name="DynRailHost" Canvas.Top="827">
                     <Canvas.Transitions>
                         <Transitions>
@@ -1042,19 +1559,19 @@
                 </Canvas>
                 <Border Classes="selectionRing homeRing selected" x:Name="DynRailRing" Canvas.Left="122" Canvas.Top="818" Width="280" Height="164" />
 
-                <!-- Ayuda abajo-derecha (decorativa; X no esta cableado, asi que "Hide menu" no
-                     funciona por ahora). El texto de la segunda accion cambia por pestaña. -->
+                <!-- Bottom-right hints (decorative; X is not wired up, so "Hide menu" does nothing for
+                     now). The second action's text changes per tab. -->
                 <Border Canvas.Left="1430" Canvas.Top="989" Height="53" CornerRadius="6" Background="#B3000000" Padding="16,0">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
-                        <!-- Boton X OFICIAL (ButtonX.svg de la app de Xbox, Microsoft.GamingApp),
-                             pintado en el azul del boton X medido de la referencia (#028EC7). -->
+                        <!-- OFFICIAL X button (ButtonX.svg from the Xbox app, Microsoft.GamingApp),
+                             painted in the X button blue measured from the reference (#028EC7). -->
                         <Viewbox Width="30" Height="30" VerticalAlignment="Center">
                             <Canvas Width="32" Height="32">
                                 <Path Fill="#028EC7" Data="F0 M16,0 C24.836556,0 32,7.163444 32,16 C32,24.836556 24.836556,32 16,32 C7.163444,32 0,24.836556 0,16 C0,7.163444 7.163444,0 16,0 Z M16,2 C8.2680135,2 2,8.2680135 2,16 C2,23.7319865 8.2680135,30 16,30 C23.7319865,30 30,23.7319865 30,16 C30,8.2680135 23.7319865,2 16,2 Z M10.688,9.906 L14.031,9.906 L15.75,13.562 C15.833,13.729 15.906,13.901 15.969,14.078 C16.031,14.245 16.083,14.417 16.125,14.594 L16.172,14.594 L16.2173333,14.421963 L16.328,14.047 C16.37525,13.891 16.428125,13.751875 16.486625,13.6308906 L18.484,9.906 L21.531,9.906 L17.891,15.938 L21.641,22.094 L18.375,22.094 L16.297,18.125 C16.234,18 16.182,17.87 16.141,17.734 L16.047,17.312 L16.016,17.312 C15.9946667,17.4026667 15.9693333,17.4977778 15.9394074,17.5973333 L15.891,17.75 C15.849,17.906 15.797,18.042 15.734,18.156 L13.625,22.094 L10.359,22.094 L14.234,16 L10.688,9.906 Z" />
                             </Canvas>
                         </Viewbox>
                         <TextBlock Text="Hide menu" FontSize="22" Foreground="White" VerticalAlignment="Center" />
-                        <!-- Boton View OFICIAL (ButtonView2.svg), en blanco. Aro + glifo de dos ventanas. -->
+                        <!-- OFFICIAL View button (ButtonView2.svg), in white. Ring + two-window glyph. -->
                         <Viewbox Width="30" Height="30" VerticalAlignment="Center" Margin="16,0,0,0">
                             <Canvas Width="32" Height="32">
                                 <Path Fill="White" Data="M10 12H18C18 10.8954 17.1046 10 16 10H10C8.89543 10 8 10.8954 8 12V16C8 17.1046 8.89543 18 10 18H12V16H10V12Z" />
@@ -1067,16 +1584,15 @@
                 </Border>
             </Canvas>
 
-            <!-- Pantalla de carga al abrir Ajustes: negro solido + el mismo engranaje (glifo
-                 Segoe Fluent Icons E713) que ya usa la cabecera de Ajustes, pero mucho mas
-                 grande y centrado. Se muestra desde el code-behind (EnterSettings) durante un
-                 minimo de 300ms y hasta que la pantalla de Ajustes real este lista, para que
-                 abrir Ajustes no parezca que la app se ha quedado colgada si en ese momento
-                 hay un juego pesado corriendo por debajo. Entra y sale con un fundido de
-                 opacidad (no un corte seco) - igual que la transicion real de Xbox al abrir
-                 Ajustes. Va despues de SettingsScreen en el XAML a proposito: en un Grid, sin
-                 ZIndex explicito, el orden de declaracion decide que queda encima - así tapa
-                 tanto la home como la propia Ajustes mientras carga. -->
+            <!-- Loading screen shown when opening Settings: solid black + the same gear glyph (Segoe
+                 Fluent Icons E713) the Settings header already uses, but much larger and centred.
+                 Shown from the code-behind (EnterSettings) for a minimum of 300ms and until the real
+                 Settings screen is ready, so opening Settings does not look like the app has hung if
+                 a heavy game happens to be running underneath. It fades in and out (not a hard cut) -
+                 the same as the real Xbox transition when opening Settings. Declared after
+                 SettingsScreen in the XAML on purpose: in a Grid, without an explicit ZIndex,
+                 declaration order decides what sits on top - so it covers both the home and Settings
+                 itself while loading. -->
             <Grid x:Name="SettingsLoadingScreen" Width="1920" Height="1080" Background="Black" Opacity="0" IsVisible="False">
                 <Grid.Transitions>
                     <Transitions>
@@ -1089,11 +1605,12 @@
         </Grid>
     </Viewbox>
 
-    <!-- Capa de APPS WEB (YouTube y demas): a PANTALLA COMPLETA de la ventana, por ENCIMA del Viewbox
-         escalado. El navegador (WebView2) es una ventana nativa que se dibuja siempre encima, asi que
-         no va dentro del lienzo 1920x1080 escalado, sino cubriendo toda la ventana. Vacio y oculto al
-         arrancar; MainWindow monta aqui el WebViewHost bajo demanda (EnterYouTube) y lo libera al salir
-         (ExitYouTube). Fondo negro para que, mientras el navegador carga, no se vea la home por debajo. -->
+    <!-- WEB APPS layer (YouTube and others): covers the FULL window, ABOVE the scaled Viewbox. The
+         browser (WebView2) is a native window that always draws on top, so it does not live inside
+         the scaled 1920x1080 canvas but covers the whole window. Empty and hidden at startup;
+         MainWindow mounts the WebViewHost here on demand (EnterYouTube) and releases it on exit
+         (ExitYouTube). Black background so the home is not visible underneath while the browser
+         loads. -->
     <Panel x:Name="YouTubeHost" IsVisible="False" Background="Black" />
     </Panel>
 </Window>

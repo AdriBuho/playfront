@@ -10,13 +10,16 @@ namespace Playfront.App;
 // selection) and the wallpaper need not match.
 public static class BackgroundSettings
 {
-    // The 14 solid colours, sampled pixel by pixel from the centre of each swatch in the Xbox
-    // reference. Row 1 is indices 0..6, row 2 is 7..13, in grid order. Xbox's swatches carry a very
-    // subtle vertical gradient; the centre colour is taken as representative.
+    // The 13 solid colours, sampled pixel by pixel from the centre of each swatch in the reference
+    // (flat fills, no gradient: centre and corners read identical).
+    //
+    // These occupy GRID SLOTS 1..13, not 0..12: slot 0 of the 7x2 grid is the custom colour picker
+    // (the hue-wheel tile), which is not a solid colour. Callers convert with SolidHexAtSlot /
+    // SolidSlotOf in MainWindow.
     public static readonly string[] SolidPalette =
     {
-        "#101010", "#389517", "#0F7464", "#0E70B3", "#14347A", "#852991", "#940F5C",
-        "#3A3A3A", "#106C0F", "#0F6B6E", "#115CA8", "#5E3398", "#B8315E", "#780A1B",
+        /* slots 1..6  */ "#3A3A3A", "#126E10", "#106D6F", "#125DA7", "#603499", "#B9335F",
+        /* slots 7..13 */ "#101010", "#399618", "#107565", "#0F72B4", "#15357B", "#862B92", "#95115C",
     };
 
     // Stored value: "#RRGGBB" means that solid colour; "video:<path relative to Assets/Backgrounds>"

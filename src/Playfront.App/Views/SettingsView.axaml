@@ -10,22 +10,48 @@
          are not duplicated. Navigation lives in the code-behind; leaving this screen (opening
          Personalization, returning Home) is signalled by events. -->
     <Canvas Width="1920" Height="1080">
+        <Canvas.Resources>
+            <!-- Icon drawings used by MORE THAN ONE card, kept here so the path data exists once.
+                 Both are the real files from the installed Xbox app's icon set (Lock.svg,
+                 MultiPlayer.svg), on a 32x32 canvas like the rest. A card that uses its drawing
+                 only once still inlines it, next to the comment that says where it came from. -->
+            <StreamGeometry x:Key="IconLock">M28,16 L28,28 C28,28.55 27.9,29.07 27.69,29.55 C27.48,30.03 27.19,30.45 26.83,30.83 C26.46,31.2 26.04,31.49 25.56,31.69 C25.08,31.89 24.56,31.99 24,32 L8,32 C7.45,32 6.93,31.9 6.45,31.69 C5.97,31.48 5.55,31.19 5.17,30.83 C4.8,30.46 4.51,30.04 4.31,29.56 C4.11,29.08 4.01,28.56 4,28 L4,16 C4,15.45 4.1,14.93 4.31,14.45 C4.52,13.97 4.81,13.55 5.17,13.17 C5.54,12.8 5.96,12.51 6.44,12.31 C6.92,12.11 7.44,12.01 8,12 L8,8 C8,6.9 8.21,5.86 8.63,4.89 C9.04,3.92 9.61,3.07 10.33,2.34 C11.05,1.61 11.9,1.04 12.88,0.63 C13.85,0.21 14.9,0 16,0 C17.1,0 18.14,0.21 19.11,0.63 C20.08,1.04 20.93,1.61 21.66,2.33 C22.39,3.05 22.96,3.9 23.38,4.88 C23.79,5.85 24,6.9 24,8 L24,12 C24.55,12 25.07,12.1 25.55,12.31 C26.03,12.52 26.45,12.81 26.83,13.17 C27.2,13.54 27.49,13.96 27.69,14.44 C27.89,14.92 28,15.44 28,16 Z M10,12 L22,12 L22,8 C22,7.17 21.84,6.39 21.53,5.66 C21.22,4.93 20.79,4.29 20.25,3.75 C19.71,3.21 19.07,2.78 18.34,2.47 C17.61,2.16 16.83,2 16,2 C15.17,2 14.39,2.16 13.66,2.47 C12.93,2.78 12.29,3.21 11.75,3.75 C11.21,4.29 10.78,4.93 10.47,5.66 C10.16,6.39 10,7.17 10,8 Z M18,22 C18,22.28 17.95,22.54 17.84,22.78 C17.74,23.02 17.6,23.23 17.42,23.41 C17.24,23.58 17.03,23.73 16.78,23.84 C16.53,23.96 16.27,24.01 16,24 C15.72,24 15.46,23.95 15.22,23.84 C14.98,23.74 14.77,23.6 14.58,23.42 C14.39,23.24 14.25,23.04 14.16,22.8 C14.06,22.56 14.01,22.29 14,22 C14,21.72 14.05,21.46 14.16,21.22 C14.26,20.98 14.4,20.77 14.58,20.59 C14.76,20.42 14.97,20.27 15.22,20.16 C15.47,20.04 15.73,19.99 16,20 C16.27,20 16.53,20.05 16.77,20.16 C17.01,20.26 17.22,20.4 17.41,20.58 C17.59,20.76 17.74,20.97 17.84,21.22 C17.95,21.47 18,21.73 18,22 Z</StreamGeometry>
+            <StreamGeometry x:Key="IconMultiPlayer">M11,15 C9.73958,15 8.57292,14.69 7.5,14.06 C6.42708,13.43 5.57292,12.57 4.9375,11.5 C4.3125,10.43 4,9.26 4,8 C4,6.74 4.3125,5.57 4.9375,4.5 C5.57292,3.43 6.42708,2.58 7.5,1.95 C8.57292,1.32 9.73958,1 11,1 C12.2604,1 13.4271,1.32 14.5,1.95 C15.5729,2.58 16.4219,3.43 17.0469,4.5 C17.6823,5.57 18,6.74 18,8 C18,9.26 17.6823,10.43 17.0469,11.5 C16.4219,12.57 15.5729,13.43 14.5,14.06 C13.4271,14.69 12.2604,15 11,15 Z M11,13 C11.9062,13 12.7396,12.78 13.5,12.33 C14.2708,11.88 14.8802,11.28 15.3281,10.52 C15.776,9.74 16,8.91 16,8 C16,7.09 15.776,6.26 15.3281,5.5 C14.8802,4.73 14.2708,4.12 13.5,3.67 C12.7396,3.22 11.9062,3 11,3 C10.0938,3 9.25521,3.22 8.48438,3.67 C7.72396,4.12 7.11979,4.73 6.67188,5.5 C6.22396,6.26 6,7.09 6,8 C6,8.91 6.22396,9.74 6.67188,10.52 C7.11979,11.28 7.72396,11.88 8.48438,12.33 C9.25521,12.78 10.0938,13 11,13 Z M25,15 C24.0938,15 23.2552,14.78 22.4844,14.33 C21.724,13.88 21.1198,13.28 20.6719,12.52 C20.224,11.74 20,10.91 20,10 C20,9.09 20.224,8.26 20.6719,7.5 C21.1198,6.73 21.724,6.12 22.4844,5.67 C23.2552,5.22 24.0938,5 25,5 C25.9062,5 26.7396,5.22 27.5,5.67 C28.2708,6.12 28.8802,6.73 29.3281,7.5 C29.776,8.26 30,9.09 30,10 C30,10.91 29.776,11.74 29.3281,12.52 C28.8802,13.28 28.2708,13.88 27.5,14.33 C26.7396,14.78 25.9062,15 25,15 Z M25,13 C25.5417,13 26.0417,12.86 26.5,12.59 C26.9583,12.32 27.3229,11.96 27.5938,11.5 C27.8646,11.04 28,10.54 28,10 C28,9.46 27.8646,8.96 27.5938,8.5 C27.3229,8.04 26.9583,7.68 26.5,7.41 C26.0417,7.14 25.5417,7 25,7 C24.4583,7 23.9583,7.14 23.5,7.41 C23.0417,7.68 22.6771,8.04 22.4062,8.5 C22.1354,8.96 22,9.46 22,10 C22,10.54 22.1354,11.04 22.4062,11.5 C22.6771,11.96 23.0417,12.32 23.5,12.59 C23.9583,12.86 24.4583,13 25,13 Z M11,31 C8.44792,31 6.34896,30.53 4.70312,29.58 C3.05729,28.62 1.85938,27.39 1.10938,25.88 C0.369792,24.36 0,22.74 0,21 C0,20.28 0.145833,19.61 0.4375,19 C0.739583,18.39 1.14062,17.9 1.64062,17.55 C2.15104,17.18 2.70833,17 3.3125,17 L18.6875,17 C19.2917,17 19.8438,17.18 20.3438,17.55 C20.8542,17.9 21.2552,18.39 21.5469,19 C21.849,19.61 22,20.28 22,21 C22,22.74 21.625,24.36 20.875,25.88 C20.1354,27.39 18.9427,28.62 17.2969,29.58 C15.651,30.53 13.5521,31 11,31 Z M21.8281,29 C22.3385,28.36 22.776,27.68 23.1406,26.95 C25.3281,26.79 27.0156,26.15 28.2031,25.03 C29.401,23.92 30,22.41 30,20.5 C30,20.09 29.8906,19.74 29.6719,19.45 C29.4635,19.15 29.2135,19 28.9219,19 L24.2188,19 C23.9896,18.24 23.6719,17.57 23.2656,17 L28.9219,17 C29.4844,17 30,17.16 30.4688,17.47 C30.9375,17.78 31.3073,18.21 31.5781,18.75 C31.8594,19.28 32,19.86 32,20.5 C32,21.98 31.6615,23.36 30.9844,24.64 C30.3073,25.92 29.2188,26.97 27.7188,27.78 C26.2292,28.59 24.3229,29 22,29 L21.8281,29 Z M11,29 C12.8958,29 14.5156,28.69 15.8594,28.06 C17.2135,27.44 18.2396,26.53 18.9375,25.33 C19.6458,24.13 20,22.69 20,21 C20,20.66 19.9375,20.33 19.8125,20.03 C19.6979,19.72 19.5365,19.47 19.3281,19.28 C19.1302,19.09 18.9167,19 18.6875,19 L3.3125,19 C3.08333,19 2.86458,19.09 2.65625,19.28 C2.45833,19.47 2.29688,19.72 2.17188,20.03 C2.05729,20.33 2,20.66 2,21 C2,22.69 2.34896,24.13 3.04688,25.33 C3.75521,26.53 4.78125,27.44 6.125,28.06 C7.47917,28.69 9.10417,29 11,29 Z</StreamGeometry>
+        </Canvas.Resources>
+
         <Rectangle Width="1920" Height="1080" Fill="#201F1F" />
-        <Rectangle Canvas.Left="478" Canvas.Top="0" Width="1" Height="1080" Fill="#3A3A3A" />
+        <!-- Sidebar divider. 2 px at x 480-481, not 1: the reference shows two full-strength
+             columns with clean shoulders either side, which a 1 px line cannot produce. #484848 is
+             the value read off the reference (the old #3A3A3A was visibly darker). Declared before
+             the nav rows on purpose, so the selected row's accent block paints over it - the
+             reference does the same. -->
+        <Rectangle Canvas.Left="480" Canvas.Top="0" Width="2" Height="1080" Fill="#484848" />
 
         <!-- Header: gear + avatar + user name in a horizontal StackPanel, so the three
              stay vertically centred against each other without hand-computing a
-             Canvas.Top for each (they all have different heights). The StackPanel's
-             left edge (Canvas.Left=100) deliberately matches the left edge of the
-             category list text below (the same Margin=100 on the settingsNavItem
-             TextBlock) - measured pixel by pixel against the reference, where they
-             line up too. -->
-        <StackPanel Canvas.Left="100" Canvas.Top="52" Orientation="Horizontal" Spacing="18">
-            <TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="28" Foreground="White" VerticalAlignment="Center" />
-            <Border Width="34" Height="34" CornerRadius="17" ClipToBounds="True" VerticalAlignment="Center">
+             Canvas.Top for each (they all have different heights).
+
+             MEASURED against a 1920x1080 reference capture, which is 1:1 with this canvas, so these
+             are the reference's own pixel values with no conversion:
+               gear   ink x 109..142, y 67..102  (34x36), centre (125.5, 84.5)
+               avatar circle centred (178.5, 84.5), diameter 38
+               name   ink starts x=214, cap top y=78, cap height 17
+
+             How the numbers below produce that: a Segoe Fluent Icons glyph advances one em, so each
+             TextBlock is exactly FontSize wide, and its ink is ~0.936 of that. Gear 36 -> ~34 of ink
+             starting 1 px in, hence Canvas.Left 108. Spacing 15.5 then lands the avatar at 159.5 and
+             the name ink at 214; both gaps agreeing on the same spacing is what confirms the model.
+
+             FONT: XboxFontFamily EXPLICITLY (see App.axaml). The app's default is Inter (Program.cs
+             calls WithInterFont) - different cap-height ratio and different widths, so leaving it
+             to the default made the name both wrong-sized and wrong-shaped.
+             Cap height 17 / 0.70 = 24 gives the FontSize. -->
+        <StackPanel Canvas.Left="108" Canvas.Top="66" Orientation="Horizontal" Spacing="15.5">
+            <TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="36" Foreground="White" VerticalAlignment="Center" />
+            <Border Width="38" Height="38" CornerRadius="19" ClipToBounds="True" VerticalAlignment="Center">
                 <Image Source="/Assets/Icons/avatar.png" Stretch="UniformToFill" />
             </Border>
-            <TextBlock x:Name="SettingsUserNameText" Foreground="White" FontSize="20" VerticalAlignment="Center" />
+            <TextBlock x:Name="SettingsUserNameText" FontFamily="{StaticResource XboxFontFamily}" Foreground="White" FontSize="24" VerticalAlignment="Center" />
         </StackPanel>
 
         <!-- Category list -->
@@ -38,7 +64,7 @@
              Canvas.Top matches SNav1 ("General", the default category on opening
              Settings); the code-behind moves it with translateY relative to that base,
              and hides it entirely while focus is inside the card grid. -->
-        <Border x:Name="SettingsNavHighlight" Canvas.Left="0" Canvas.Top="216" Width="478" Height="62"
+        <Border x:Name="SettingsNavHighlight" Canvas.Left="0" Canvas.Top="276" Width="482" Height="64"
                 CornerRadius="4" Background="{DynamicResource AccentBrush}" BoxShadow="{DynamicResource SettingsHighlightShadow}">
             <Border.Transitions>
                 <Transitions>
@@ -53,51 +79,110 @@
              through cards. Faint grey strip (same tone as settingsCard) plus a thin
              accent bar against the right edge, next to the sidebar divider. Uses the same
              translateY mechanism as SettingsNavHighlight, off the same base Canvas.Top
-             (216 = the "General" row), so both share one offset in the code-behind. -->
-        <Border x:Name="SettingsCategoryIndicator" Canvas.Left="0" Canvas.Top="216" Width="478" Height="62"
+             (276 = the "General" row), so both share one offset in the code-behind. -->
+        <Border x:Name="SettingsCategoryIndicator" Canvas.Left="0" Canvas.Top="276" Width="482" Height="64"
                 Background="#303030" IsVisible="False">
             <Border.Transitions>
                 <Transitions>
                     <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="QuadraticEaseInOut" />
                 </Transitions>
             </Border.Transitions>
-            <Rectangle Width="4" Height="62" Fill="{DynamicResource AccentBrush}" HorizontalAlignment="Right" />
+            <Rectangle Width="4" Height="64" Fill="{DynamicResource AccentBrush}" HorizontalAlignment="Right" />
         </Border>
 
-        <Border Classes="settingsNavItem" x:Name="SNav0" Canvas.Left="0" Canvas.Top="153"><TextBlock Text="Recommendations" /></Border>
-        <!-- Divider flush with the top edge of the "General" row (Canvas.Top=216): the line
-             occupies row 215, so the row starts exactly where it ends. -->
-        <Rectangle Canvas.Left="35" Canvas.Top="215" Width="410" Height="1" Fill="#3A3A3A" />
-        <Border Classes="settingsNavItem" x:Name="SNav1" Canvas.Left="0" Canvas.Top="216"><TextBlock Text="General" /></Border>
-        <Border Classes="settingsNavItem" x:Name="SNav2" Canvas.Left="0" Canvas.Top="280"><TextBlock Text="Account" /></Border>
-        <Border Classes="settingsNavItem" x:Name="SNav3" Canvas.Left="0" Canvas.Top="344"><TextBlock Text="System" /></Border>
-        <Border Classes="settingsNavItem" x:Name="SNav4" Canvas.Left="0" Canvas.Top="408"><TextBlock Text="Devices &amp; connections" /></Border>
-        <Border Classes="settingsNavItem" x:Name="SNav5" Canvas.Left="0" Canvas.Top="472"><TextBlock Text="Preferences" /></Border>
-        <Border Classes="settingsNavItem" x:Name="SNav6" Canvas.Left="0" Canvas.Top="536"><TextBlock Text="Accessibility" /></Border>
+        <!-- Row tops measured off the reference. "Recommendations" stands alone at 176; the list
+             proper starts at 276 and steps by 68 from there. The 100 px between the two is NOT the
+             row step and must not be "tidied up" to one - the reference really does open that gap
+             for the divider.
 
-        <!-- "General" content: title plus a 2x3 card grid -->
-        <TextBlock x:Name="SettingsCategoryTitle" Canvas.Left="528" Canvas.Top="160" Text="General"
-                   Foreground="White" FontSize="40" FontWeight="Bold" />
+             Rows are 64 tall (see Border.settingsNavItem), so the step leaves a 4 px gap. Anchor
+             used for every top: the selected row's accent block, whose solid extent is y 276..339
+             for "General", and the label cap centres, which land 2 px below each row's centre -
+             the same 2 px on all seven, which is what confirms the grid rather than one lucky row.
 
+             Changing any of these means changing NavTops in the code-behind too: the highlight
+             slides by a translateY computed from that array, so a mismatch shows up as the block
+             landing between rows. -->
+        <Border Classes="settingsNavItem" x:Name="SNav0" Canvas.Left="0" Canvas.Top="176"><TextBlock Text="Recommendations" /></Border>
+        <!-- Divider: 1 px at y 247, inset 40 from each side of the 482-wide sidebar. It sits in
+             the gap, NOT flush against either row - it is 7 px below "Recommendations" and 29 px
+             above "General". Asymmetric on purpose, that is where the reference puts it. -->
+        <Rectangle Canvas.Left="40" Canvas.Top="247" Width="402" Height="1" Fill="#484848" />
+        <Border Classes="settingsNavItem" x:Name="SNav1" Canvas.Left="0" Canvas.Top="276"><TextBlock Text="General" /></Border>
+        <Border Classes="settingsNavItem" x:Name="SNav2" Canvas.Left="0" Canvas.Top="344"><TextBlock Text="Account" /></Border>
+        <Border Classes="settingsNavItem" x:Name="SNav3" Canvas.Left="0" Canvas.Top="412"><TextBlock Text="System" /></Border>
+        <Border Classes="settingsNavItem" x:Name="SNav4" Canvas.Left="0" Canvas.Top="480"><TextBlock Text="Devices &amp; connections" /></Border>
+        <Border Classes="settingsNavItem" x:Name="SNav5" Canvas.Left="0" Canvas.Top="548"><TextBlock Text="Preferences" /></Border>
+        <Border Classes="settingsNavItem" x:Name="SNav6" Canvas.Left="0" Canvas.Top="616"><TextBlock Text="Cloud gaming" /></Border>
+        <Border Classes="settingsNavItem" x:Name="SNav7" Canvas.Left="0" Canvas.Top="684"><TextBlock Text="Accessibility" /></Border>
+
+        <!-- Category title. Reference ink: x 530..693, y 71..104 (164 x 34).
+
+             The DISPLAY SEMIBOLD cut, and both halves of that matter. Overlaying the reference's
+             own capital G against every candidate (blurred equally, since the reference is
+             compressed video) ranks the Semibold cuts far ahead of Regular and puts Light last, and
+             among those the Display cut wins. Ink widths alone cannot decide this - Regular and
+             Semibold in this family set almost the same widths - so the shape is the evidence.
+             45 matches the ink height (34).
+
+             THE FACE IS STILL NOT RIGHT, and the other category titles are what prove it.
+             Reference ink widths, all at ink height 34, against what this cut gives at 45:
+
+                 title                     reference   this cut
+                 "General"                     164        154
+                 "Account"                     170        173
+                 "Devices & connections"       477        463
+                 "Preferences"                 256        238
+
+             Three short, one long, at one size. No size or tracking value fixes that, because the
+             widths RELATIVE TO EACH OTHER are wrong, and only a different typeface changes those.
+             An earlier LetterSpacing of 1.8 was fitted to "General" alone and looked right;
+             "Account" then came out 14 px over. Removed - better to carry the font's own error
+             than a fudge that only holds for one word.
+             A candidate face must reproduce ALL THREE numbers before it is believed.
+
+             Canvas.Top: the TextBlock's box starts ~13 px above the ink at this size. -->
+        <TextBlock x:Name="SettingsCategoryTitle" Canvas.Left="529" Canvas.Top="58" Text="General"
+                   Foreground="White" FontFamily="{StaticResource XboxFontDisplaySemibold}" FontSize="45" />
+
+        <!-- CARD GRID, measured off the reference. Every card in this file (General and System)
+             uses it, so change it here and everywhere at once:
+               card      438 x 132
+               columns   x 570 and 1024  (step 454, so a 16 px gutter)
+               rows      y 190, 338, 486 (step 148), System's fourth row continues to 634
+               icon box  36 x 36, its left edge 34 in from the card, vertically centred
+               label     ink starts 101 in from the card
+
+             How the numbers below produce that: the card carries Padding 3, so the StackPanel's
+             Margin of 31 puts the icon box at 34. Icon 36 wide + Spacing 29 puts the label origin
+             at 99, and Segoe UI's own left bearing lands the ink on 101.
+
+             The icon box is what all six agree on, not the drawings: the wide ones (wifi+gear,
+             brush) fill 36x36, the narrow ones (cables 26, padlock 28) sit centred inside the same
+             box, and the speaker is 31x26 centred both ways. That is why the glyphs are set at
+             FontSize 36 and the Viewboxes at 36 - anything smaller and the icon floats in its box.
+
+             Selection rings follow the old rule unchanged: the card rectangle inflated 8 per side,
+             so 454 x 148 with its corner 8 up and 8 left. -->
         <!-- Row 1 -->
-        <Border Classes="settingsCard selected" x:Name="SCard0" Canvas.Left="567" Canvas.Top="256" Width="445" Height="133">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="28,0,0,0" Spacing="22">
+        <Border Classes="settingsCard selected" x:Name="SCard0" Canvas.Left="570" Canvas.Top="190" Width="438" Height="132">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
                 <!-- Real system icon, not an approximation: it does not exist as a
                      standalone file in the installed Xbox app, but it does exist as a
                      single ready-made wifi+gear glyph in the Windows 11 icon font
                      "Segoe Fluent Icons" (code F080) - the same drawing. This used to be
                      two separate icons composed together. -->
                 <Grid Width="36" Height="36">
-                    <TextBlock Text="&#xF080;" FontFamily="Segoe Fluent Icons" FontSize="30" Foreground="White"
+                    <TextBlock Text="&#xF080;" FontFamily="Segoe Fluent Icons" FontSize="36" Foreground="White"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Grid>
                 <TextBlock Text="Network settings" />
             </StackPanel>
         </Border>
-        <Border Classes="settingsCard" x:Name="SCard1" Canvas.Left="1026" Canvas.Top="256" Width="445" Height="133">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="28,0,0,0" Spacing="22">
+        <Border Classes="settingsCard" x:Name="SCard1" Canvas.Left="1024" Canvas.Top="190" Width="438" Height="132">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
                 <Grid Width="36" Height="36">
-                    <TextBlock Text="&#xE771;" FontFamily="Segoe Fluent Icons" FontSize="30" Foreground="White"
+                    <TextBlock Text="&#xE771;" FontFamily="Segoe Fluent Icons" FontSize="36" Foreground="White"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Grid>
                 <TextBlock Text="Personalization" />
@@ -105,9 +190,9 @@
         </Border>
 
         <!-- Row 2 -->
-        <Border Classes="settingsCard" x:Name="SCard2" Canvas.Left="567" Canvas.Top="402" Width="445" Height="133">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="28,0,0,0" Spacing="22">
-                <Viewbox Width="36" Height="36">
+        <Border Classes="settingsCard" x:Name="SCard2" Canvas.Left="570" Canvas.Top="338" Width="438" Height="132">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <Grid Width="36" Height="36"><Viewbox>
                     <Canvas Width="32" Height="32">
                         <!-- The reference drawing (two cables/connectors) does not exist
                              standalone anywhere reachable - not in the Xbox app's own SVGs
@@ -119,42 +204,42 @@
                         <Path Fill="White"
                               Data="M4,30 C3.59,30 3.21,29.92 2.84,29.77 C2.48,29.61 2.16,29.4 1.89,29.13 C1.62,28.86 1.4,28.53 1.24,28.16 C1.07,27.78 0.99,27.4 1,27 L1,5 C1,4.59 1.08,4.21 1.24,3.84 C1.39,3.48 1.61,3.16 1.88,2.89 C2.15,2.62 2.47,2.4 2.84,2.24 C3.22,2.07 3.61,1.99 4,2 L14,2 C14.41,2 14.79,2.08 15.16,2.24 C15.52,2.39 15.84,2.61 16.11,2.88 C16.38,3.15 16.6,3.47 16.77,3.84 C16.93,4.22 17.01,4.61 17,5 L17,8 L15,8 L15,5 C15,4.73 14.9,4.5 14.7,4.3 C14.51,4.1 14.27,4 14,4 L4,4 C3.73,4 3.5,4.1 3.3,4.3 C3.1,4.5 3,4.73 3,5 L3,27 C3,27.27 3.1,27.51 3.3,27.7 C3.5,27.9 3.73,28 4,28 L13,28 L13,30 L4,30 Z M6,8 C5.73,8 5.5,7.9 5.3,7.7 C5.1,7.51 5,7.27 5,7 C5,6.73 5.1,6.5 5.3,6.3 C5.5,6.1 5.73,6 6,6 L12,6 C12.27,6 12.51,6.1 12.7,6.3 C12.9,6.5 13,6.73 13,7 C13,7.27 12.9,7.51 12.7,7.7 C12.51,7.9 12.27,8 12,8 L6,8 Z M6,12 C5.73,12 5.5,11.9 5.3,11.7 C5.1,11.51 5,11.27 5,11 C5,10.73 5.1,10.5 5.3,10.3 C5.5,10.1 5.73,10 6,10 L9,10 L9,12 L6,12 Z M16,30 C15.73,30 15.5,29.9 15.3,29.7 C15.1,29.51 15,29.27 15,29 C15,28.77 15.04,28.59 15.13,28.47 C15.21,28.34 15.32,28.25 15.47,28.17 C15.62,28.1 15.78,28.05 15.95,28.03 C16.13,28.01 16.31,28 16.49,28 L17,28 L17,26 L14,26 C13.59,26 13.21,25.92 12.84,25.77 C12.48,25.61 12.16,25.4 11.89,25.13 C11.62,24.86 11.4,24.53 11.24,24.16 C11.07,23.78 10.99,23.4 11,23 L11,13 C11,12.59 11.08,12.21 11.24,11.84 C11.39,11.48 11.61,11.16 11.88,10.89 C12.15,10.62 12.47,10.4 12.84,10.24 C13.22,10.07 13.61,9.99 14,10 L28,10 C28.41,10 28.79,10.08 29.16,10.24 C29.52,10.39 29.84,10.61 30.11,10.88 C30.38,11.15 30.6,11.47 30.77,11.84 C30.93,12.22 31.01,12.61 31,13 L31,23 C31,23.41 30.92,23.79 30.77,24.16 C30.61,24.52 30.4,24.84 30.13,25.11 C29.86,25.38 29.53,25.6 29.16,25.77 C28.78,25.93 28.4,26.01 28,26 L25,26 L25,28 L25.53,28 C25.71,28 25.89,28.01 26.06,28.03 C26.24,28.05 26.4,28.09 26.53,28.16 C26.67,28.22 26.78,28.32 26.88,28.47 C26.97,28.62 27.01,28.79 27,29 C27,29.27 26.9,29.51 26.7,29.7 C26.51,29.9 26.27,30 26,30 L16,30 Z M28,24 C28.27,24 28.51,23.9 28.7,23.7 C28.9,23.51 29,23.27 29,23 L29,13 C29,12.73 28.9,12.5 28.7,12.3 C28.51,12.1 28.27,12 28,12 L14,12 C13.73,12 13.5,12.1 13.3,12.3 C13.1,12.5 13,12.73 13,13 L13,23 C13,23.27 13.1,23.51 13.3,23.7 C13.5,23.9 13.73,24 14,24 L28,24 Z M19,26 L19,28 L23,28 L23,26 L19,26 Z" />
                     </Canvas>
-                </Viewbox>
+                </Viewbox></Grid>
                 <TextBlock Text="TV &amp; display options" />
             </StackPanel>
         </Border>
-        <Border Classes="settingsCard" x:Name="SCard3" Canvas.Left="1026" Canvas.Top="402" Width="445" Height="133">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="28,0,0,0" Spacing="22">
-                <Viewbox Width="34" Height="34">
+        <Border Classes="settingsCard" x:Name="SCard3" Canvas.Left="1024" Canvas.Top="338" Width="438" Height="132">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <Grid Width="36" Height="36"><Viewbox>
                     <Canvas Width="32" Height="32">
-                        <!-- padlock for "online safety & family" - real path taken from
-                             Lock.svg (Microsoft.GamingApp), not an approximation -->
-                        <Path Fill="White"
-                              Data="M28,16 L28,28 C28,28.55 27.9,29.07 27.69,29.55 C27.48,30.03 27.19,30.45 26.83,30.83 C26.46,31.2 26.04,31.49 25.56,31.69 C25.08,31.89 24.56,31.99 24,32 L8,32 C7.45,32 6.93,31.9 6.45,31.69 C5.97,31.48 5.55,31.19 5.17,30.83 C4.8,30.46 4.51,30.04 4.31,29.56 C4.11,29.08 4.01,28.56 4,28 L4,16 C4,15.45 4.1,14.93 4.31,14.45 C4.52,13.97 4.81,13.55 5.17,13.17 C5.54,12.8 5.96,12.51 6.44,12.31 C6.92,12.11 7.44,12.01 8,12 L8,8 C8,6.9 8.21,5.86 8.63,4.89 C9.04,3.92 9.61,3.07 10.33,2.34 C11.05,1.61 11.9,1.04 12.88,0.63 C13.85,0.21 14.9,0 16,0 C17.1,0 18.14,0.21 19.11,0.63 C20.08,1.04 20.93,1.61 21.66,2.33 C22.39,3.05 22.96,3.9 23.38,4.88 C23.79,5.85 24,6.9 24,8 L24,12 C24.55,12 25.07,12.1 25.55,12.31 C26.03,12.52 26.45,12.81 26.83,13.17 C27.2,13.54 27.49,13.96 27.69,14.44 C27.89,14.92 28,15.44 28,16 Z M10,12 L22,12 L22,8 C22,7.17 21.84,6.39 21.53,5.66 C21.22,4.93 20.79,4.29 20.25,3.75 C19.71,3.21 19.07,2.78 18.34,2.47 C17.61,2.16 16.83,2 16,2 C15.17,2 14.39,2.16 13.66,2.47 C12.93,2.78 12.29,3.21 11.75,3.75 C11.21,4.29 10.78,4.93 10.47,5.66 C10.16,6.39 10,7.17 10,8 Z M18,22 C18,22.28 17.95,22.54 17.84,22.78 C17.74,23.02 17.6,23.23 17.42,23.41 C17.24,23.58 17.03,23.73 16.78,23.84 C16.53,23.96 16.27,24.01 16,24 C15.72,24 15.46,23.95 15.22,23.84 C14.98,23.74 14.77,23.6 14.58,23.42 C14.39,23.24 14.25,23.04 14.16,22.8 C14.06,22.56 14.01,22.29 14,22 C14,21.72 14.05,21.46 14.16,21.22 C14.26,20.98 14.4,20.77 14.58,20.59 C14.76,20.42 14.97,20.27 15.22,20.16 C15.47,20.04 15.73,19.99 16,20 C16.27,20 16.53,20.05 16.77,20.16 C17.01,20.26 17.22,20.4 17.41,20.58 C17.59,20.76 17.74,20.97 17.84,21.22 C17.95,21.47 18,21.73 18,22 Z" />
+                        <!-- padlock - real path from Lock.svg (Microsoft.GamingApp), not an
+                             approximation. Shared with Account's "Privacy & online safety",
+                             which is why the data lives in Canvas.Resources. -->
+                        <Path Fill="White" Data="{StaticResource IconLock}" />
                     </Canvas>
-                </Viewbox>
+                </Viewbox></Grid>
                 <TextBlock Text="Online safety &amp; family" />
             </StackPanel>
         </Border>
 
         <!-- Row 3 -->
-        <Border Classes="settingsCard" x:Name="SCard4" Canvas.Left="567" Canvas.Top="548" Width="445" Height="133">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="28,0,0,0" Spacing="22">
-                <Viewbox Width="34" Height="34">
+        <Border Classes="settingsCard" x:Name="SCard4" Canvas.Left="570" Canvas.Top="486" Width="438" Height="132">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <Grid Width="36" Height="36"><Viewbox>
                     <Canvas Width="32" Height="32">
                         <!-- speaker for "volume & audio output" - real path taken from
                              Volume.svg (Microsoft.GamingApp), not an approximation -->
                         <Path Fill="White"
                               Data="M14.5,27.58 C14.1,27.58 13.75,27.43 13.44,27.14 L8.59,22.28 L5,22.28 C4.46,22.28 3.96,22.15 3.5,21.88 C3.04,21.6 2.68,21.24 2.41,20.78 C2.14,20.32 2,19.82 2,19.28 L2,13.28 C2,12.74 2.14,12.24 2.41,11.78 C2.68,11.32 3.04,10.96 3.5,10.69 C3.96,10.42 4.46,10.28 5,10.28 L8.59,10.28 L13.44,5.42 C13.74,5.14 14.09,5 14.5,5 C14.71,5 14.9,5.04 15.08,5.11 C15.36,5.21 15.58,5.4 15.75,5.66 C15.92,5.91 16,6.18 16,6.48 L16,26.08 C16,26.38 15.92,26.66 15.75,26.91 C15.58,27.16 15.36,27.34 15.08,27.45 C14.88,27.54 14.69,27.58 14.5,27.58 Z M24.08,26.16 C23.79,26.16 23.54,26.05 23.33,25.83 C23.15,25.63 23.06,25.41 23.06,25.17 C23.06,24.88 23.18,24.63 23.41,24.42 C24.55,23.38 25.44,22.15 26.06,20.73 C26.69,19.31 27,17.82 27,16.28 C27,14.74 26.69,13.26 26.06,11.84 C25.44,10.42 24.55,9.18 23.41,8.14 C23.18,7.93 23.06,7.68 23.06,7.39 C23.06,7.15 23.15,6.93 23.33,6.73 C23.54,6.52 23.79,6.41 24.08,6.41 C24.35,6.41 24.57,6.49 24.75,6.66 C26.1,7.9 27.15,9.35 27.89,11.03 C28.63,12.71 29,14.46 29,16.28 C29,18.1 28.63,19.85 27.89,21.53 C27.15,23.21 26.1,24.67 24.75,25.91 C24.55,26.07 24.33,26.16 24.08,26.16 Z M9.7,11.98 C9.51,12.18 9.27,12.28 9,12.28 L5,12.28 C4.73,12.28 4.49,12.38 4.3,12.58 C4.1,12.78 4,13.01 4,13.28 L4,19.28 C4,19.55 4.1,19.79 4.3,19.98 C4.49,20.18 4.73,20.28 5,20.28 L9,20.28 C9.27,20.28 9.51,20.38 9.7,20.58 L14,24.86 L14,7.69 Z M20.19,22.34 C19.93,22.34 19.72,22.27 19.56,22.13 C19.44,22.03 19.34,21.92 19.28,21.78 C19.22,21.65 19.19,21.51 19.19,21.36 C19.19,21.12 19.27,20.91 19.42,20.72 C19.93,20.09 20.32,19.4 20.59,18.64 C20.86,17.87 21,17.08 21,16.28 C21,15.48 20.86,14.7 20.59,13.94 C20.32,13.17 19.93,12.47 19.42,11.84 C19.27,11.66 19.19,11.44 19.19,11.2 C19.19,11.06 19.22,10.92 19.28,10.78 C19.34,10.65 19.44,10.53 19.56,10.44 C19.75,10.28 19.96,10.2 20.19,10.2 C20.5,10.2 20.76,10.33 20.97,10.58 C21.62,11.37 22.12,12.26 22.47,13.25 C22.82,14.23 23,15.24 23,16.28 C23,17.32 22.82,18.33 22.47,19.31 C22.12,20.29 21.62,21.18 20.97,21.98 C20.76,22.22 20.5,22.34 20.19,22.34 Z" />
                     </Canvas>
-                </Viewbox>
+                </Viewbox></Grid>
                 <TextBlock Text="Volume &amp; audio output" />
             </StackPanel>
         </Border>
-        <Border Classes="settingsCard" x:Name="SCard5" Canvas.Left="1026" Canvas.Top="548" Width="445" Height="133">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="28,0,0,0" Spacing="22">
+        <Border Classes="settingsCard" x:Name="SCard5" Canvas.Left="1024" Canvas.Top="486" Width="438" Height="132">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
                 <Grid Width="36" Height="36">
-                    <TextBlock Text="&#xE7E8;" FontFamily="Segoe Fluent Icons" FontSize="30" Foreground="White"
+                    <TextBlock Text="&#xE7E8;" FontFamily="Segoe Fluent Icons" FontSize="36" Foreground="White"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Grid>
                 <TextBlock Text="Power options" />
@@ -165,12 +250,12 @@
              side -> 461x149, top-left corner 8 up and 8 left of its own. Integers throughout,
              on purpose (see the Border.selectionRing comment). Declared after the cards so
              they sit above them. -->
-        <Border Classes="selectionRing" x:Name="SRing0" Canvas.Left="559" Canvas.Top="248" Width="461" Height="149" />
-        <Border Classes="selectionRing" x:Name="SRing1" Canvas.Left="1018" Canvas.Top="248" Width="461" Height="149" />
-        <Border Classes="selectionRing" x:Name="SRing2" Canvas.Left="559" Canvas.Top="394" Width="461" Height="149" />
-        <Border Classes="selectionRing" x:Name="SRing3" Canvas.Left="1018" Canvas.Top="394" Width="461" Height="149" />
-        <Border Classes="selectionRing" x:Name="SRing4" Canvas.Left="559" Canvas.Top="540" Width="461" Height="149" />
-        <Border Classes="selectionRing" x:Name="SRing5" Canvas.Left="1018" Canvas.Top="540" Width="461" Height="149" />
+        <Border Classes="selectionRing" x:Name="SRing0" Canvas.Left="562" Canvas.Top="182" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="SRing1" Canvas.Left="1016" Canvas.Top="182" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="SRing2" Canvas.Left="562" Canvas.Top="330" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="SRing3" Canvas.Left="1016" Canvas.Top="330" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="SRing4" Canvas.Left="562" Canvas.Top="478" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="SRing5" Canvas.Left="1016" Canvas.Top="478" Width="454" Height="148" />
 
         <!-- ================================================================================
              "System" content: 7 cards in 4 rows (2+2+2+1). Reuses EXACTLY the same grid as
@@ -181,28 +266,26 @@
              ================================================================================ -->
 
         <!-- Row 1 -->
-        <Border Classes="settingsCard" x:Name="SysCard0" Canvas.Left="567" Canvas.Top="256" Width="445" Height="133" IsVisible="False">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="28,0,0,0" Spacing="22">
-                <!-- Display with a gear. APPROXIMATE: the exact drawing in the reference does
-                     not exist as a standalone file in any installed Xbox app (all 240 icons
-                     swept) nor as an identical glyph in the Windows icon font (ranges
-                     E700-ECFF, ED00-EEFF and F100-F2FF checked). This is the closest glyph
-                     that IS real: same idea, device plus gear. -->
+        <Border Classes="settingsCard" x:Name="SysCard0" Canvas.Left="570" Canvas.Top="190" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <!-- Console outline with a gear biting into its lower right corner. This is the
+                     real one: it is not in the Windows icon font, which is why it used to be an
+                     approximation - it lives in the Xbox icon font, swept glyph by glyph against
+                     the reference (0.90 agreement, next best 0.84). -->
                 <Grid Width="36" Height="36">
-                    <TextBlock Text="&#xF210;" FontFamily="Segoe Fluent Icons" FontSize="30" Foreground="White"
+                    <TextBlock Text="&#xE9E5;" FontFamily="{StaticResource XboxIconFont}" FontSize="36" Foreground="White"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Grid>
                 <TextBlock Text="Console info" />
             </StackPanel>
         </Border>
-        <Border Classes="settingsCard" x:Name="SysCard1" Canvas.Left="1026" Canvas.Top="256" Width="445" Height="133" IsVisible="False">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="28,0,0,0" Spacing="22">
-                <!-- Stacked drives. APPROXIMATE for the same reason as "Console info": the
-                     reference draws a console with an external drive beneath it, and that
-                     specific icon only exists in the console's own UI, not in anything
-                     installed here. -->
+        <Border Classes="settingsCard" x:Name="SysCard1" Canvas.Left="1024" Canvas.Top="190" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <!-- USB stick above an internal drive. The real one, from the Xbox icon font: swept
+                     glyph by glyph against the reference (0.86 agreement, next best 0.72). It used to
+                     be an approximation because only the Windows icon font had been searched. -->
                 <Grid Width="36" Height="36">
-                    <TextBlock Text="&#xE7DE;" FontFamily="Segoe Fluent Icons" FontSize="30" Foreground="White"
+                    <TextBlock Text="&#xEA0B;" FontFamily="{StaticResource XboxIconFont}" FontSize="36" Foreground="White"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Grid>
                 <TextBlock Text="Storage devices" />
@@ -210,85 +293,369 @@
         </Border>
 
         <!-- Row 2 -->
-        <Border Classes="settingsCard" x:Name="SysCard2" Canvas.Left="567" Canvas.Top="402" Width="445" Height="133" IsVisible="False">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="28,0,0,0" Spacing="22">
-                <Viewbox Width="34" Height="34">
+        <Border Classes="settingsCard" x:Name="SysCard2" Canvas.Left="570" Canvas.Top="338" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <Grid Width="36" Height="36"><Viewbox>
                     <Canvas Width="32" Height="32">
                         <!-- download arrow over a line - real path from Download.svg
                              (Microsoft.GamingApp), not an approximation -->
                         <Path Fill="White"
                               Data="M6.29688,17.7031 C6.09896,17.4844 6,17.25 6,17 C6,16.7292 6.09896,16.4948 6.29688,16.2969 C6.49479,16.099 6.72917,16 7,16 C7.28125,16 7.51562,16.099 7.70312,16.2969 L15,23.5781 L15,2 C15,1.729167 15.099,1.494792 15.2969,1.296875 C15.4948,1.0989583 15.7292,1 16,1 C16.2708,1 16.5052,1.0989583 16.7031,1.296875 C16.901,1.494792 17,1.729167 17,2 L17,23.5781 L24.2969,16.2969 C24.4948,16.099 24.7292,16 25,16 C25.2812,16 25.5156,16.099 25.7031,16.2969 C25.901,16.4844 26,16.7188 26,17 C26,17.2708 25.901,17.5052 25.7031,17.7031 L16.75,26.6562 C16.6771,26.7292 16.6406,26.7656 16.6406,26.7656 C16.474,26.9219 16.2656,27 16.0156,27 L16,27 L15.9844,27 C15.7448,27 15.5365,26.9219 15.3594,26.7656 C15.3594,26.7656 15.3229,26.7292 15.25,26.6562 L6.29688,17.7031 Z M26,29 C26.2708,29 26.5052,29.099 26.7031,29.2969 C26.901,29.4948 27,29.7292 27,30 C27,30.2708 26.901,30.5052 26.7031,30.7031 C26.5052,30.901 26.2708,31 26,31 L6,31 C5.729167,31 5.494792,30.901 5.296875,30.7031 C5.0989583,30.5052 5,30.2708 5,30 C5,29.7292 5.0989583,29.4948 5.296875,29.2969 C5.494792,29.099 5.729167,29 6,29 L26,29 Z" />
                     </Canvas>
-                </Viewbox>
+                </Viewbox></Grid>
                 <TextBlock Text="Updates" />
             </StackPanel>
         </Border>
-        <Border Classes="settingsCard" x:Name="SysCard3" Canvas.Left="1026" Canvas.Top="402" Width="445" Height="133" IsVisible="False">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="28,0,0,0" Spacing="22">
-                <Viewbox Width="34" Height="34">
+        <Border Classes="settingsCard" x:Name="SysCard3" Canvas.Left="1024" Canvas.Top="338" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <Grid Width="36" Height="36"><Viewbox>
                     <Canvas Width="32" Height="32">
                         <!-- group of people - real path from MultiPlayer.svg
                              (Microsoft.GamingApp), not an approximation. The reference adds a
                              small padlock bottom right; it is deliberately NOT drawn here,
                              because composing two icons at 34 px went badly once already. -->
-                        <Path Fill="White"
-                              Data="M11,15 C9.73958,15 8.57292,14.69 7.5,14.06 C6.42708,13.43 5.57292,12.57 4.9375,11.5 C4.3125,10.43 4,9.26 4,8 C4,6.74 4.3125,5.57 4.9375,4.5 C5.57292,3.43 6.42708,2.58 7.5,1.95 C8.57292,1.32 9.73958,1 11,1 C12.2604,1 13.4271,1.32 14.5,1.95 C15.5729,2.58 16.4219,3.43 17.0469,4.5 C17.6823,5.57 18,6.74 18,8 C18,9.26 17.6823,10.43 17.0469,11.5 C16.4219,12.57 15.5729,13.43 14.5,14.06 C13.4271,14.69 12.2604,15 11,15 Z M11,13 C11.9062,13 12.7396,12.78 13.5,12.33 C14.2708,11.88 14.8802,11.28 15.3281,10.52 C15.776,9.74 16,8.91 16,8 C16,7.09 15.776,6.26 15.3281,5.5 C14.8802,4.73 14.2708,4.12 13.5,3.67 C12.7396,3.22 11.9062,3 11,3 C10.0938,3 9.25521,3.22 8.48438,3.67 C7.72396,4.12 7.11979,4.73 6.67188,5.5 C6.22396,6.26 6,7.09 6,8 C6,8.91 6.22396,9.74 6.67188,10.52 C7.11979,11.28 7.72396,11.88 8.48438,12.33 C9.25521,12.78 10.0938,13 11,13 Z M25,15 C24.0938,15 23.2552,14.78 22.4844,14.33 C21.724,13.88 21.1198,13.28 20.6719,12.52 C20.224,11.74 20,10.91 20,10 C20,9.09 20.224,8.26 20.6719,7.5 C21.1198,6.73 21.724,6.12 22.4844,5.67 C23.2552,5.22 24.0938,5 25,5 C25.9062,5 26.7396,5.22 27.5,5.67 C28.2708,6.12 28.8802,6.73 29.3281,7.5 C29.776,8.26 30,9.09 30,10 C30,10.91 29.776,11.74 29.3281,12.52 C28.8802,13.28 28.2708,13.88 27.5,14.33 C26.7396,14.78 25.9062,15 25,15 Z M25,13 C25.5417,13 26.0417,12.86 26.5,12.59 C26.9583,12.32 27.3229,11.96 27.5938,11.5 C27.8646,11.04 28,10.54 28,10 C28,9.46 27.8646,8.96 27.5938,8.5 C27.3229,8.04 26.9583,7.68 26.5,7.41 C26.0417,7.14 25.5417,7 25,7 C24.4583,7 23.9583,7.14 23.5,7.41 C23.0417,7.68 22.6771,8.04 22.4062,8.5 C22.1354,8.96 22,9.46 22,10 C22,10.54 22.1354,11.04 22.4062,11.5 C22.6771,11.96 23.0417,12.32 23.5,12.59 C23.9583,12.86 24.4583,13 25,13 Z M11,31 C8.44792,31 6.34896,30.53 4.70312,29.58 C3.05729,28.62 1.85938,27.39 1.10938,25.88 C0.369792,24.36 0,22.74 0,21 C0,20.28 0.145833,19.61 0.4375,19 C0.739583,18.39 1.14062,17.9 1.64062,17.55 C2.15104,17.18 2.70833,17 3.3125,17 L18.6875,17 C19.2917,17 19.8438,17.18 20.3438,17.55 C20.8542,17.9 21.2552,18.39 21.5469,19 C21.849,19.61 22,20.28 22,21 C22,22.74 21.625,24.36 20.875,25.88 C20.1354,27.39 18.9427,28.62 17.2969,29.58 C15.651,30.53 13.5521,31 11,31 Z M21.8281,29 C22.3385,28.36 22.776,27.68 23.1406,26.95 C25.3281,26.79 27.0156,26.15 28.2031,25.03 C29.401,23.92 30,22.41 30,20.5 C30,20.09 29.8906,19.74 29.6719,19.45 C29.4635,19.15 29.2135,19 28.9219,19 L24.2188,19 C23.9896,18.24 23.6719,17.57 23.2656,17 L28.9219,17 C29.4844,17 30,17.16 30.4688,17.47 C30.9375,17.78 31.3073,18.21 31.5781,18.75 C31.8594,19.28 32,19.86 32,20.5 C32,21.98 31.6615,23.36 30.9844,24.64 C30.3073,25.92 29.2188,26.97 27.7188,27.78 C26.2292,28.59 24.3229,29 22,29 L21.8281,29 Z M11,29 C12.8958,29 14.5156,28.69 15.8594,28.06 C17.2135,27.44 18.2396,26.53 18.9375,25.33 C19.6458,24.13 20,22.69 20,21 C20,20.66 19.9375,20.33 19.8125,20.03 C19.6979,19.72 19.5365,19.47 19.3281,19.28 C19.1302,19.09 18.9167,19 18.6875,19 L3.3125,19 C3.08333,19 2.86458,19.09 2.65625,19.28 C2.45833,19.47 2.29688,19.72 2.17188,20.03 C2.05729,20.33 2,20.66 2,21 C2,22.69 2.34896,24.13 3.04688,25.33 C3.75521,26.53 4.78125,27.44 6.125,28.06 C7.47917,28.69 9.10417,29 11,29 Z" />
+                        <Path Fill="White" Data="{StaticResource IconMultiPlayer}" />
                     </Canvas>
-                </Viewbox>
+                </Viewbox></Grid>
                 <TextBlock Text="Access restrictions" />
             </StackPanel>
         </Border>
 
         <!-- Row 3 -->
-        <Border Classes="settingsCard" x:Name="SysCard4" Canvas.Left="567" Canvas.Top="548" Width="445" Height="133" IsVisible="False">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="28,0,0,0" Spacing="22">
-                <Viewbox Width="34" Height="34">
+        <Border Classes="settingsCard" x:Name="SysCard4" Canvas.Left="570" Canvas.Top="486" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <Grid Width="36" Height="36"><Viewbox>
                     <Canvas Width="32" Height="32">
                         <!-- globe - real path from Globe.svg (Microsoft.GamingApp), not an
                              approximation -->
                         <Path Fill="White"
                               Data="M32 16C32 17.4792 31.8125 18.8958 31.4375 20.25C31.0625 21.6042 30.526 22.8802 29.8281 24.0781C29.1302 25.276 28.2969 26.3542 27.3281 27.3125C26.3594 28.2708 25.276 29.1042 24.0781 29.8125C22.8802 30.5208 21.6042 31.0573 20.25 31.4219C18.8958 31.7865 17.4792 31.9792 16 32C14.5208 32 13.1042 31.8125 11.75 31.4375C10.3958 31.0625 9.11979 30.526 7.92188 29.8281C6.72396 29.1302 5.64583 28.2969 4.6875 27.3281C3.72917 26.3594 2.89583 25.276 2.1875 24.0781C1.47917 22.8802 0.942708 21.6042 0.578125 20.25C0.213542 18.8958 0.0208333 17.4792 0 16C0 14.5312 0.1875 13.1146 0.5625 11.75C0.9375 10.3854 1.47396 9.10938 2.17188 7.92188C2.86979 6.73438 3.70312 5.65625 4.67188 4.6875C5.64062 3.71875 6.72396 2.88542 7.92188 2.1875C9.11979 1.48958 10.3958 0.953125 11.75 0.578125C13.1042 0.203125 14.5208 0.0104167 16 0C17.4688 0 18.8854 0.1875 20.25 0.5625C21.6146 0.9375 22.8906 1.47396 24.0781 2.17188C25.2656 2.86979 26.3438 3.70312 27.3125 4.67188C28.2812 5.64062 29.1146 6.72396 29.8125 7.92188C30.5104 9.11979 31.0469 10.3958 31.4219 11.75C31.7969 13.1042 31.9896 14.5208 32 16ZM10.6094 10H21.3906C21.3073 9.59375 21.1875 9.11458 21.0312 8.5625C20.875 8.01042 20.6823 7.4375 20.4531 6.84375C20.224 6.25 19.9635 5.66667 19.6719 5.09375C19.3802 4.52083 19.0469 4 18.6719 3.53125C18.2969 3.0625 17.8906 2.69271 17.4531 2.42188C17.0156 2.15104 16.5312 2.01042 16 2C15.4792 2 15 2.14062 14.5625 2.42188C14.125 2.70312 13.7188 3.07292 13.3438 3.53125C12.9688 3.98958 12.6354 4.50521 12.3438 5.07812C12.0521 5.65104 11.7865 6.23958 11.5469 6.84375C11.3073 7.44792 11.1146 8.02083 10.9688 8.5625C10.8229 9.10417 10.7031 9.58333 10.6094 10ZM3.34375 10H8.5625C8.80208 8.70833 9.14583 7.44792 9.59375 6.21875C10.0417 4.98958 10.651 3.83854 11.4219 2.76562C10.5469 3.03646 9.70833 3.41146 8.90625 3.89062C8.10417 4.36979 7.35938 4.92708 6.67188 5.5625C5.98438 6.19792 5.35417 6.89062 4.78125 7.64062C4.20833 8.39062 3.72917 9.17708 3.34375 10ZM20.5781 2.76562C21.3385 3.83854 21.9427 4.98958 22.3906 6.21875C22.8385 7.44792 23.1875 8.70833 23.4375 10H28.6562C28.2604 9.17708 27.7812 8.39062 27.2188 7.64062C26.6562 6.89062 26.0312 6.19792 25.3438 5.5625C24.6562 4.92708 23.9062 4.36979 23.0938 3.89062C22.2812 3.41146 21.4427 3.03646 20.5781 2.76562ZM8.25 20C8.15625 19.3333 8.09375 18.6719 8.0625 18.0156C8.03125 17.3594 8.01042 16.6875 8 16C8 15.3229 8.01562 14.6562 8.04688 14C8.07812 13.3438 8.14583 12.6771 8.25 12H2.57812C2.39062 12.6562 2.25 13.3125 2.15625 13.9688C2.0625 14.625 2.01042 15.3021 2 16C2 16.6875 2.04688 17.3594 2.14062 18.0156C2.23438 18.6719 2.38021 19.3333 2.57812 20H8.25ZM21.75 20C21.8438 19.3333 21.9062 18.6719 21.9375 18.0156C21.9688 17.3594 21.9896 16.6875 22 16C22 15.3229 21.9844 14.6562 21.9531 14C21.9219 13.3438 21.8542 12.6771 21.75 12H10.25C10.1562 12.6667 10.0938 13.3281 10.0625 13.9844C10.0312 14.6406 10.0104 15.3125 10 16C10 16.6771 10.0156 17.3438 10.0469 18C10.0781 18.6562 10.1458 19.3229 10.25 20H21.75ZM29.4219 12H23.75C23.8438 12.6667 23.9062 13.3281 23.9375 13.9844C23.9688 14.6406 23.9896 15.3125 24 16C24 16.6771 23.9844 17.3438 23.9531 18C23.9219 18.6562 23.8542 19.3229 23.75 20H29.4219C29.6094 19.3438 29.75 18.6875 29.8438 18.0312C29.9375 17.375 29.9896 16.6979 30 16C30 15.3125 29.9531 14.6406 29.8594 13.9844C29.7656 13.3281 29.6198 12.6667 29.4219 12ZM11.4219 29.2344C10.6615 28.1615 10.0573 27.0104 9.60938 25.7812C9.16146 24.5521 8.8125 23.2917 8.5625 22H3.34375C3.72917 22.8125 4.20312 23.5938 4.76562 24.3438C5.32812 25.0938 5.95833 25.7865 6.65625 26.4219C7.35417 27.0573 8.10417 27.6146 8.90625 28.0938C9.70833 28.5729 10.5469 28.9531 11.4219 29.2344ZM21.3906 22H10.6094C10.6927 22.4062 10.8125 22.8854 10.9688 23.4375C11.125 23.9896 11.3177 24.5625 11.5469 25.1562C11.776 25.75 12.0365 26.3333 12.3281 26.9062C12.6198 27.4792 12.9531 28 13.3281 28.4688C13.7031 28.9375 14.1094 29.3073 14.5469 29.5781C14.9844 29.849 15.4688 29.9896 16 30C16.5208 30 17 29.8594 17.4375 29.5781C17.875 29.2969 18.2812 28.9271 18.6562 28.4688C19.0312 28.0104 19.3646 27.4948 19.6562 26.9219C19.9479 26.349 20.2135 25.7604 20.4531 25.1562C20.6927 24.5521 20.8854 23.9792 21.0312 23.4375C21.1771 22.8958 21.2969 22.4167 21.3906 22ZM28.6562 22H23.4375C23.1979 23.2917 22.8542 24.5521 22.4062 25.7812C21.9583 27.0104 21.349 28.1615 20.5781 29.2344C21.4531 28.9635 22.2917 28.5885 23.0938 28.1094C23.8958 27.6302 24.6406 27.0729 25.3281 26.4375C26.0156 25.8021 26.6458 25.1094 27.2188 24.3594C27.7917 23.6094 28.2708 22.8229 28.6562 22Z" />
                     </Canvas>
-                </Viewbox>
+                </Viewbox></Grid>
                 <TextBlock Text="Language &amp; location" />
             </StackPanel>
         </Border>
-        <Border Classes="settingsCard" x:Name="SysCard5" Canvas.Left="1026" Canvas.Top="548" Width="445" Height="133" IsVisible="False">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="28,0,0,0" Spacing="22">
-                <Viewbox Width="34" Height="34">
+        <Border Classes="settingsCard" x:Name="SysCard5" Canvas.Left="1024" Canvas.Top="486" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <Grid Width="36" Height="36"><Viewbox>
                     <Canvas Width="32" Height="32">
                         <!-- upload arrow under a line - real path from Upload.svg
                              (Microsoft.GamingApp), not an approximation -->
                         <Path Fill="White"
                               Data="M25 0C25.2708 0 25.5052 0.0989583 25.7031 0.296875C25.901 0.494792 26 0.729167 26 1C26 1.27083 25.901 1.50521 25.7031 1.70312C25.5052 1.90104 25.2708 2 25 2H5C4.72917 2 4.49479 1.90104 4.29688 1.70312C4.09896 1.50521 4 1.27083 4 1C4 0.729167 4.09896 0.494792 4.29688 0.296875C4.49479 0.0989583 4.72917 0 5 0H25ZM25 14C25 14.2708 24.901 14.5052 24.7031 14.7031C24.5052 14.901 24.2708 15 24 15C23.8542 15 23.7292 14.974 23.625 14.9219C23.5208 14.8698 23.4115 14.7969 23.2969 14.7031L16 7.42188V31C16 31.2708 15.901 31.5052 15.7031 31.7031C15.5052 31.901 15.2708 32 15 32C14.7292 32 14.4948 31.901 14.2969 31.7031C14.099 31.5052 14 31.2708 14 31V7.42188L6.70312 14.7031C6.50521 14.901 6.27083 15 6 15C5.72917 15 5.49479 14.901 5.29688 14.7031C5.09896 14.5052 5 14.2708 5 14C5 13.7292 5.09896 13.4948 5.29688 13.2969L14.25 4.34375C14.3646 4.22917 14.4792 4.14583 14.5938 4.09375C14.7083 4.04167 14.8438 4.01042 15 4C15.1562 4 15.2917 4.02604 15.4062 4.07812C15.5208 4.13021 15.6354 4.21875 15.75 4.34375L24.7031 13.2969C24.901 13.4948 25 13.7292 25 14Z" />
                     </Canvas>
-                </Viewbox>
+                </Viewbox></Grid>
                 <TextBlock Text="Backup &amp; transfer" />
             </StackPanel>
         </Border>
 
         <!-- Row 4: a single card, as in the reference -->
-        <Border Classes="settingsCard" x:Name="SysCard6" Canvas.Left="567" Canvas.Top="694" Width="445" Height="133" IsVisible="False">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="28,0,0,0" Spacing="22">
-                <Viewbox Width="34" Height="34">
+        <Border Classes="settingsCard" x:Name="SysCard6" Canvas.Left="570" Canvas.Top="634" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <Grid Width="36" Height="36"><Viewbox>
                     <Canvas Width="32" Height="32">
                         <!-- clock - real path from Clock.svg (Microsoft.GamingApp), not an approximation -->
                         <Path Fill="White"
                               Data="M1.00043402,16 C1.00043402,14.6145833 1.17751479,13.2864583 1.53167634,12.015625 C1.88583788,10.7447917 2.38583064,9.546875 3.03165463,8.421875 C3.67747862,7.296875 4.45871732,6.28645833 5.37537073,5.390625 C6.29202413,4.49479167 7.30763444,3.71354167 8.42220165,3.046875 C9.53676885,2.38020833 10.7294599,1.875 12.0002749,1.53125 C13.2710898,1.1875 14.6044039,1.01041667 16.000217,1 C17.3751971,1 18.6980946,1.17708333 19.9689096,1.53125 C21.2397245,1.88541667 22.4376239,2.390625 23.5626076,3.046875 C24.6875913,3.703125 25.6979934,4.484375 26.5938137,5.390625 C27.4896341,6.296875 28.2708728,7.3125 28.9375298,8.4375 C29.6041869,9.5625 30.1093879,10.7552083 30.4531329,12.015625 C30.7968779,13.2760417 30.979167,14.6041667 31,16 C31,17.3854167 30.8229192,18.7135417 30.4687577,19.984375 C30.1145961,21.2552083 29.6093951,22.4479167 28.9531546,23.5625 C28.2969141,24.6770833 27.5156754,25.6875 26.6094385,26.59375 C25.7032016,27.5 24.6927996,28.28125 23.5782324,28.9375 C22.4636652,29.59375 21.2657658,30.0989583 19.9845344,30.453125 C18.7033029,30.8072917 17.3751971,30.9895833 16.000217,31 C14.6148204,31 13.2815063,30.8229167 12.0002749,30.46875 C10.7190434,30.1145833 9.52635234,29.6145833 8.42220165,28.96875 C7.31805095,28.3229167 6.30764891,27.5416667 5.3909955,26.625 C4.4743421,25.7083333 3.6931034,24.6979167 3.04727941,23.59375 C2.40145542,22.4895833 1.89625439,21.2916667 1.53167634,20 C1.16709828,18.7083333 0.990017506,17.375 1.00043402,16 Z M29.0000289,16 C29.0000289,14.8020833 28.8489895,13.6510417 28.5469105,12.546875 C28.2448315,11.4427083 27.8073379,10.40625 27.2344295,9.4375 C26.6615211,8.46875 25.9844476,7.59375 25.2032089,6.8125 C24.4219702,6.03125 23.5469828,5.35416667 22.5782468,4.78125 C21.6095109,4.20833333 20.5730675,3.77083333 19.4689168,3.46875 C18.3647661,3.16666667 17.2085329,3.01041667 16.000217,3 C14.8023177,3 13.6512927,3.15104167 12.547142,3.453125 C11.4429913,3.75520833 10.4065479,4.19270833 9.43781195,4.765625 C8.46907597,5.33854167 7.59408863,6.015625 6.81284993,6.796875 C6.03161123,7.578125 5.35453769,8.453125 4.78162932,9.421875 C4.20872094,10.390625 3.77122727,11.4270833 3.46914831,12.53125 C3.16706934,13.6354167 3.0108216,14.7916667 3.00040509,16 C3.00040509,17.1979167 3.15144457,18.3489583 3.45352353,19.453125 C3.75560249,20.5572917 4.19309616,21.59375 4.76600454,22.5625 C5.33891292,23.53125 6.01598646,24.4114583 6.79722516,25.203125 C7.57846385,25.9947917 8.45345119,26.671875 9.42218718,27.234375 C10.3909232,27.796875 11.4273665,28.2291667 12.5315172,28.53125 C13.6356679,28.8333333 14.7919012,28.9895833 16.000217,29 C17.1981163,29 18.3491414,28.8489583 19.4532921,28.546875 C20.5574427,28.2447917 21.5938861,27.8072917 22.5626221,27.234375 C23.5313581,26.6614583 24.4115537,25.984375 25.2032089,25.203125 C25.9948641,24.421875 26.6719376,23.546875 27.2344295,22.578125 C27.7969213,21.609375 28.2292068,20.5729167 28.5312857,19.46875 C28.8333647,18.3645833 28.9896124,17.2083333 29.0000289,16 Z M16.000217,17 C15.7293876,17 15.495016,16.9010417 15.2971022,16.703125 C15.0991884,16.5052083 15.0002315,16.2708333 15.0002315,16 L15.0002315,8 C15.0002315,7.72916667 15.0991884,7.49479167 15.2971022,7.296875 C15.495016,7.09895833 15.7293876,7 16.000217,7 C16.2710464,7 16.505418,7.09895833 16.7033318,7.296875 C16.9012456,7.49479167 17.0002025,7.72916667 17.0002025,8 L17.0002025,15 L22.0001302,15 C22.2709596,15 22.5053312,15.0989583 22.703245,15.296875 C22.9011588,15.4947917 23.0001157,15.7291667 23.0001157,16 C23.0001157,16.2708333 22.9011588,16.5052083 22.703245,16.703125 C22.5053312,16.9010417 22.2709596,17 22.0001302,17 L16.000217,17 Z" />
                     </Canvas>
-                </Viewbox>
+                </Viewbox></Grid>
                 <TextBlock Text="Time" />
             </StackPanel>
         </Border>
 
         <!-- System selection rings: same rule as General's (each card inflated 8 per side).
-             Row 4's follows the same step: 540+146=686. -->
-        <Border Classes="selectionRing" x:Name="SysRing0" Canvas.Left="559" Canvas.Top="248" Width="461" Height="149" />
-        <Border Classes="selectionRing" x:Name="SysRing1" Canvas.Left="1018" Canvas.Top="248" Width="461" Height="149" />
-        <Border Classes="selectionRing" x:Name="SysRing2" Canvas.Left="559" Canvas.Top="394" Width="461" Height="149" />
-        <Border Classes="selectionRing" x:Name="SysRing3" Canvas.Left="1018" Canvas.Top="394" Width="461" Height="149" />
-        <Border Classes="selectionRing" x:Name="SysRing4" Canvas.Left="559" Canvas.Top="540" Width="461" Height="149" />
-        <Border Classes="selectionRing" x:Name="SysRing5" Canvas.Left="1018" Canvas.Top="540" Width="461" Height="149" />
-        <Border Classes="selectionRing" x:Name="SysRing6" Canvas.Left="559" Canvas.Top="686" Width="461" Height="149" />
+             Row 4 continues the same step: 478+148=626. -->
+        <Border Classes="selectionRing" x:Name="SysRing0" Canvas.Left="562" Canvas.Top="182" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="SysRing1" Canvas.Left="1016" Canvas.Top="182" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="SysRing2" Canvas.Left="562" Canvas.Top="330" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="SysRing3" Canvas.Left="1016" Canvas.Top="330" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="SysRing4" Canvas.Left="562" Canvas.Top="478" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="SysRing5" Canvas.Left="1016" Canvas.Top="478" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="SysRing6" Canvas.Left="562" Canvas.Top="626" Width="454" Height="148" />
+
+        <!-- ================================================================================
+             "Account" content: 8 cards in 4 full rows. Same grid as General and System - the
+             reference uses one card grid for every category, and this screen confirms it:
+             columns 570/1024, rows 190/338/486/634, cards 438x132, all measured on the capture
+             and matching General to the pixel.
+
+             ICON SOURCES. Five are the exact drawing the reference uses, taken from the original
+             file rather than traced: CreditCard.svg, Subscriptions.svg and GenreFamilyFriends.svg
+             from the installed Xbox app's icon set, Lock.svg via IconLock, and the chain link,
+             which is not in that set but IS the same drawing as Segoe Fluent Icons E71B.
+             Three are NOT the reference drawing and are marked at each card.
+             ================================================================================ -->
+
+        <!-- Row 1 -->
+        <Border Classes="settingsCard" x:Name="AccCard0" Canvas.Left="570" Canvas.Top="190" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <!-- person with a round badge holding a right arrow, from the Xbox icon font.
+                     Was a near-miss from the Windows font (same person and badge, but a plus
+                     inside) until the real set turned up. -->
+                <Grid Width="36" Height="36">
+                    <TextBlock Text="&#xE936;" FontFamily="{StaticResource XboxIconFont}" FontSize="36" Foreground="White"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Grid>
+                <TextBlock Text="Sign-in, security &amp; PIN" />
+            </StackPanel>
+        </Border>
+        <Border Classes="settingsCard" x:Name="AccCard1" Canvas.Left="1024" Canvas.Top="190" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <Grid Width="36" Height="36"><Viewbox>
+                    <Canvas Width="32" Height="32">
+                        <!-- credit card - real path from CreditCard.svg (Microsoft.GamingApp) -->
+                        <Path Fill="White"
+                              Data="M21 20C20.4477 20 20 20.4477 20 21C20 21.5523 20.4477 22 21 22H25C25.5523 22 26 21.5523 26 21C26 20.4477 25.5523 20 25 20H21Z" />
+                        <!-- The leading "F0" is the even-odd fill rule, which is what carves the
+                             card's inside out of the outline. Avalonia has no FillRule property on
+                             Path - it belongs to the geometry, written as this prefix. Without it
+                             the card renders as a solid white block. -->
+                        <Path Fill="White"
+                              Data="F0 M6 6C3.79086 6 2 7.79086 2 10V22C2 24.2091 3.79086 26 6 26H26C28.2091 26 30 24.2091 30 22V10C30 7.79086 28.2091 6 26 6H6ZM26 8H6C4.89543 8 4 8.89542 4 10V12H28V10C28 8.89542 27.1046 8 26 8ZM4 22V14H28V22C28 23.1046 27.1046 24 26 24H6C4.89543 24 4 23.1046 4 22Z" />
+                    </Canvas>
+                </Viewbox></Grid>
+                <TextBlock Text="Payment &amp; billing" />
+            </StackPanel>
+        </Border>
+
+        <!-- Row 2 -->
+        <Border Classes="settingsCard" x:Name="AccCard2" Canvas.Left="570" Canvas.Top="338" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <!-- chain link, from the Xbox icon font. -->
+                <Grid Width="36" Height="36">
+                    <TextBlock Text="&#xEA9E;" FontFamily="{StaticResource XboxIconFont}" FontSize="36" Foreground="White"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Grid>
+                <TextBlock Text="Linked social accounts" />
+            </StackPanel>
+        </Border>
+        <Border Classes="settingsCard" x:Name="AccCard3" Canvas.Left="1024" Canvas.Top="338" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <Grid Width="36" Height="36"><Viewbox>
+                    <Canvas Width="32" Height="32">
+                        <!-- panel with lines and an arrow looping out - real path from
+                             Subscriptions.svg (Microsoft.GamingApp) -->
+                        <Path Fill="White"
+                              Data="M29.7,26.297 C29.9,26.484 30,26.719 30,27 C30,27.271 29.9,27.505 29.7,27.703 L25.7,31.703 C25.5,31.901 25.3,32 25,32 C24.7,32 24.5,31.901 24.3,31.703 C24.1,31.484 24,31.25 24,31 C24,30.729 24.1,30.495 24.3,30.297 L26.6,28 L7,28 C6.1,28 5.3,27.776 4.5,27.328 C3.7,26.88 3.1,26.276 2.7,25.516 C2.2,24.745 2,23.906 2,23 L2,7 C2,6.094 2.2,5.26 2.7,4.5 C3.1,3.729 3.7,3.12 4.5,2.672 C5.3,2.224 6.1,2 7,2 L23,2 C23.9,2 24.7,2.224 25.5,2.672 C26.3,3.12 26.9,3.729 27.3,4.5 C27.8,5.26 28,6.094 28,7 L28,19 C28,19.271 27.9,19.505 27.7,19.703 C27.5,19.901 27.3,20 27,20 C26.7,20 26.5,19.901 26.3,19.703 C26.1,19.505 26,19.271 26,19 L26,7 C26,6.458 25.9,5.958 25.6,5.5 C25.3,5.042 25,4.677 24.5,4.406 C24,4.135 23.5,4 23,4 L7,4 C6.5,4 6,4.135 5.5,4.406 C5,4.677 4.7,5.042 4.4,5.5 C4.1,5.958 4,6.458 4,7 L4,23 C4,23.542 4.1,24.042 4.4,24.5 C4.7,24.958 5,25.323 5.5,25.594 C6,25.865 6.5,26 7,26 L26.6,26 L24.3,23.703 C24.1,23.484 24,23.25 24,23 C24,22.729 24.1,22.495 24.3,22.297 C24.5,22.099 24.7,22 25,22 C25.3,22 25.5,22.099 25.7,22.297 L29.7,26.297 Z M21,8 C21.3,8 21.5,8.099 21.7,8.297 C21.9,8.495 22,8.729 22,9 C22,9.271 21.9,9.505 21.7,9.703 C21.5,9.901 21.3,10 21,10 L9,10 C8.7,10 8.5,9.901 8.3,9.703 C8.1,9.505 8,9.271 8,9 C8,8.729 8.1,8.495 8.3,8.297 C8.5,8.099 8.7,8 9,8 L21,8 Z M21,14 C21.3,14 21.5,14.099 21.7,14.297 C21.9,14.495 22,14.729 22,15 C22,15.271 21.9,15.505 21.7,15.703 C21.5,15.901 21.3,16 21,16 L9,16 C8.7,16 8.5,15.901 8.3,15.703 C8.1,15.505 8,15.271 8,15 C8,14.729 8.1,14.495 8.3,14.297 C8.5,14.099 8.7,14 9,14 L21,14 Z" />
+                    </Canvas>
+                </Viewbox></Grid>
+                <TextBlock Text="Subscriptions" />
+            </StackPanel>
+        </Border>
+
+        <!-- Row 3 -->
+        <Border Classes="settingsCard" x:Name="AccCard4" Canvas.Left="570" Canvas.Top="486" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <Grid Width="36" Height="36"><Viewbox>
+                    <Canvas Width="32" Height="32">
+                        <Path Fill="White" Data="{StaticResource IconLock}" />
+                    </Canvas>
+                </Viewbox></Grid>
+                <TextBlock Text="Privacy &amp; online safety" />
+            </StackPanel>
+        </Border>
+        <Border Classes="settingsCard" x:Name="AccCard5" Canvas.Left="1024" Canvas.Top="486" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <Grid Width="36" Height="36"><Viewbox>
+                    <Canvas Width="32" Height="32">
+                        <!-- three figures, one large and two small - real path from
+                             GenreFamilyFriends.svg (Microsoft.GamingApp). NOT MultiPlayer.svg,
+                             which draws two: the reference clearly shows three. -->
+                        <Path Fill="White"
+                              Data="M10,12 C8.92,12 7.91,11.7344 6.98,11.2031 C6.07,10.6615 5.34,9.93229 4.8,9.01562 C4.27,8.08854 4,7.08333 4,6 C4,4.91667 4.27,3.91667 4.8,3 C5.34,2.07292 6.07,1.34375 6.98,0.8125 C7.91,0.270833 8.92,0 10,0 C11.08,0 12.08,0.270833 13,0.8125 C13.93,1.34375 14.66,2.07292 15.19,3 C15.73,3.91667 16,4.91667 16,6 C16,7.08333 15.73,8.08854 15.19,9.01562 C14.66,9.93229 13.93,10.6615 13,11.2031 C12.08,11.7344 11.08,12 10,12 Z M10,10 C10.72,10 11.39,9.82292 12,9.46875 C12.61,9.10417 13.1,8.61458 13.45,8 C13.82,7.38542 14,6.71875 14,6 C14,5.28125 13.82,4.61458 13.45,4 C13.1,3.38542 12.61,2.90104 12,2.54688 C11.39,2.18229 10.72,2 10,2 C9.28,2 8.61,2.18229 8,2.54688 C7.39,2.90104 6.9,3.38542 6.53,4 C6.18,4.61458 6,5.28125 6,6 C6,6.71875 6.18,7.38542 6.53,8 C6.9,8.61458 7.39,9.10417 8,9.46875 C8.61,9.82292 9.28,10 10,10 Z M24,14 C23.36,14 22.77,13.8646 22.22,13.5938 C21.67,13.3125 21.2,12.9271 20.83,12.4375 L20.77,12.3594 C20.52,12.026 20.32,11.6615 20.19,11.2656 C20.06,10.8594 20,10.4375 20,10 C20,9.28125 20.18,8.61458 20.53,8 C20.9,7.38542 21.39,6.90104 22,6.54688 C22.61,6.18229 23.28,6 24,6 C24.72,6 25.39,6.18229 26,6.54688 C26.61,6.90104 27.1,7.38542 27.45,8 C27.82,8.61458 28,9.28125 28,10 C28,10.7188 27.82,11.3854 27.45,12 C27.1,12.6146 26.61,13.1042 26,13.4688 C25.39,13.8229 24.72,14 24,14 Z M24,12 C24.55,12 25.02,11.8073 25.41,11.4219 C25.8,11.026 26,10.5521 26,10 C26,9.44792 25.8,8.97917 25.41,8.59375 C25.02,8.19792 24.55,8 24,8 C23.45,8 22.97,8.19792 22.58,8.59375 C22.19,8.97917 22,9.44792 22,10 C22,10.5521 22.19,11.026 22.58,11.4219 C22.97,11.8073 23.45,12 24,12 Z M16,20 C15.28,20 14.61,19.8229 14,19.4688 C13.39,19.1042 12.9,18.6146 12.53,18 C12.18,17.3854 12,16.7188 12,16 C12,15.2812 12.18,14.6146 12.53,14 C12.89,13.3854 13.37,12.901 13.98,12.5469 C14.6,12.1823 15.27,12 16,12 C16.72,12 17.39,12.1823 18,12.5469 C18.61,12.901 19.1,13.3854 19.45,14 C19.82,14.6146 20,15.2812 20,16 C20,16.7188 19.82,17.3854 19.47,18 C19.12,18.6042 18.65,19.0885 18.05,19.4531 C17.44,19.8073 16.78,19.9896 16.06,20 L16,20 Z M6,25.375 C4.76,24.9583 3.69,24.3646 2.78,23.5938 C1.88,22.8229 1.18,21.9531 0.7,20.9844 C0.23,20.0052 0,19.0104 0,18 L0,17 C0,16.4583 0.14,15.9583 0.41,15.5 C0.68,15.0417 1.04,14.6771 1.5,14.4062 C1.96,14.1354 2.46,14 3,14 L10.34,14 C10.11,14.6562 10,15.3229 10,16 L3,16 C2.73,16 2.49,16.099 2.3,16.2969 C2.1,16.4948 2,16.7292 2,17 L2,18 C2,18.6979 2.17,19.3958 2.5,20.0938 C2.83,20.7812 3.32,21.4115 3.97,21.9844 C4.61,22.5573 5.39,23.0156 6.28,23.3594 C6.09,23.8698 6,24.4167 6,25 L6,25.375 Z M16.17,18 C16.69,17.9479 17.12,17.7344 17.47,17.3594 C17.82,16.974 18,16.5208 18,16 C18,15.4479 17.8,14.9792 17.41,14.5938 C17.02,14.1979 16.55,14 16,14 C15.45,14 14.97,14.1979 14.58,14.5938 C14.19,14.9792 14,15.4479 14,16 C14,16.5521 14.19,17.026 14.58,17.4219 C14.97,17.8073 15.45,18 16,18 L16.17,18 Z M25.97,25.8281 C25.99,25.4531 26,25.1771 26,25 C26,24.5833 25.95,24.1823 25.86,23.7969 C26.83,23.5885 27.65,23.2135 28.33,22.6719 C29.44,21.7656 30,20.5417 30,19 C30,18.7292 29.9,18.4948 29.7,18.2969 C29.51,18.099 29.27,18 29,18 L21.66,18 C21.89,17.3438 22,16.6771 22,16 L29,16 C29.54,16 30.04,16.1354 30.5,16.4062 C30.96,16.6771 31.32,17.0417 31.59,17.5 C31.86,17.9583 32,18.4583 32,19 C32,20.0938 31.79,21.0833 31.36,21.9688 C30.94,22.8542 30.35,23.6094 29.58,24.2344 C28.6,25.0156 27.4,25.5469 25.97,25.8281 Z M16,32 C14.93,32 13.91,31.8542 12.95,31.5625 C11.99,31.2604 11.15,30.8177 10.42,30.2344 C9.76,29.7031 9.22,29.0677 8.81,28.3281 C8.41,27.5885 8.15,26.7656 8.05,25.8594 C8.02,25.5781 8,25.2917 8,25 C8,24.6146 8.07,24.2344 8.22,23.8594 C8.45,23.3073 8.81,22.8594 9.31,22.5156 C9.82,22.1719 10.39,22 11,22 L21,22 C21.65,22 22.22,22.1875 22.73,22.5625 C23.26,22.9271 23.62,23.4062 23.83,24 C23.94,24.3229 24,24.6562 24,25 C24,25.375 23.98,25.7083 23.94,26 C23.82,26.8646 23.56,27.6562 23.16,28.375 C22.75,29.0833 22.22,29.7031 21.58,30.2344 C20.85,30.8177 20.01,31.2604 19.05,31.5625 C18.09,31.8542 17.07,32 16,32 Z M16,30 C16.88,30 17.68,29.8854 18.41,29.6562 C19.15,29.4271 19.79,29.099 20.33,28.6719 C21.23,27.9323 21.77,26.974 21.94,25.7969 C21.98,25.5781 22,25.3125 22,25 C22,24.7292 21.9,24.4948 21.7,24.2969 C21.51,24.099 21.27,24 21,24 L11,24 C10.73,24 10.49,24.099 10.3,24.2969 C10.1,24.4948 10,24.7292 10,25 C10,25.3542 10.03,25.6875 10.09,26 C10.28,27.0729 10.81,27.9635 11.67,28.6719 C12.21,29.099 12.85,29.4271 13.58,29.6562 C14.32,29.8854 15.12,30 16,30 Z" />
+                    </Canvas>
+                </Viewbox></Grid>
+                <TextBlock Text="Family settings" />
+            </StackPanel>
+        </Border>
+
+        <!-- Row 4 -->
+        <Border Classes="settingsCard" x:Name="AccCard6" Canvas.Left="570" Canvas.Top="634" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <Grid Width="36" Height="36"><Viewbox>
+                    <Canvas Width="32" Height="32">
+                        <!-- APPROXIMATE, and the same shortfall as System's "Access restrictions":
+                             the reference draws a group with a small padlock, and the padlock is
+                             not drawn here. Same figures, missing the badge. -->
+                        <Path Fill="White" Data="{StaticResource IconMultiPlayer}" />
+                    </Canvas>
+                </Viewbox></Grid>
+                <TextBlock Text="Content restrictions" />
+            </StackPanel>
+        </Border>
+        <Border Classes="settingsCard" x:Name="AccCard7" Canvas.Left="1024" Canvas.Top="634" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <!-- APPROXIMATE. The reference badge holds an X; E8F8 is the same person and badge
+                     but holds a "no entry" slash. Closest real glyph rather than a traced one. -->
+                <Grid Width="36" Height="36">
+                    <TextBlock Text="&#xE8F8;" FontFamily="Segoe Fluent Icons" FontSize="36" Foreground="White"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Grid>
+                <TextBlock Text="Remove accounts" />
+            </StackPanel>
+        </Border>
+
+        <!-- Account selection rings: same rule again, card inflated 8 per side. -->
+        <Border Classes="selectionRing" x:Name="AccRing0" Canvas.Left="562" Canvas.Top="182" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="AccRing1" Canvas.Left="1016" Canvas.Top="182" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="AccRing2" Canvas.Left="562" Canvas.Top="330" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="AccRing3" Canvas.Left="1016" Canvas.Top="330" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="AccRing4" Canvas.Left="562" Canvas.Top="478" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="AccRing5" Canvas.Left="1016" Canvas.Top="478" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="AccRing6" Canvas.Left="562" Canvas.Top="626" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="AccRing7" Canvas.Left="1016" Canvas.Top="626" Width="454" Height="148" />
+
+        <!-- ================================================================================
+             "Devices & connections" content: 5 cards in 3 rows (2+2+1). Same grid again -
+             columns 570/1024, rows 190/338/486, cards 438x132 - measured on the capture and
+             matching General, Account and System to the pixel. The last row holds only the left
+             card, the same way System's fourth row holds only "Time".
+
+             ICONS: all five are Segoe Fluent Icons glyphs. Nothing in the Xbox app's own icon set
+             draws a mouse, a phone, a media remote or a robot, and the reference's drawings ARE
+             these glyphs - checked one by one, not assumed. Two are marked approximate below.
+             ================================================================================ -->
+
+        <!-- Row 1 -->
+        <Border Classes="settingsCard" x:Name="DevCard0" Canvas.Left="570" Canvas.Top="190" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <!-- APPROXIMATE: the reference draws a controller AND a headset side by side. This
+                     is the controller alone - no single glyph or icon file has the pair, and the
+                     controller is the half that carries the meaning. -->
+                <Grid Width="36" Height="36">
+                    <TextBlock Text="&#xE7FC;" FontFamily="Segoe Fluent Icons" FontSize="36" Foreground="White"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Grid>
+                <TextBlock Text="Controllers &amp; headsets" />
+            </StackPanel>
+        </Border>
+        <Border Classes="settingsCard" x:Name="DevCard1" Canvas.Left="1024" Canvas.Top="190" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <Grid Width="36" Height="36">
+                    <TextBlock Text="&#xEAD9;" FontFamily="{StaticResource XboxIconFont}" FontSize="36" Foreground="White"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Grid>
+                <TextBlock Text="Mouse" />
+            </StackPanel>
+        </Border>
+
+        <!-- Row 2 -->
+        <Border Classes="settingsCard" x:Name="DevCard2" Canvas.Left="570" Canvas.Top="338" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <Grid Width="36" Height="36">
+                    <TextBlock Text="&#xE8EA;" FontFamily="Segoe Fluent Icons" FontSize="36" Foreground="White"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Grid>
+                <TextBlock Text="Remote features" />
+            </StackPanel>
+        </Border>
+        <Border Classes="settingsCard" x:Name="DevCard3" Canvas.Left="1024" Canvas.Top="338" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <Grid Width="36" Height="36">
+                    <TextBlock Text="&#xE75E;" FontFamily="Segoe Fluent Icons" FontSize="36" Foreground="White"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Grid>
+                <TextBlock Text="Media remote" />
+            </StackPanel>
+        </Border>
+
+        <!-- Row 3: a single card, as in the reference -->
+        <Border Classes="settingsCard" x:Name="DevCard4" Canvas.Left="570" Canvas.Top="486" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <!-- robot head with its speech-bubble tail, from the Xbox icon font. The Windows
+                     font has the same head WITHOUT the tail, which is what was here before. -->
+                <Grid Width="36" Height="36">
+                    <TextBlock Text="&#xEA95;" FontFamily="{StaticResource XboxIconFont}" FontSize="36" Foreground="White"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Grid>
+                <TextBlock Text="Digital assistants" />
+            </StackPanel>
+        </Border>
+
+        <!-- Devices selection rings: card inflated 8 per side, as everywhere else. -->
+        <Border Classes="selectionRing" x:Name="DevRing0" Canvas.Left="562" Canvas.Top="182" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="DevRing1" Canvas.Left="1016" Canvas.Top="182" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="DevRing2" Canvas.Left="562" Canvas.Top="330" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="DevRing3" Canvas.Left="1016" Canvas.Top="330" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="DevRing4" Canvas.Left="562" Canvas.Top="478" Width="454" Height="148" />
+
+        <!-- ================================================================================
+             "Preferences" content: 5 cards in 3 rows (2+2+1), the same shape as Devices and the
+             same grid as every other category - columns 570/1024, rows 190/338/486, 438x132,
+             measured on the capture.
+             ================================================================================ -->
+
+        <!-- Row 1 -->
+        <Border Classes="settingsCard" x:Name="PrefCard0" Canvas.Left="570" Canvas.Top="190" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <!-- speech bubble with three full-width lines, from the Xbox icon font. Was
+                     Chat.svg from the same app, which draws two lines of different lengths. -->
+                <Grid Width="36" Height="36">
+                    <TextBlock Text="&#xEA08;" FontFamily="{StaticResource XboxIconFont}" FontSize="36" Foreground="White"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Grid>
+                <TextBlock Text="Notifications" />
+            </StackPanel>
+        </Border>
+        <Border Classes="settingsCard" x:Name="PrefCard1" Canvas.Left="1024" Canvas.Top="190" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <!-- bell with "zZ", from the Xbox icon font. This one is why that font is bundled
+                     at all: nothing in the Xbox app's SVG set or in the Windows icon font draws
+                     the bell and the zZ together, so this card sat with a plain bell until the
+                     right file turned up. -->
+                <Grid Width="36" Height="36">
+                    <TextBlock Text="&#xE7C6;" FontFamily="{StaticResource XboxIconFont}" FontSize="36" Foreground="White"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Grid>
+                <TextBlock Text="Idle options" />
+            </StackPanel>
+        </Border>
+
+        <!-- Row 2 -->
+        <Border Classes="settingsCard" x:Name="PrefCard2" Canvas.Left="570" Canvas.Top="338" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <Grid Width="36" Height="36"><Viewbox>
+                    <Canvas Width="32" Height="32">
+                        <!-- arrow rising out of an open tray - real path from CaptureShare.svg
+                             (Microsoft.GamingApp), the reference drawing exactly. -->
+                        <Path Fill="White"
+                              Data="M29.9896645,18.5407347 C29.9896645,18.5407347 29.9926867,18.5859658 29.9987312,18.676428 C29.9987312,23.3352804 29.9987312,25.6647065 29.9987312,25.6647065 C29.9987312,27.9753732 28.1900646,29.8636399 25.9112646,29.9911065 C25.9112646,29.9911065 25.8293091,29.9934176 25.665398,29.9980399 C12.7717873,29.9980399 6.32498187,29.9980399 6.32498187,29.9980399 C4.01427507,29.9980399 2.12598699,28.1893732 1.99850811,25.9105732 C1.99850811,25.9105732 1.99622155,25.8286176 1.99164843,25.6647065 C1.99164843,21.0058542 1.99164843,18.676428 1.99164843,18.676428 C1.99164843,18.124148 2.43936315,17.676428 2.99164843,17.676428 C3.49791507,17.676428 3.91630179,18.052628 3.98251515,18.5407347 C3.98251515,18.5407347 3.98555958,18.5859658 3.99164843,18.676428 C3.99164843,23.3352804 3.99164843,25.6647065 3.99164843,25.6647065 C3.99164843,26.8888399 4.93446171,27.8929732 6.13360851,27.9903065 C6.13360851,27.9903065 6.19739963,27.9928843 6.32498187,27.9980399 C19.2185926,27.9980399 25.665398,27.9980399 25.665398,27.9980399 C26.8896647,27.9980399 27.8936646,27.0552399 27.990998,25.8560399 C27.990998,25.8560399 27.9935758,25.7922621 27.9987313,25.6647065 C27.9987313,21.0058542 27.9987313,18.676428 27.9987313,18.676428 C27.9987313,18.124148 28.4464645,17.676428 28.9987314,17.676428 C29.5049979,17.676428 29.9233979,18.052628 29.9896645,18.5407347 Z M7.64609008,9.95889078 C12.753859,4.85079301 15.3077434,2.29674412 15.3077434,2.29674412 C15.6625436,1.94190598 16.2177301,1.90942252 16.6092236,2.19945078 C16.6092236,2.19945078 16.6466146,2.23167878 16.7213967,2.29613478 C21.8367924,7.40423878 24.3944902,9.95829078 24.3944902,9.95829078 C24.7854235,10.3484908 24.7859568,10.9816508 24.3956902,11.3725041 C24.0410234,11.7278108 23.4854234,11.7605441 23.0936902,11.4703975 C23.0936902,11.4703975 23.0562679,11.438153 22.9814234,11.3736641 L17.0175567,5.41849078 C17.0196058,15.330719 17.0206304,20.2868331 17.0206304,20.2868331 C17.0206304,20.7930997 16.644417,21.2114997 16.1563237,21.2777664 C16.1563237,21.2777664 16.0206303,21.2868331 16.0206303,21.2868331 C15.5143638,21.2868331 15.095977,20.9106997 15.0297505,20.4225664 C15.0297505,20.4225664 15.0267105,20.377322 15.0206305,20.2868331 L15.0175568,5.41449078 C11.0460901,9.38686412 9.0603568,11.3730508 9.0603568,11.3730508 C8.70534352,11.7280908 8.1497968,11.7603841 7.75830352,11.4699308 C7.75830352,11.4699308 7.6461436,11.3731041 7.6461436,11.3731041 C7.29110344,11.0181041 7.25881024,10.4625441 7.54926352,10.0710508 C7.54926352,10.0710508 7.58153904,10.0336641 7.64609008,9.95889078 L15.3077434,2.29674412 L7.64609008,9.95889078 Z" />
+                    </Canvas>
+                </Viewbox></Grid>
+                <TextBlock Text="Capture &amp; share" />
+            </StackPanel>
+        </Border>
+        <Border Classes="settingsCard" x:Name="PrefCard3" Canvas.Left="1024" Canvas.Top="338" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <!-- stopwatch: crown on top, hand pointing up. Segoe Fluent Icons E916 is the
+                     reference drawing, not an approximation. -->
+                <Grid Width="36" Height="36">
+                    <TextBlock Text="&#xE916;" FontFamily="Segoe Fluent Icons" FontSize="36" Foreground="White"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Grid>
+                <TextBlock Text="Break reminder" />
+            </StackPanel>
+        </Border>
+
+        <!-- Row 3: a single card, as in the reference -->
+        <Border Classes="settingsCard" x:Name="PrefCard4" Canvas.Left="570" Canvas.Top="486" Width="438" Height="132" IsVisible="False">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="31,0,0,0" Spacing="29">
+                <!-- wide speech bubble holding both the lines and a small avatar, from the Xbox
+                     icon font. Was Feedback.svg, which has the same two elements side by side
+                     rather than one inside the other. -->
+                <Grid Width="36" Height="36">
+                    <TextBlock Text="&#xEA2F;" FontFamily="{StaticResource XboxIconFont}" FontSize="36" Foreground="White"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Grid>
+                <TextBlock Text="Activity feed" />
+            </StackPanel>
+        </Border>
+
+        <!-- Preferences selection rings: card inflated 8 per side, as everywhere else. -->
+        <Border Classes="selectionRing" x:Name="PrefRing0" Canvas.Left="562" Canvas.Top="182" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="PrefRing1" Canvas.Left="1016" Canvas.Top="182" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="PrefRing2" Canvas.Left="562" Canvas.Top="330" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="PrefRing3" Canvas.Left="1016" Canvas.Top="330" Width="454" Height="148" />
+        <Border Classes="selectionRing" x:Name="PrefRing4" Canvas.Left="562" Canvas.Top="478" Width="454" Height="148" />
     </Canvas>
 </UserControl>

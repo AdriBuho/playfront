@@ -1,0 +1,104 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Playfront.App.Views.SystemStorageView"
+             Width="1920" Height="1080">
+    <!-- "Manage Storage devices": opened with A on the "Storage devices" tile of Settings > System,
+         closed with B. A FULL screen, mounted on demand.
+
+         Measured 1:1. Note this page does NOT share the 112 left margin of the rest of Settings: its
+         title and its column both start at 103, and the title sits 10 px lower than every other
+         breadcrumb (ink at 103,79 against 112,69). Measured twice, it is not a slip.
+
+         Left column: four action cards 577x66 at y=204 with pitch 80, then a bold heading and three
+         paragraphs. Right: one card per storage device, 1060x293 at (754,207), with a donut whose
+         centre line is a 227 circle stroked 11 at centre (915,353) - green from 12 o'clock clockwise
+         for the used share, #808080 for the rest.
+
+         The device card does NOT lighten when selected: measured #303030 while it carried the ring.
+         The four action cards do lighten, following the app's convention - their selected state is
+         not in the reference, which has the ring on the device.
+
+         VISUAL ONLY as far as the four actions go: none of them does anything. The device cards, on
+         the other hand, show the REAL drives of this machine, read at open time.
+
+         Two labels are the console's and mean nothing on a PC - "Clear local saved games" and "Clear
+         local XBOX 360 storage". They are here because the screen was replicated as-is; they have to
+         be dropped or renamed before any of this is wired up. -->
+    <UserControl.Styles>
+        <Style Selector="Border.sdAction">
+            <Setter Property="Background" Value="#303030" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Width" Value="577" />
+            <Setter Property="Height" Value="66" />
+        </Style>
+        <Style Selector="Border.sdAction.selected">
+            <Setter Property="Background" Value="#444444" />
+            <Setter Property="ZIndex" Value="2" />
+        </Style>
+        <Style Selector="Border.sdAction TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="TextBlock.sdBody">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="LineHeight" Value="34.7" />
+            <Setter Property="Width" Value="700" />
+        </Style>
+    </UserControl.Styles>
+
+    <Canvas Width="1920" Height="1080">
+        <Rectangle Width="1920" Height="1080" Fill="#201F1F" />
+
+        <TextBlock Canvas.Left="100" Canvas.Top="66" FontSize="45" Foreground="White">
+            <Run Text="Manage " FontFamily="{StaticResource XboxFontDisplaySemibold}" />
+            <Run Text="Storage devices" FontFamily="{StaticResource XboxFontFamily}" />
+        </TextBlock>
+
+        <!-- "Free up space" is the one action here that is meant to become real: list what is taking
+             up room, largest first, and let it be removed without leaving the screen. It would be the
+             first thing in Playfront that DELETES from disk, so what it is allowed to touch has to be
+             decided before it is wired, and it has to confirm. -->
+        <Border Classes="sdAction" x:Name="SdAction0" Canvas.Left="103" Canvas.Top="204">
+            <Canvas><TextBlock Canvas.Left="20" Canvas.Top="18" Text="Free up space" /></Canvas>
+        </Border>
+        <Border Classes="selectionRing" x:Name="SdActionRing0" Canvas.Left="95" Canvas.Top="196" Width="593" Height="82" />
+
+        <Border Classes="sdAction" x:Name="SdAction1" Canvas.Left="103" Canvas.Top="284">
+            <Canvas><TextBlock Canvas.Left="20" Canvas.Top="18" Text="Change installation locations" /></Canvas>
+        </Border>
+        <Border Classes="selectionRing" x:Name="SdActionRing1" Canvas.Left="95" Canvas.Top="276" Width="593" Height="82" />
+
+        <Border Classes="sdAction" x:Name="SdAction2" Canvas.Left="103" Canvas.Top="364">
+            <Canvas><TextBlock Canvas.Left="20" Canvas.Top="18" Text="Clear local saved games" /></Canvas>
+        </Border>
+        <Border Classes="selectionRing" x:Name="SdActionRing2" Canvas.Left="95" Canvas.Top="356" Width="593" Height="82" />
+
+        <Border Classes="sdAction" x:Name="SdAction3" Canvas.Left="103" Canvas.Top="444">
+            <Canvas><TextBlock Canvas.Left="20" Canvas.Top="18" Text="Clear local XBOX 360 storage" /></Canvas>
+        </Border>
+        <Border Classes="selectionRing" x:Name="SdActionRing3" Canvas.Left="95" Canvas.Top="436" Width="593" Height="82" />
+
+        <TextBlock Canvas.Left="102" Canvas.Top="571" FontSize="26" Foreground="White"
+                   FontFamily="{StaticResource XboxFontSemibold}" Text="Select a device to see its options" />
+
+        <!-- The line breaks are WRITTEN OUT, not left to wrapping. No single wrap width reproduces the
+             reference's breaks: in this font "devices must" and "be USB 3.0" come out almost the same
+             width, while in the reference's they differ by 38 px, so any width that breaks the first
+             paragraph correctly splits the second into four lines - and the fourth would collide with
+             the paragraph below. The copy is fixed English text, so pinning the breaks is safe; revisit
+             it if the heading typeface is ever solved. -->
+        <TextBlock Classes="sdBody" Canvas.Left="102" Canvas.Top="626"
+                   Text="To store games and apps, devices must be USB&#10;3.0 or faster, at least 128GB, and formatted for&#10;XBOX." />
+        <TextBlock Classes="sdBody" Canvas.Left="102" Canvas.Top="750"
+                   Text="To store game clips and screenshots, devices must&#10;be USB 3.0 or faster, and formatted (on your PC)&#10;as NTFS. Storage formatted for XBOX won't work." />
+        <TextBlock Classes="sdBody" Canvas.Left="102" Canvas.Top="875"
+                   Text="Music, videos, and pictures can be read as-is from&#10;almost any USB device." />
+
+        <!-- One card per drive, built by the code-behind. -->
+        <Canvas x:Name="SdDeviceHost" />
+    </Canvas>
+</UserControl>

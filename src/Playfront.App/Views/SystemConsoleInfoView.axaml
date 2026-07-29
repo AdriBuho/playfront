@@ -1,0 +1,136 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Playfront.App.Views.SystemConsoleInfoView"
+             Width="1920" Height="1080">
+    <!-- "System Console info": opened with A on the "Console info" tile of Settings > System, closed
+         with B. A FULL screen, not a panel: no sidebar, no header. Mounted on demand.
+
+         Measured 1:1. Three cards at x=112, 438x98, tops 263/377/491 (the usual pitch 114); the
+         explanatory paragraph under them starts at ink y=615 with a 34.5 line height. The middle
+         column starts at x=622 with a 36 pt label and its 26 pt value 50 px below it, and blocks
+         repeat every 99. The right-hand block is centred on x=1500.
+
+         WHAT IT SHOWS IS NOT WHAT THE REFERENCE SHOWS, and that is deliberate:
+
+         - The reference closes with the Xbox sphere and "(c) 2026 Microsoft Corporation". The name
+           and the copyright line are Playfront's; the sphere is kept AS A PLACEHOLDER until Playfront
+           has a mark of its own. Note what that costs: an Xbox logo on Playfront's own info screen
+           reads as "this app is Microsoft's", which it is not. Replace it before this goes anywhere.
+         - Rows that only exist on a console (its serial, its Xbox network id, its global device id)
+           have no honest equivalent on a PC, so they are not faked: the ones kept are the ones this
+           machine can actually answer. "Shell version" is Playfront's own version - it IS the shell,
+           and this is the screen the version was always meant to appear on.
+         - "Allow optional data collection" is a REPLICA AND NOTHING ELSE. Playfront collects nothing
+           and is not going to, so this checkbox must either be removed or rewritten before this
+           screen reaches anyone. Same case as the "Scheduled" description on My color & theme. -->
+    <UserControl.Styles>
+        <Style Selector="Border.cinfCard">
+            <Setter Property="Background" Value="#303030" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Width" Value="438" />
+            <Setter Property="Height" Value="98" />
+        </Style>
+        <Style Selector="Border.cinfCard.selected">
+            <Setter Property="Background" Value="#444444" />
+            <Setter Property="ZIndex" Value="2" />
+        </Style>
+        <Style Selector="TextBlock.cinfLabel">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <!-- The value line of a card is dimmer than its label: measured #D5D5D5. -->
+        <Style Selector="TextBlock.cinfValue">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="#D5D5D5" />
+        </Style>
+        <!-- Middle column: the label is noticeably bigger than its value (ink cap 26 against 18). -->
+        <Style Selector="TextBlock.cinfName">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="36" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="TextBlock.cinfField">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+    </UserControl.Styles>
+
+    <Canvas Width="1920" Height="1080">
+        <Rectangle Width="1920" Height="1080" Fill="#201F1F" />
+
+        <TextBlock Canvas.Left="110" Canvas.Top="56" FontSize="45" Foreground="White">
+            <Run Text="System " FontFamily="{StaticResource XboxFontDisplaySemibold}" />
+            <Run Text="Console info" FontFamily="{StaticResource XboxFontFamily}" />
+        </TextBlock>
+
+        <!-- Card 1: label plus value, two lines. Renaming needs an on-screen keyboard, which does not
+             exist yet, so A does nothing. -->
+        <Border Classes="cinfCard" x:Name="CiCard0" Canvas.Left="112" Canvas.Top="263">
+            <Canvas>
+                <TextBlock Classes="cinfLabel" Canvas.Left="19" Canvas.Top="18" Text="Name" />
+                <TextBlock Classes="cinfValue" x:Name="CiDeviceName" Canvas.Left="19" Canvas.Top="53" Text="" />
+            </Canvas>
+        </Border>
+        <Border Classes="selectionRing" x:Name="CiRing0" Canvas.Left="104" Canvas.Top="255" Width="454" Height="114" />
+
+        <Border Classes="cinfCard" x:Name="CiCard1" Canvas.Left="112" Canvas.Top="377">
+            <Canvas>
+                <TextBlock Classes="cinfLabel" Canvas.Left="19" Canvas.Top="35" Text="Reset console" />
+            </Canvas>
+        </Border>
+        <Border Classes="selectionRing" x:Name="CiRing1" Canvas.Left="104" Canvas.Top="369" Width="454" Height="114" />
+
+        <Border Classes="cinfCard" x:Name="CiCard2" Canvas.Left="112" Canvas.Top="491">
+            <Canvas>
+                <TextBlock Classes="cinfLabel" Canvas.Left="19" Canvas.Top="18" Width="250"
+                           TextWrapping="Wrap" LineHeight="35" Text="Allow optional data collection" />
+                <Border Canvas.Left="384" Canvas.Top="37" Width="32" Height="32"
+                        BorderBrush="White" BorderThickness="2" CornerRadius="2" />
+            </Canvas>
+        </Border>
+        <Border Classes="selectionRing" x:Name="CiRing2" Canvas.Left="104" Canvas.Top="483" Width="454" Height="114" />
+
+        <TextBlock Canvas.Left="111" Canvas.Top="609" Width="430" TextWrapping="Wrap" LineHeight="34.5"
+                   FontFamily="{StaticResource XboxFontFamily}" FontSize="26" Foreground="White"
+                   Text="Allowing optional data collection shares data from times when no one is signed in." />
+
+        <!-- Middle column. Blocks every 99: label, then its value 50 lower. -->
+        <TextBlock Classes="cinfName"  Canvas.Left="620" Canvas.Top="258" Text="Device" />
+        <TextBlock Classes="cinfField" x:Name="CiDevice" Canvas.Left="620" Canvas.Top="311" Text="" />
+
+        <TextBlock Classes="cinfName"  Canvas.Left="620" Canvas.Top="357" Text="Console ID" />
+        <TextBlock Classes="cinfField" x:Name="CiConsoleId" Canvas.Left="620" Canvas.Top="410" Text="" />
+
+        <TextBlock Classes="cinfName"  Canvas.Left="620" Canvas.Top="456" Text="OS version" />
+        <TextBlock Classes="cinfField" x:Name="CiOsVersion" Canvas.Left="620" Canvas.Top="509" Text="" />
+
+        <TextBlock Classes="cinfName"  Canvas.Left="620" Canvas.Top="555" Text="Shell version" />
+        <TextBlock Classes="cinfField" x:Name="CiShellVersion" Canvas.Left="620" Canvas.Top="608" Text="" />
+
+        <TextBlock Classes="cinfName"  Canvas.Left="620" Canvas.Top="654" Text="Network device ID" />
+        <TextBlock Classes="cinfField" x:Name="CiNetworkId" Canvas.Left="620" Canvas.Top="707" Text="" />
+
+        <!-- Right-hand block, centred on x=1500. The mark above the name is the Xbox sphere, measured
+             55x55 at (1473,292) in the reference. It is a PLACEHOLDER until Playfront has one of its
+             own, and it is the real vector, not a trace: the path below is "Xenon.svg" from the Xbox
+             app's own design system (Xenon was the Xbox 360 codename and is what Microsoft calls this
+             mark internally), on a 32x32 canvas, scaled here by 55/32. Numbers rounded to two
+             decimals - at 55 px that is far under one pixel. Recorded in THIRD-PARTY.md. -->
+        <Canvas Canvas.Left="1473" Canvas.Top="292" Width="55" Height="55">
+            <Canvas.RenderTransform>
+                <ScaleTransform ScaleX="1.71875" ScaleY="1.71875" />
+            </Canvas.RenderTransform>
+            <Canvas.RenderTransformOrigin>0%,0%</Canvas.RenderTransformOrigin>
+            <Path Fill="White" Data="M7.69,2.47 C7.65,2.47 7.62,2.46 7.61,2.45 L7.61,2.42 L7.64,2.38 C8.94,1.59 10.28,1.01 11.66,0.61 C13.03,0.21 14.48,0.01 16,0 C17.49,0 18.93,0.2 20.33,0.59 C21.72,0.99 23.06,1.58 24.33,2.36 L24.38,2.39 C24.34,2.44 24.31,2.47 24.28,2.47 C24.2,2.47 24.11,2.46 24.02,2.44 C23.92,2.42 23.83,2.4 23.75,2.38 C23.66,2.36 23.56,2.36 23.47,2.36 C23.38,2.36 23.28,2.36 23.19,2.36 C22.7,2.36 22.2,2.41 21.7,2.5 C21.2,2.59 20.7,2.72 20.2,2.88 C19.7,3.03 19.22,3.21 18.77,3.41 C18.31,3.6 17.85,3.81 17.39,4.02 C17.16,4.13 16.93,4.24 16.7,4.34 C16.47,4.45 16.25,4.58 16.03,4.73 L15.95,4.73 C15.51,4.45 14.98,4.17 14.39,3.89 C13.8,3.61 13.17,3.35 12.52,3.12 C11.86,2.9 11.22,2.71 10.59,2.56 C9.97,2.42 9.38,2.34 8.83,2.34 C8.63,2.34 8.43,2.36 8.22,2.41 C8.01,2.45 7.83,2.47 7.69,2.47 Z M11.61,8.91 C11.15,9.46 10.62,10.12 10.03,10.91 C9.44,11.69 8.83,12.54 8.2,13.47 C7.58,14.4 6.97,15.35 6.38,16.34 C5.78,17.33 5.25,18.32 4.78,19.3 C4.31,20.28 3.94,21.21 3.66,22.11 C3.38,23.01 3.23,23.82 3.22,24.55 C3.22,24.72 3.23,24.92 3.25,25.12 C3.27,25.33 3.31,25.52 3.38,25.69 L3.36,25.72 L3.33,25.73 L3.27,25.7 C2.19,24.26 1.38,22.73 0.83,21.12 C0.28,19.52 0,17.81 0,16 C0,14.98 0.1,13.94 0.31,12.89 C0.52,11.84 0.83,10.82 1.25,9.83 C1.67,8.84 2.17,7.9 2.75,7.02 C3.33,6.13 4.01,5.33 4.78,4.62 C4.83,4.58 4.91,4.56 5.02,4.55 C5.12,4.54 5.2,4.53 5.25,4.52 C5.56,4.52 5.91,4.59 6.28,4.73 C6.66,4.88 7.05,5.08 7.45,5.33 C7.86,5.58 8.26,5.85 8.64,6.16 C9.03,6.46 9.41,6.77 9.8,7.09 C10.18,7.42 10.52,7.72 10.81,8.02 C11.1,8.31 11.37,8.57 11.61,8.8 L11.62,8.86 L11.61,8.91 Z M26.73,4.52 C26.81,4.52 26.89,4.52 26.98,4.53 C27.08,4.54 27.16,4.57 27.22,4.62 C27.98,5.36 28.66,6.17 29.25,7.05 C29.84,7.92 30.34,8.85 30.75,9.83 C31.16,10.81 31.46,11.82 31.67,12.86 C31.88,13.9 31.99,14.95 32,16 C32,17.8 31.72,19.51 31.17,21.12 C30.62,22.74 29.81,24.27 28.73,25.7 L28.64,25.72 L28.61,25.67 C28.64,25.63 28.67,25.56 28.69,25.45 C28.71,25.35 28.72,25.24 28.73,25.12 C28.74,25.01 28.76,24.9 28.77,24.78 C28.78,24.67 28.78,24.58 28.78,24.53 C28.78,23.81 28.64,23.01 28.36,22.11 C28.08,21.21 27.7,20.28 27.23,19.3 C26.77,18.32 26.23,17.33 25.64,16.33 C25.05,15.33 24.44,14.37 23.81,13.45 C23.19,12.54 22.58,11.69 21.98,10.91 C21.39,10.12 20.86,9.45 20.39,8.89 L20.38,8.84 L20.39,8.8 C20.61,8.58 20.87,8.32 21.17,8.03 C21.47,7.74 21.81,7.44 22.19,7.12 C22.56,6.81 22.94,6.49 23.33,6.17 C23.71,5.85 24.11,5.57 24.53,5.34 C24.95,5.11 25.34,4.92 25.7,4.75 C26.07,4.58 26.41,4.51 26.73,4.52 Z M16,12.84 C16.3,13.03 16.59,13.25 16.88,13.5 C17.16,13.75 17.44,13.99 17.72,14.23 C18.16,14.62 18.69,15.11 19.31,15.7 C19.94,16.3 20.6,16.96 21.3,17.7 C21.99,18.44 22.68,19.22 23.34,20.03 C24.01,20.84 24.62,21.65 25.17,22.45 C25.72,23.26 26.16,24.03 26.48,24.78 C26.81,25.53 26.97,26.2 26.98,26.8 C26.98,27.04 26.95,27.26 26.89,27.47 C26.83,27.68 26.71,27.87 26.53,28.05 C26.21,28.37 25.85,28.67 25.45,28.94 C25.06,29.21 24.66,29.46 24.27,29.7 C23.02,30.45 21.69,31.02 20.3,31.41 C18.9,31.79 17.47,31.99 16,32 C14.53,32 13.1,31.81 11.72,31.42 C10.33,31.04 9.01,30.46 7.73,29.7 C7.56,29.6 7.33,29.46 7.06,29.3 C6.79,29.13 6.53,28.94 6.27,28.72 C6.01,28.5 5.76,28.29 5.53,28.09 C5.3,27.9 5.16,27.69 5.11,27.48 C5.04,27.28 5,27.04 5,26.78 C5,26.22 5.16,25.58 5.47,24.88 C5.78,24.17 6.19,23.43 6.69,22.66 C7.19,21.89 7.76,21.11 8.41,20.33 C9.05,19.55 9.69,18.81 10.33,18.11 C10.96,17.41 11.58,16.77 12.17,16.19 C12.77,15.6 13.27,15.12 13.69,14.75 C14.04,14.44 14.42,14.1 14.81,13.75 C15.21,13.4 15.6,13.09 16,12.84 Z" />
+        </Canvas>
+
+        <TextBlock Canvas.Left="1200" Canvas.Top="372" Width="600" TextAlignment="Center"
+                   FontFamily="{StaticResource XboxFontDisplaySemibold}" FontSize="45" Foreground="White"
+                   Text="Playfront" />
+        <TextBlock x:Name="CiCopyright" Canvas.Left="1200" Canvas.Top="432" Width="600" TextAlignment="Center"
+                   FontFamily="{StaticResource XboxFontFamily}" FontSize="26" Foreground="White" Text="" />
+    </Canvas>
+</UserControl>
