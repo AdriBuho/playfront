@@ -12,7 +12,9 @@
     PlayfrontHelper.zip            the privileged service
     PlayfrontAssets-Games.zip      artwork and video
 
-  Which release it downloads from is set by ReleaseTag inside Playfront.iss.
+  Which release it downloads from is derived from the version: it always points at the release tagged
+  'v<PlayfrontVersion>'. The version is read here from Directory.Build.props and passed to the
+  compiler, so it cannot drift from the app's.
 
 .PARAMETER Output
   Folder to leave the .exe in. Defaults to 'dist\installer' (outside git).
@@ -57,10 +59,31 @@ $($candidates -join "`n")
 Write-Ok $iscc
 
 if (-not (Test-Path $issPath)) { Fail "$issPath not found" }
+
+# --- Version, from the single place it is defined -------------------------------------------------
+# Read here and handed to the compiler rather than written inside the .iss: the release tag is derived
+# from it, so a stale number there would keep shipping an installer that downloads an OLD release
+# without ever saying so. The .iss refuses to compile if this is missing.
+$propsPath = Join-Path $repoRoot 'Directory.Build.props'
+if (-not (Test-Path $propsPath)) { Fail "Directory.Build.props not found in $repoRoot" }
+$version = ([xml](Get-Content $propsPath)).Project.PropertyGroup.PlayfrontVersion | Where-Object { $_ }
+if ([string]::IsNullOrWhiteSpace($version)) { Fail 'Could not read PlayfrontVersion from Directory.Build.props' }
+
+# Same rule as Pack-Playfront.ps1: leading zeros break updates, and they break them silently. Rejected
+# in both places so it cannot slip in through whichever one is run first.
+if ($version -match '(^|\.)0\d') {
+    Fail @"
+Version '$version' has leading zeros, and that breaks updates.
+
+Drop them: 0.1.1, 0.1.2, 0.1.3 ... 0.1.87 (no cap, and it sorts correctly without padding).
+"@
+}
+Write-Ok "Version $version (from Directory.Build.props)"
+
 $null = New-Item -ItemType Directory -Force $Output
 
 Write-Step 'Compiling'
-& $iscc "/O$Output" $issPath
+& $iscc "/DPfVersion=$version" "/O$Output" $issPath
 if ($LASTEXITCODE -ne 0) { Fail "The compiler returned $LASTEXITCODE" }
 
 $exe = Join-Path $Output 'PlayfrontSetup.exe'

@@ -28,13 +28,25 @@
 ;  GetOriginalUserLocalAppData); resolving it here would give the administrator's folder again.
 ; ===================================================================================================
 
+; THE VERSION IS NOT WRITTEN HERE. Build-Installer.ps1 reads it from Directory.Build.props (the one
+; place it is defined) and passes it in with /DPfVersion. Compiling without it is a hard error on
+; purpose: a hardcoded number here would silently drift from the app's.
+;
+; What that drift costs, if it is ever "simplified" back to a literal: the release tag is derived from
+; this number, so an installer left at an old version keeps downloading the OLD release forever. It
+; installs fine, reports success, and hands out a stale build with nothing to indicate it. Same class
+; of silent failure as pointing the updater at a repository that does not exist.
+#ifndef PfVersion
+  #error PfVersion was not supplied. Build with: build\installer\Build-Installer.ps1
+#endif
+
 #define AppName        "Playfront"
-#define AppVersion     "0.1.0"
+#define AppVersion     PfVersion
 #define AppPublisher   "Playfront"
 #define AppUrl         "https://github.com/AdriBuho/playfront"
 
-; Where everything is downloaded from. Cutting a new version means changing ReleaseTag and nothing else.
-#define ReleaseTag     "v0.1.0"
+; Where everything is downloaded from: the release tagged with this same version.
+#define ReleaseTag     "v" + PfVersion
 #define BaseUrl        "https://github.com/AdriBuho/playfront/releases/download/" + ReleaseTag
 
 #define ShellSetupFile "PlayfrontShell-win-Setup.exe"
@@ -346,6 +358,10 @@ begin
 
   // 3. Artwork and video.
   DelTree(ExpandConstant('{commonappdata}\Playfront\Assets'), True, True, True);
+  // ...and the parent it lived in. Inno only tracks what [Dirs] created, and the Assets folder is
+  // emptied by the line above, so without this an empty %ProgramData%\Playfront was left behind.
+  // RemoveDir only deletes an EMPTY directory, so anything else that ever lands there survives.
+  RemoveDir(ExpandConstant('{commonappdata}\Playfront'));
 
   // 4. The helper. Deleted by hand: its files were unpacked by this script rather than laid down by
   //    Inno, so Inno does not know they exist and would leave the folder full.
