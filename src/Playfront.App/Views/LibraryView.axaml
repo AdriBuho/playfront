@@ -2,39 +2,37 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Playfront.App.Views.LibraryView"
              Width="1920" Height="1080">
-    <!-- Pantalla "My games & apps" (biblioteca), calcada 1:1 de la captura de referencia
-         (biblioteca.png, un Xbox real). Misma estructura que el resto de vistas: lienzo fijo
-         1920x1080, se monta BAJO DEMANDA al abrir la biblioteca (MainWindow.EnterLibrary) y se
-         libera al salir (ExitLibrary). Por ahora es SOLO VISUAL (no funcional): B sale a la home,
-         y no hay navegacion interna ni datos reales todavia.
+    <!-- "My games & apps" screen (library), traced 1:1 from the reference capture of a real Xbox.
+         Same structure as the other views: fixed 1920x1080 canvas, built ON DEMAND when the library
+         opens (MainWindow.EnterLibrary) and released on exit (ExitLibrary). For now it is VISUAL
+         ONLY (not functional): B returns home, and there is no inner navigation or real data yet.
 
-         Texto en INGLES por convencion del proyecto, aunque la captura sea en español: el
-         layout/colores son 1:1, solo cambia el idioma. Los unicos textos de la captura que eran
-         español ("Próximamente" -> "Coming soon", "Pedir por adelantado" -> "Pre-order") se tapan
-         con una banda oscura + texto ingles sobre la caratula; "X|S", "GAME PASS" y "Demo" son
-         neutros y se dejan tal cual vienen en el arte.
+         Text is in ENGLISH per project convention even though the reference capture is in Spanish:
+         layout and colours are 1:1, only the language differs. The only Spanish strings in the
+         capture ("Proximamente" -> "Coming soon", "Pedir por adelantado" -> "Pre-order") are covered
+         with a dark band + English text over the cover art; "X|S", "GAME PASS" and "Demo" are
+         language-neutral and left exactly as the art has them.
 
-         Las 10 caratulas (Assets/Library/*.png) son PLACEHOLDER recortados de la propia captura:
-         para estos juegos concretos (varios ficticios/no lanzados: Forza Horizon 6, Gears E-Day,
-         GTA VI...) la captura es la unica fuente del arte exacto. Cuando la biblioteca sea
-         funcional, el arte saldra del proveedor real de cada plataforma. -->
+         The 10 covers (Assets/Library/*.png) are PLACEHOLDERS cropped from the capture itself: for
+         these particular games (several fictional/unreleased: Forza Horizon 6, Gears E-Day,
+         GTA VI...) the capture is the only source of the exact art. Once the library is functional,
+         art will come from each platform's real provider. -->
     <UserControl.Styles>
-        <!-- Etiqueta de cada categoria del menu lateral -->
+        <!-- Label of each side-menu category -->
         <Style Selector="TextBlock.menuLabel">
             <Setter Property="Foreground" Value="White" />
             <Setter Property="FontSize" Value="22" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
-        <!-- Contador gris a la derecha de una categoria (10 / 29 / 5) -->
+        <!-- Grey count to the right of a category (10 / 29 / 5) -->
         <Style Selector="TextBlock.menuCount">
             <Setter Property="Foreground" Value="#9A9A9A" />
             <Setter Property="FontSize" Value="22" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="HorizontalAlignment" Value="Right" />
         </Style>
-        <!-- Etiqueta con el nombre del juego: SOLO se muestra en la casilla enfocada (la ensiende el
-             code-behind), sobre la casilla gris, abajo. Franja negra al 70%, igual que las casillas
-             de la home. -->
+        <!-- Game name label: shown ONLY on the focused tile (the code-behind turns it on), over the
+             grey tile, at the bottom. Black band at 70%, same as the home tiles. -->
         <Style Selector="Border.gameLabel">
             <Setter Property="Background" Value="#B3000000" />
             <Setter Property="VerticalAlignment" Value="Bottom" />
@@ -48,8 +46,8 @@
             <Setter Property="LineHeight" Value="24" />
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
-        <!-- Tarjetas de la pantalla "Manage" (misma familia que las de Ajustes: gris, esquinas poco
-             redondeadas). Icono + etiqueta + (opcional) estado a la derecha ("On"). -->
+        <!-- Cards of the "Manage" screen (same family as the Settings ones: grey, barely rounded
+             corners). Icon + label + optional state on the right ("On"). -->
         <Style Selector="Border.manageCard">
             <Setter Property="Background" Value="#333333" />
             <Setter Property="CornerRadius" Value="4" />
@@ -70,18 +68,18 @@
     </UserControl.Styles>
 
     <Canvas Width="1920" Height="1080">
-        <!-- Fondo (medido de la captura: #272626, igual en lateral y contenido) -->
+        <!-- Background (measured from the reference: #272626, same for sidebar and content) -->
         <Rectangle Width="1920" Height="1080" Fill="#272626" />
 
-        <!-- Divisor vertical fino entre el menu lateral y el contenido (mismo patron y color que
-             Settings). Medido en la captura a x=445, altura completa. Va DETRAS del resalte verde
-             para que el halo de este lo cubra al pasar por la fila seleccionada. -->
+        <!-- Thin vertical divider between the side menu and the content (same pattern and colour as
+             Settings). Measured at x=445, full height. Sits BEHIND the accent highlight so that its
+             glow covers the divider as it passes the selected row. -->
         <Rectangle Canvas.Left="445" Canvas.Top="0" Width="1" Height="1080" Fill="#3A3A3A" />
 
-        <!-- ===================== BARRA LATERAL ===================== -->
+        <!-- ===================== SIDEBAR ===================== -->
 
-        <!-- Avatar + nombre de usuario. El nombre real de Playfront (Environment.UserName), no el de la
-             captura, igual que Home/Settings. Alineado a la izquierda con el texto del menu (x=137). -->
+        <!-- Avatar + user name. The real Windows account name (Environment.UserName), not the one in
+             the capture, same as Home/Settings. Left-aligned with the menu text (x=137). -->
         <StackPanel Canvas.Left="63" Canvas.Top="83" Orientation="Horizontal" Spacing="24">
             <Border Width="50" Height="50" CornerRadius="25" ClipToBounds="True" VerticalAlignment="Center">
                 <Image Source="/Assets/Icons/avatar.png" Stretch="UniformToFill" />
@@ -89,9 +87,9 @@
             <TextBlock x:Name="LibraryUserName" Foreground="White" FontSize="26" VerticalAlignment="Center" />
         </StackPanel>
 
-        <!-- Resalte verde SOLIDO de la categoria enfocada (cuando el foco esta en el MENU). Sigue el
-             TEMA (acento), como Settings. Va DETRAS del contenido de la fila. El code-behind lo mueve
-             a la categoria enfocada (translateY) y lo OCULTA cuando el foco entra en la rejilla. -->
+        <!-- SOLID highlight of the focused category (while focus is on the MENU). Follows the THEME
+             accent, like Settings. Sits BEHIND the row content. The code-behind moves it to the
+             focused category (translateY) and HIDES it when focus enters the grid. -->
         <Border x:Name="LMenuHighlight" Canvas.Left="0" Canvas.Top="181" Width="443" Height="70" CornerRadius="0,4,4,0"
                 Background="{DynamicResource AccentBrush}" BoxShadow="{DynamicResource SettingsHighlightShadow}">
             <Border.Transitions>
@@ -101,22 +99,22 @@
             </Border.Transitions>
         </Border>
 
-        <!-- Indicador de categoria ABIERTA: toma el relevo del resalte verde cuando el foco entra en la
-             rejilla (patron identico a Settings). Franja gris tenue + barrita verde fina pegada al borde
-             derecho (junto al divisor). Fijo sobre "Games", la unica categoria con contenido. Oculto por
-             defecto; el code-behind lo muestra al entrar en la rejilla. -->
+        <!-- OPEN category indicator: takes over from the highlight when focus enters the grid (same
+             pattern as Settings). Faint grey band + thin accent bar against the right edge (next to
+             the divider). Fixed on "Games", the only category with content. Hidden by default; the
+             code-behind shows it when entering the grid. -->
         <Border x:Name="LCategoryIndicator" Canvas.Left="0" Canvas.Top="181" Width="445" Height="70" Background="#303030" IsVisible="False">
             <Rectangle Width="4" Height="70" Fill="{DynamicResource AccentBrush}" HorizontalAlignment="Right" />
         </Border>
 
-        <!-- == Categorias (icono | etiqueta | contador) == -->
+        <!-- == Categories (icon | label | count) == -->
 
-        <!-- Games (seleccionada) -->
+        <!-- Games (selected) -->
         <Border Canvas.Left="0" Canvas.Top="181" Width="443" Height="70">
             <Grid Margin="75,0,30,0" ColumnDefinitions="46,*,Auto" VerticalAlignment="Center">
-                <!-- Controller: silueta HUECA (outline), calcada de la referencia. El glifo del
-                     sistema (Segoe Fluent E7FC) mostraba cruceta y botones dentro; la referencia es
-                     solo el contorno, asi que se dibuja a trazo. -->
+                <!-- Controller: HOLLOW silhouette (outline), traced from the reference. The system
+                     glyph (Segoe Fluent E7FC) shows the d-pad and buttons inside; the reference is
+                     outline only, so it is stroked by hand. -->
                 <Viewbox Grid.Column="0" Width="33" Height="33" HorizontalAlignment="Left">
                     <Canvas Width="32" Height="32">
                         <Path Stroke="White" StrokeThickness="1.7" StrokeJoin="Round"
@@ -134,7 +132,7 @@
             <Grid Margin="75,0,30,0" ColumnDefinitions="46,*,Auto" VerticalAlignment="Center">
                 <Viewbox Grid.Column="0" Width="30" Height="30" HorizontalAlignment="Left">
                     <Canvas Width="32" Height="32">
-                        <!-- 3 cuadrados + 1 girado (icono de apps) -->
+                        <!-- 3 squares + 1 rotated (apps icon) -->
                         <Rectangle Canvas.Left="4"  Canvas.Top="4"  Width="11" Height="11" RadiusX="2" RadiusY="2" Stroke="White" StrokeThickness="2" />
                         <Rectangle Canvas.Left="4"  Canvas.Top="17" Width="11" Height="11" RadiusX="2" RadiusY="2" Stroke="White" StrokeThickness="2" />
                         <Rectangle Canvas.Left="17" Canvas.Top="17" Width="11" Height="11" RadiusX="2" RadiusY="2" Stroke="White" StrokeThickness="2" />
@@ -152,7 +150,7 @@
             <Grid Margin="75,0,30,0" ColumnDefinitions="46,*,Auto" VerticalAlignment="Center">
                 <Viewbox Grid.Column="0" Width="30" Height="30" HorizontalAlignment="Left">
                     <Canvas Width="32" Height="32">
-                        <!-- dos tarjetas apiladas (la de detras asoma a la derecha, ligeramente inclinada) -->
+                        <!-- two stacked cards (the back one peeks out on the right, slightly tilted) -->
                         <Rectangle Canvas.Left="13" Canvas.Top="6" Width="14" Height="20" RadiusX="2.5" RadiusY="2.5"
                                    Fill="#272626" Stroke="White" StrokeThickness="2"
                                    RenderTransform="rotate(11deg)" RenderTransformOrigin="50%,50%" />
@@ -170,7 +168,7 @@
             <Grid Margin="75,0,30,0" ColumnDefinitions="46,*,Auto" VerticalAlignment="Center">
                 <Viewbox Grid.Column="0" Width="30" Height="30" HorizontalAlignment="Left">
                     <Canvas Width="32" Height="32">
-                        <!-- Reloj: trazado real de Clock.svg (Microsoft.GamingApp) -->
+                        <!-- Clock: real path from Clock.svg (Microsoft.GamingApp) -->
                         <Path Fill="White" Data="M1.00043402,16 C1.00043402,14.6145833 1.17751479,13.2864583 1.53167634,12.015625 C1.88583788,10.7447917 2.38583064,9.546875 3.03165463,8.421875 C3.67747862,7.296875 4.45871732,6.28645833 5.37537073,5.390625 C6.29202413,4.49479167 7.30763444,3.71354167 8.42220165,3.046875 C9.53676885,2.38020833 10.7294599,1.875 12.0002749,1.53125 C13.2710898,1.1875 14.6044039,1.01041667 16.000217,1 C17.3751971,1 18.6980946,1.17708333 19.9689096,1.53125 C21.2397245,1.88541667 22.4376239,2.390625 23.5626076,3.046875 C24.6875913,3.703125 25.6979934,4.484375 26.5938137,5.390625 C27.4896341,6.296875 28.2708728,7.3125 28.9375298,8.4375 C29.6041869,9.5625 30.1093879,10.7552083 30.4531329,12.015625 C30.7968779,13.2760417 30.979167,14.6041667 31,16 C31,17.3854167 30.8229192,18.7135417 30.4687577,19.984375 C30.1145961,21.2552083 29.6093951,22.4479167 28.9531546,23.5625 C28.2969141,24.6770833 27.5156754,25.6875 26.6094385,26.59375 C25.7032016,27.5 24.6927996,28.28125 23.5782324,28.9375 C22.4636652,29.59375 21.2657658,30.0989583 19.9845344,30.453125 C18.7033029,30.8072917 17.3751971,30.9895833 16.000217,31 C14.6148204,31 13.2815063,30.8229167 12.0002749,30.46875 C10.7190434,30.1145833 9.52635234,29.6145833 8.42220165,28.96875 C7.31805095,28.3229167 6.30764891,27.5416667 5.3909955,26.625 C4.4743421,25.7083333 3.6931034,24.6979167 3.04727941,23.59375 C2.40145542,22.4895833 1.89625439,21.2916667 1.53167634,20 C1.16709828,18.7083333 0.990017506,17.375 1.00043402,16 Z M29.0000289,16 C29.0000289,14.8020833 28.8489895,13.6510417 28.5469105,12.546875 C28.2448315,11.4427083 27.8073379,10.40625 27.2344295,9.4375 C26.6615211,8.46875 25.9844476,7.59375 25.2032089,6.8125 C24.4219702,6.03125 23.5469828,5.35416667 22.5782468,4.78125 C21.6095109,4.20833333 20.5730675,3.77083333 19.4689168,3.46875 C18.3647661,3.16666667 17.2085329,3.01041667 16.000217,3 C14.8023177,3 13.6512927,3.15104167 12.547142,3.453125 C11.4429913,3.75520833 10.4065479,4.19270833 9.43781195,4.765625 C8.46907597,5.33854167 7.59408863,6.015625 6.81284993,6.796875 C6.03161123,7.578125 5.35453769,8.453125 4.78162932,9.421875 C4.20872094,10.390625 3.77122727,11.4270833 3.46914831,12.53125 C3.16706934,13.6354167 3.0108216,14.7916667 3.00040509,16 C3.00040509,17.1979167 3.15144457,18.3489583 3.45352353,19.453125 C3.75560249,20.5572917 4.19309616,21.59375 4.76600454,22.5625 C5.33891292,23.53125 6.01598646,24.4114583 6.79722516,25.203125 C7.57846385,25.9947917 8.45345119,26.671875 9.42218718,27.234375 C10.3909232,27.796875 11.4273665,28.2291667 12.5315172,28.53125 C13.6356679,28.8333333 14.7919012,28.9895833 16.000217,29 C17.1981163,29 18.3491414,28.8489583 19.4532921,28.546875 C20.5574427,28.2447917 21.5938861,27.8072917 22.5626221,27.234375 C23.5313581,26.6614583 24.4115537,25.984375 25.2032089,25.203125 C25.9948641,24.421875 26.6719376,23.546875 27.2344295,22.578125 C27.7969213,21.609375 28.2292068,20.5729167 28.5312857,19.46875 C28.8333647,18.3645833 28.9896124,17.2083333 29.0000289,16 Z M16.000217,17 C15.7293876,17 15.495016,16.9010417 15.2971022,16.703125 C15.0991884,16.5052083 15.0002315,16.2708333 15.0002315,16 L15.0002315,8 C15.0002315,7.72916667 15.0991884,7.49479167 15.2971022,7.296875 C15.495016,7.09895833 15.7293876,7 16.000217,7 C16.2710464,7 16.505418,7.09895833 16.7033318,7.296875 C16.9012456,7.49479167 17.0002025,7.72916667 17.0002025,8 L17.0002025,15 L22.0001302,15 C22.2709596,15 22.5053312,15.0989583 22.703245,15.296875 C22.9011588,15.4947917 23.0001157,15.7291667 23.0001157,16 C23.0001157,16.2708333 22.9011588,16.5052083 22.703245,16.703125 C22.5053312,16.9010417 22.2709596,17 22.0001302,17 L16.000217,17 Z" />
                     </Canvas>
                 </Viewbox>
@@ -181,9 +179,9 @@
         <!-- Full library -->
         <Border Canvas.Left="0" Canvas.Top="475" Width="443" Height="70">
             <Grid Margin="75,0,30,0" ColumnDefinitions="46,*,Auto" VerticalAlignment="Center">
-                <!-- Libros: contorno (hueco), como la referencia. En la Home el mismo icono es macizo
-                     (nav-home.png); aqui va a trazo para calcar la captura de la biblioteca. Tres lomos,
-                     el tercero inclinado. -->
+                <!-- Books: outline (hollow), like the reference. On the Home the same icon is solid
+                     (nav-home.png); here it is stroked to match the library capture. Three spines,
+                     the third one tilted. -->
                 <Viewbox Grid.Column="0" Width="30" Height="30" HorizontalAlignment="Left">
                     <Canvas Width="32" Height="32">
                         <Rectangle Canvas.Left="6.5" Canvas.Top="8.5" Width="5.4" Height="15.5" RadiusX="1" RadiusY="1" Stroke="White" StrokeThickness="1.7" />
@@ -196,33 +194,33 @@
             </Grid>
         </Border>
 
-        <!-- Divisor -->
+        <!-- Divider -->
         <Rectangle Canvas.Left="35" Canvas.Top="568" Width="375" Height="1" Fill="#3A3A3A" />
 
         <!-- Manage -->
         <Border Canvas.Left="0" Canvas.Top="592" Width="443" Height="70">
             <Grid Margin="75,0,30,0" ColumnDefinitions="46,*,Auto" VerticalAlignment="Center">
-                <!-- Maletin (glifo "Work" de Segoe Fluent Icons) -->
+                <!-- Briefcase ("Work" glyph from Segoe Fluent Icons) -->
                 <TextBlock Grid.Column="0" Text="&#xE821;" FontFamily="Segoe Fluent Icons" FontSize="26"
                            Foreground="White" HorizontalAlignment="Left" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="1" Classes="menuLabel" Text="Manage" Margin="16,0,0,0" />
             </Grid>
         </Border>
 
-        <!-- == Medidor de almacenamiento (abajo-izquierda) == -->
-        <!-- Base del bloque (ultima linea "available") alineada con la base del boton SEE FULL LIBRARY
-             y de la pildora de la derecha, a y=1046 (mismas bases). -->
-        <!-- "Total / {libre} / available": el tamaño real (linea del medio) lo pone el code-behind con
-             el espacio LIBRE del disco del sistema. La base de "available" queda a y=1046. -->
+        <!-- == Storage meter (bottom left) == -->
+        <!-- The block's baseline (last line, "available") is aligned with the baseline of the
+             SEE FULL LIBRARY button and of the pill on the right, at y=1046. -->
+        <!-- "Total / {free} / available": the code-behind fills the middle line with the system
+             drive's FREE space. The "available" baseline stays at y=1046. -->
         <StackPanel Canvas.Left="78" Canvas.Top="942" Spacing="0">
             <TextBlock Text="Total" Foreground="White" FontSize="26" />
             <TextBlock x:Name="LStorageSize" Text="—" Foreground="White" FontSize="26" />
             <TextBlock Text="available" Foreground="White" FontSize="26" />
         </StackPanel>
-        <!-- Anillo de almacenamiento, remedido de la captura (juegos.png): trazo FINO (5) con GLOW verde
-             (como los anillos de seleccion), y el hueco del % restante es un track VERDE OSCURO (no gris).
-             Todo sigue el tema. Centro (330,993), radio 42.5. El arco (LStorageArc) y el % (LStoragePercent)
-             los rellena el code-behind con el % libre REAL. -->
+        <!-- Storage ring, re-measured from the reference: THIN stroke (5) with an accent GLOW (like
+             the selection rings), and the remaining-% gap is a DARK ACCENT track, not grey. All of
+             it follows the theme. Centre (330,993), radius 42.5. The code-behind fills the arc
+             (LStorageArc) and the percentage (LStoragePercent) with the REAL free %. -->
         <Ellipse Canvas.Left="287.5" Canvas.Top="950.5" Width="85" Height="85"
                  Stroke="{DynamicResource AccentTrackBrush}" StrokeThickness="5" />
         <Path x:Name="LStorageArc" Stroke="{DynamicResource AccentBrush}" StrokeThickness="5" StrokeLineCap="Round"
@@ -234,18 +232,18 @@
         <TextBlock x:Name="LStoragePercent" Canvas.Left="287.5" Canvas.Top="982" Width="85" TextAlignment="Center"
                    Text="—" Foreground="White" FontSize="20" />
 
-        <!-- ===================== CONTENIDO (DERECHA) ===================== -->
+        <!-- ===================== CONTENT (RIGHT) ===================== -->
 
-        <!-- Titulo COMPARTIDO: el code-behind lo cambia al nombre de la categoria activa (Games / Manage
-             / ...). Al moverse por el menu, el contenido de abajo cambia solo a la categoria resaltada. -->
+        <!-- SHARED title: the code-behind swaps it to the active category name (Games / Manage /
+             ...). Moving through the menu switches the content below to the highlighted category. -->
         <TextBlock x:Name="LContentTitle" Canvas.Left="527" Canvas.Top="74" Text="Games" Foreground="White" FontSize="54" FontWeight="SemiBold" />
 
-        <!-- Contenido de GAMES: se muestra cuando la categoria activa es Games. Envuelto en un Canvas
-             para enseñar/ocultar como bloque (las coordenadas Canvas.Left/Top siguen absolutas, el
-             Canvas va en 0,0). -->
+        <!-- GAMES content: shown when the active category is Games. Wrapped in a Canvas so it can be
+             shown/hidden as one block (Canvas.Left/Top coordinates stay absolute, the Canvas itself
+             sits at 0,0). -->
         <Canvas x:Name="LGamesContent" Width="1920" Height="1080">
 
-        <!-- Dropdown "Group by content type" (truncado, como la captura) -->
+        <!-- "Group by content type" dropdown (truncated, as in the reference) -->
         <Border Canvas.Left="527" Canvas.Top="190" Width="383" Height="62" Background="#363636" CornerRadius="6">
             <Grid Margin="22,0,16,0" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                 <TextBlock Grid.Column="0" Text="Group by content t&#x2026;" Foreground="White" FontSize="22" VerticalAlignment="Center" />
@@ -257,7 +255,7 @@
             </Grid>
         </Border>
 
-        <!-- Boton "Filter" (derecha) -->
+        <!-- "Filter" button (right) -->
         <Border Canvas.Left="1635" Canvas.Top="190" Width="210" Height="62" Background="#363636" CornerRadius="6">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="26,0,0,0" Spacing="14">
                 <Viewbox Width="20" Height="20" VerticalAlignment="Center">
@@ -272,14 +270,14 @@
             </StackPanel>
         </Border>
 
-        <!-- Encabezado de seccion -->
+        <!-- Section header -->
         <TextBlock Canvas.Left="527" Canvas.Top="308" Text="Optimized for XBOX Series X|S"
                    Foreground="White" FontSize="34" FontWeight="SemiBold" />
 
-        <!-- == Rejilla de juegos (fila 1: 6 / fila 2: 4). 202x202, radio 14. Placeholder GRIS (como las
-             casillas de la home): el arte real llega con la parte funcional. Navegable con el mando
-             (ver LibraryView.axaml.cs): el juego enfocado lleva anillo laser + etiqueta con su nombre. == -->
-        <!-- Fila 1 -->
+        <!-- == Game grid (row 1: 6 / row 2: 4). 202x202, radius 14. GREY placeholder (like the home
+             tiles): the real art arrives with the functional part. Gamepad navigable (see
+             LibraryView.axaml.cs): the focused game gets the laser ring + its name label. == -->
+        <!-- Row 1 -->
         <Border Canvas.Left="527"  Canvas.Top="378" Width="202" Height="202" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
             <Border x:Name="LLabel0" Classes="gameLabel"><TextBlock Text="Apex Legends" /></Border>
         </Border>
@@ -299,7 +297,7 @@
             <Border x:Name="LLabel5" Classes="gameLabel"><TextBlock Text="Gears of War: E-Day" /></Border>
         </Border>
 
-        <!-- Fila 2 -->
+        <!-- Row 2 -->
         <Border Canvas.Left="527"  Canvas.Top="602" Width="202" Height="202" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
             <Border x:Name="LLabel6" Classes="gameLabel"><TextBlock Text="Gears of War: E-Day" /></Border>
         </Border>
@@ -313,8 +311,8 @@
             <Border x:Name="LLabel9" Classes="gameLabel"><TextBlock Text="Halo: Combat Evolved" /></Border>
         </Border>
 
-        <!-- Anillos de seleccion (laser, estilo home), inflados 7 respecto a la casilla y declarados
-             DESPUES para quedar por encima. El code-behind enciende el del juego enfocado. -->
+        <!-- Selection rings (laser, home style), inflated by 7 over the tile and declared AFTER it so
+             they render on top. The code-behind lights up the focused game's ring. -->
         <Border Classes="selectionRing homeRing" x:Name="LRing0" Canvas.Left="520"  Canvas.Top="371" Width="216" Height="216" />
         <Border Classes="selectionRing homeRing" x:Name="LRing1" Canvas.Left="742"  Canvas.Top="371" Width="216" Height="216" />
         <Border Classes="selectionRing homeRing" x:Name="LRing2" Canvas.Left="964"  Canvas.Top="371" Width="216" Height="216" />
@@ -326,22 +324,22 @@
         <Border Classes="selectionRing homeRing" x:Name="LRing8" Canvas.Left="964"  Canvas.Top="595" Width="216" Height="216" />
         <Border Classes="selectionRing homeRing" x:Name="LRing9" Canvas.Left="1186" Canvas.Top="595" Width="216" Height="216" />
 
-        <!-- == Elementos inferiores (parcialmente visibles en la captura) == -->
+        <!-- == Bottom elements (only partly visible in the reference) == -->
         <TextBlock Canvas.Left="527" Canvas.Top="934" Text="Want more?" Foreground="White" FontSize="26" />
-        <!-- Base del boton (y=986+60=1046) alineada con el bloque de almacenamiento y la pildora derecha. -->
+        <!-- Button baseline (y=986+60=1046) aligned with the storage block and the right-hand pill. -->
         <Border Canvas.Left="527" Canvas.Top="986" Width="433" Height="60" Background="#363636" CornerRadius="6">
             <TextBlock Text="SEE FULL LIBRARY" Foreground="White" FontSize="21" VerticalAlignment="Center" Margin="28,0,0,0" />
         </Border>
-        </Canvas><!-- fin LGamesContent -->
+        </Canvas><!-- end LGamesContent -->
 
-        <!-- Contenido de MANAGE (calcado de administrar.png). Oculto por defecto; el code-behind lo
-             enseña cuando la categoria activa es "Manage". Dos grupos de tarjetas: acciones arriba +
-             "Settings" abajo (algunas con estado "On"). Tarjetas 640x108, 2 columnas (x525 / x1193),
-             paso vertical 147. NOTA: varios iconos son PLACEHOLDER (glifos del sistema) — los de la
-             captura son composiciones de consola que se recrearan en una pasada aparte. Los reales ya
-             puestos: Download (In queue) y Subscriptions. -->
+        <!-- MANAGE content (traced from the reference). Hidden by default; the code-behind shows it
+             when the active category is "Manage". Two card groups: actions on top + "Settings" below
+             (some with an "On" state). Cards 640x108, 2 columns (x525 / x1193), vertical step 147.
+             NOTE: several icons are PLACEHOLDERS (system glyphs) - the ones in the reference are
+             console compositions to be recreated in a separate pass. Already real: Download
+             (In queue) and Subscriptions. -->
         <Canvas x:Name="LManageContent" Width="1920" Height="1080" IsVisible="False">
-            <!-- Grupo 1: acciones -->
+            <!-- Group 1: actions -->
             <Border Classes="manageCard" Canvas.Left="525" Canvas.Top="210" Width="640" Height="108">
                 <Grid VerticalAlignment="Center" Margin="44,0,30,0" ColumnDefinitions="Auto,*,Auto">
                     <Viewbox Grid.Column="0" Width="44" Height="44" VerticalAlignment="Center">
@@ -372,10 +370,10 @@
                 </Grid>
             </Border>
 
-            <!-- Cabecera de seccion "Settings" (Configuración) -->
+            <!-- "Settings" section header -->
             <TextBlock Canvas.Left="527" Canvas.Top="540" Text="Settings" Foreground="White" FontSize="34" FontWeight="SemiBold" />
 
-            <!-- Grupo 2: ajustes (algunos con estado "On") -->
+            <!-- Group 2: settings (some with an "On" state) -->
             <Border Classes="manageCard" Canvas.Left="525" Canvas.Top="627" Width="640" Height="108">
                 <Grid VerticalAlignment="Center" Margin="44,0,30,0" ColumnDefinitions="Auto,*,Auto">
                     <TextBlock Grid.Column="0" Width="44" TextAlignment="Center" Text="&#xE895;" FontFamily="Segoe Fluent Icons" FontSize="34" Foreground="White" VerticalAlignment="Center" />
@@ -415,8 +413,8 @@
                 </Grid>
             </Border>
 
-            <!-- Anillos de seleccion de las tarjetas (laser, como el resto). Inflados 7 y con el radio
-                 acorde a la tarjeta (4). Declarados despues para quedar por encima. -->
+            <!-- Card selection rings (laser, like the rest). Inflated by 7, corner radius matched to
+                 the card (4). Declared afterwards so they render on top. -->
             <Border Classes="selectionRing homeRing" x:Name="MRing0" CornerRadius="10" Canvas.Left="518"  Canvas.Top="203" Width="654" Height="122" />
             <Border Classes="selectionRing homeRing" x:Name="MRing1" CornerRadius="10" Canvas.Left="1186" Canvas.Top="203" Width="654" Height="122" />
             <Border Classes="selectionRing homeRing" x:Name="MRing2" CornerRadius="10" Canvas.Left="518"  Canvas.Top="350" Width="654" Height="122" />
@@ -426,11 +424,11 @@
             <Border Classes="selectionRing homeRing" x:Name="MRing6" CornerRadius="10" Canvas.Left="518"  Canvas.Top="765" Width="654" Height="122" />
             <Border Classes="selectionRing homeRing" x:Name="MRing7" CornerRadius="10" Canvas.Left="1186" Canvas.Top="765" Width="654" Height="122" />
             <Border Classes="selectionRing homeRing" x:Name="MRing8" CornerRadius="10" Canvas.Left="518"  Canvas.Top="910" Width="654" Height="122" />
-        </Canvas><!-- fin LManageContent -->
+        </Canvas><!-- end LManageContent -->
 
-        <!-- Pista de boton "Search" (Y) abajo-derecha. Se ve cuando el foco esta en el MENU; al entrar
-             en la rejilla se cambia por las acciones del juego (LGridHints). -->
-        <!-- Base de la pildora (y=994+52=1046) alineada con el boton y el bloque de almacenamiento. -->
+        <!-- "Search" (Y) button hint, bottom right. Visible while focus is on the MENU; entering the
+             grid swaps it for the game actions (LGridHints). -->
+        <!-- Pill baseline (y=994+52=1046) aligned with the button and the storage block. -->
         <Border x:Name="LSearchHint" Canvas.Left="1716" Canvas.Top="994" Width="134" Height="52" Background="#E60D0D0D" CornerRadius="26">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="13,0,0,0" Spacing="11">
                 <Grid Width="27" Height="27" VerticalAlignment="Center">
@@ -442,16 +440,16 @@
             </StackPanel>
         </Border>
 
-        <!-- Acciones del juego enfocado (cuando el foco esta en la REJILLA), como en la captura
-             "juegos.png": pildora con los BOTONES REALES del mando de Xbox (View + Menu, extraidos del
-             set de la app: ButtonView2.svg / ButtonMenu.svg). Misma altura y base que LSearchHint.
-             Oculto por defecto; el code-behind lo muestra al entrar en la rejilla y oculta LSearchHint. -->
+        <!-- Focused game actions (while focus is on the GRID), as in the reference: pill with the REAL
+             Xbox gamepad buttons (View + Menu, taken from the Xbox app icon set: ButtonView2.svg /
+             ButtonMenu.svg). Same height and baseline as LSearchHint. Hidden by default; the
+             code-behind shows it when entering the grid and hides LSearchHint. -->
         <Border x:Name="LGridHints" Canvas.Left="1430" Canvas.Top="994" Width="420" Height="52" Background="#E60D0D0D" CornerRadius="26" IsVisible="False">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="30">
                 <StackPanel Orientation="Horizontal" Spacing="11" VerticalAlignment="Center">
                     <Viewbox Width="27" Height="27" VerticalAlignment="Center">
                         <Canvas Width="32" Height="32">
-                            <!-- Boton View (ButtonView2.svg) -->
+                            <!-- View button (ButtonView2.svg) -->
                             <Path Fill="White" Data="M10 12H18C18 10.8954 17.1046 10 16 10H10C8.89543 10 8 10.8954 8 12V16C8 17.1046 8.89543 18 10 18H12V16H10V12Z" />
                             <Path Fill="White" Data="M16 14C14.8954 14 14 14.8954 14 16V20C14 21.1046 14.8954 22 16 22H22C23.1046 22 24 21.1046 24 20V16C24 14.8954 23.1046 14 22 14H16ZM22 16H16V20H22V16Z" />
                             <Path Fill="White" Data="M32 16C32 24.8366 24.8366 32 16 32C7.16344 32 0 24.8366 0 16C0 7.16344 7.16344 0 16 0C24.8366 0 32 7.16344 32 16ZM30 16C30 23.732 23.732 30 16 30C8.26801 30 2 23.732 2 16C2 8.26801 8.26801 2 16 2C23.732 2 30 8.26801 30 16Z" />
@@ -462,7 +460,7 @@
                 <StackPanel Orientation="Horizontal" Spacing="11" VerticalAlignment="Center">
                     <Viewbox Width="27" Height="27" VerticalAlignment="Center">
                         <Canvas Width="32" Height="32">
-                            <!-- Boton Menu (ButtonMenu.svg) -->
+                            <!-- Menu button (ButtonMenu.svg) -->
                             <Path Fill="White" Data="M16,0 C24.836556,0 32,7.163444 32,16 C32,24.836556 24.836556,32 16,32 C7.163444,32 0,24.836556 0,16 C0,7.163444 7.163444,0 16,0 Z M16,2 C8.2680135,2 2,8.2680135 2,16 C2,23.7319865 8.2680135,30 16,30 C23.7319865,30 30,23.7319865 30,16 C30,8.2680135 23.7319865,2 16,2 Z M23,20 C23.2708,20 23.5052,20.1 23.7031,20.3 C23.901,20.49 24,20.73 24,21 C24,21.27 23.901,21.51 23.7031,21.7 C23.5052,21.9 23.2708,22 23,22 L9,22 C8.72917,22 8.49479,21.9 8.29688,21.7 C8.09896,21.51 8,21.27 8,21 C8,20.73 8.09896,20.49 8.29688,20.3 C8.49479,20.1 8.72917,20 9,20 L23,20 Z M23,15 C23.2708,15 23.5052,15.1 23.7031,15.3 C23.901,15.49 24,15.73 24,16 C24,16.27 23.901,16.51 23.7031,16.7 C23.5052,16.9 23.2708,17 23,17 L9,17 C8.72917,17 8.49479,16.9 8.29688,16.7 C8.09896,16.51 8,16.27 8,16 C8,15.73 8.09896,15.49 8.29688,15.3 C8.49479,15.1 8.72917,15 9,15 L23,15 Z M23,10 C23.2708,10 23.5052,10.1 23.7031,10.3 C23.901,10.49 24,10.73 24,11 C24,11.27 23.901,11.51 23.7031,11.7 C23.5052,11.9 23.2708,12 23,12 L9,12 C8.72917,12 8.49479,11.9 8.29688,11.7 C8.09896,11.51 8,11.27 8,11 C8,10.73 8.09896,10.49 8.29688,10.3 C8.49479,10.1 8.72917,10 9,10 L23,10 Z" />
                         </Canvas>
                     </Viewbox>

@@ -2,25 +2,24 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Playfront.App.Views.StoreAppView"
              Width="1920" Height="1080">
-    <!-- FICHA DE PRODUCTO de la Tienda: la pagina que se abre al pulsar A sobre una tarjeta de la
-         pagina de categoria (Apps > Music apps > YouTube). Construida 1:1 midiendo "youtube.png"
-         (1411x793, escala 1920/1411 = 1,3607). Todas las coordenadas de aqui son medidas, no a ojo;
-         cada coordenada sale de esa captura.
+    <!-- Store PRODUCT PAGE: opens when pressing A on a card of the category page
+         (Apps > Music apps > YouTube). Built 1:1 from the reference capture (1411x793,
+         scale 1920/1411 = 1.3607). Every coordinate here is measured, not eyeballed.
 
-         Vive bajo demanda como el resto de pantallas (MainWindow la crea al entrar y la libera al
-         salir con B), segun la arquitectura de rendimiento del proyecto.
+         Created on demand like every other screen (MainWindow builds it on entry and releases it
+         when leaving with B).
 
-         OJO: de momento la unica app con captura de esta pagina es YouTube. Los textos salen de
-         apps.json; las apps sin los campos nuevos (editor, ESRB) los dejan vacios en vez de
-         inventarselos. -->
+         Only YouTube has a reference capture for this page so far. Text comes from apps.json;
+         apps missing the newer fields (publisher, ESRB) leave them empty rather than making
+         them up. -->
 
     <UserControl.Styles>
-        <!-- Mismo anillo de foco que la pagina de categoria: trazo de acento de 6 px por fuera y
-             banda negra de 5 px por dentro, siguiendo el color del tema. -->
+        <!-- Same focus ring as the category page: 6 px accent stroke outside, 5 px black band
+             inside, following the theme colour. -->
         <Style Selector="Border.appRing">
             <Setter Property="Background" Value="Transparent" />
-            <!-- Apagado = acento con alfa 0 (NO "Transparent", que es blanco transparente y haria
-                 que el anillo se apagara en blanco). Mismo motivo que en Border.catRing. -->
+            <!-- Off state = accent at alpha 0, NOT "Transparent" (which is transparent WHITE and
+                 would make the ring fade out through white). Same reason as Border.catRing. -->
             <Setter Property="BorderBrush" Value="{DynamicResource AccentFadedBrush}" />
             <Setter Property="BorderThickness" Value="6" />
             <Setter Property="IsHitTestVisible" Value="False" />
@@ -48,19 +47,18 @@
     <Canvas Width="1920" Height="1080" ClipToBounds="True">
 
         <!-- ============================================================
-             FONDO. Medido punto a punto: es NEGRO casi puro en los cuatro bordes (0..4 de brillo) con
-             UN halo gris neutro cuyo centro cae fuera de pantalla, por arriba y centrado en x=950, y
-             una mancha ROJA pequeña a media altura a la izquierda (el desenfoque del boton de play del
-             logo). No se usa aqui el truco del "arte ampliado y desenfocado" de la pagina de categoria
-             porque en esta pagina el fondo esta MUCHO mas apagado y con una caida clara desde arriba:
-             el arte sin mas no reproduce esa caida.
+             BACKGROUND. Sampled point by point: near-pure black on all four edges (brightness 0..4),
+             one neutral grey halo whose centre falls off-screen above, centred on x=950, plus a small
+             RED blob mid-height on the left (the blurred play button of the logo). The category
+             page's "scaled-up blurred art" trick is not used here: this background is MUCH dimmer and
+             has a clear top-down falloff that the raw art does not reproduce.
              ============================================================ -->
         <Rectangle Width="1920" Height="1080" Fill="Black" />
 
-        <!-- Halo neutro. Centro (950,0), radio 850 px en las dos direcciones (44,3% x 78,7% del
-             lienzo), pico #3F4241 y caida LINEAL del alfa hasta 0. Verificado en 6 puntos de la
-             captura: (953,14)=63 medido / 62 modelo; (680,340)=28 / 31; (408,204)=19 / 20; y las
-             tres esquinas lejanas quedan fuera del radio = negro, como se mide. -->
+        <!-- Neutral halo. Centre (950,0), radius 850 px both ways (44.3% x 78.7% of the canvas),
+             peak #3F4241, LINEAR alpha falloff to 0. Checked at 6 sample points: (953,14)=63
+             measured / 62 model; (680,340)=28 / 31; (408,204)=19 / 20; the three far corners fall
+             outside the radius = black, which matches. -->
         <Rectangle Width="1920" Height="1080">
             <Rectangle.Fill>
                 <RadialGradientBrush Center="49.5%,0%" GradientOrigin="49.5%,0%" RadiusX="44.3%" RadiusY="78.7%">
@@ -74,11 +72,11 @@
             </Rectangle.Fill>
         </Rectangle>
 
-        <!-- Mancha roja. NO aporta rojo: lo que hace es QUITAR verde y azul (igual que el halo de la
-             pagina de categoria, que desatura en vez de iluminar). Por eso el color es un rojo muy
-             oscuro (#160404) a alfa alto: sobre el gris del halo deja el rojo donde estaba y hunde
-             los otros dos canales. Centro (630,465), radio 220. Verificado: en (585,408) el modelo da
-             22,11,11 y la captura 22,10,11. -->
+        <!-- Red blob. It does NOT add red: it REMOVES green and blue (same as the category page
+             halo, which desaturates instead of lighting up). Hence a very dark red (#160404) at high
+             alpha: over the grey halo it leaves red where it was and sinks the other two channels.
+             Centre (630,465), radius 220. Checked: at (585,408) the model gives 22,11,11 and the
+             capture 22,10,11. -->
         <Rectangle Width="1920" Height="1080">
             <Rectangle.Fill>
                 <RadialGradientBrush Center="32.8%,43.1%" GradientOrigin="32.8%,43.1%" RadiusX="11.5%" RadiusY="20.4%">
@@ -89,54 +87,54 @@
             </Rectangle.Fill>
         </Rectangle>
 
-        <!-- ===== Indicador de scroll (arriba-izquierda) =====
-             Cuatro puntos en columna, TODOS centrados en la misma x (65) y con la misma separacion.
-             El de arriba es blanco y un pelin mas grande (= estamos al principio de la pagina); los
-             otros TRES son identicos entre si: mismo tamaño y MISMO tono. Medido pixel a pixel: el
-             color del centro de los tres de abajo es 81,81,81 en los tres, no un degradado. -->
+        <!-- ===== Scroll indicator (top left) =====
+             Four dots in a column, ALL centred on the same x (65) with equal spacing. The top one is
+             white and slightly larger (= we are at the start of the page); the other THREE are
+             identical to each other: same size and SAME tone. Measured pixel by pixel: the centre
+             colour of the bottom three is 81,81,81 in all three, not a gradient. -->
         <Ellipse Canvas.Left="60.3" Canvas.Top="45.6" Width="9.5" Height="9.5" Fill="White" />
         <Ellipse Canvas.Left="60.9" Canvas.Top="58.5" Width="8.2" Height="8.2" Fill="#515151" />
         <Ellipse Canvas.Left="60.9" Canvas.Top="70.1" Width="8.2" Height="8.2" Fill="#515151" />
         <Ellipse Canvas.Left="60.9" Canvas.Top="82.3" Width="8.2" Height="8.2" Fill="#515151" />
 
-        <!-- ===== CAJA DE ARTE (derecha) =====
-             Cuadrado perfecto de 701x701 en (1109,91). Su borde derecho cae en x=1810, que es el mismo
-             margen de contenido que usan la Tienda y la pagina de categoria. -->
+        <!-- ===== ART BOX (right) =====
+             Perfect 701x701 square at (1109,91). Its right edge lands on x=1810, the same content
+             margin used by the Store and the category page. -->
         <Border Canvas.Left="1109" Canvas.Top="91" Width="701" Height="701" Background="White" ClipToBounds="True">
-            <!-- HighQuality: por defecto Avalonia amplia las imagenes con el metodo rapido, y aqui el
-                 arte se ve a 701 px cuando el fichero es mas pequeño, asi que salian los pixeles
-                 cuadrados. Con esto la ampliacion se interpola de verdad. -->
+            <!-- HighQuality: Avalonia upscales with the fast method by default, and the art is shown
+                 at 701 px while the file is smaller, so the pixels showed up as squares. This makes
+                 the upscale actually interpolate. -->
             <Image x:Name="Art" Stretch="UniformToFill" RenderOptions.BitmapInterpolationMode="HighQuality" />
         </Border>
 
-        <!-- ===== COLUMNA IZQUIERDA =====
-             Todos los bloques arrancan en x=110 (medido: la tinta de cada linea cae entre 108,9 y
-             114,3 segun el lateral del glifo, y el origen de caja comun es 110).
-             Las Y NO se calculan con una formula de metricas de fuente: se ajustaron MIDIENDO nuestra
-             propia captura y comparandola con la del usuario, banda de tinta a banda de tinta, hasta
-             que las cimas de mayusculas coinciden. (La primera version salio de una formula teorica y
-             dejaba todos los textos entre 3 y 8 px altos.) -->
+        <!-- ===== LEFT COLUMN =====
+             Every block starts at x=110 (measured: the ink of each line falls between 108.9 and
+             114.3 depending on the glyph side bearing, and the common box origin is 110).
+             The Y values are NOT computed from a font-metrics formula: they were tuned by rendering
+             this screen and comparing it against the reference, ink band by ink band, until the cap
+             heights line up. (The first version came from a theoretical formula and left every text
+             3 to 8 px too high.) -->
 
-        <!-- Titulo. Cima de mayusculas medida en y=424,5; alto de mayuscula 46,3 -> 64 px de letra. -->
+        <!-- Title. Cap height measured at y=424.5; cap height 46.3 -> 64 px font size. -->
         <TextBlock x:Name="TitleText" Canvas.Left="110" Canvas.Top="408.5"
                    FontSize="64" FontWeight="SemiBold" Foreground="White" />
 
-        <!-- Editor + genero ("Google LLC ▪ Entertainment"). Cima en 503,5; gris medido #A4A09E. -->
+        <!-- Publisher + genre ("Google LLC ▪ Entertainment"). Cap top at 503.5; grey measured #A4A09E. -->
         <TextBlock x:Name="PublisherText" Canvas.Left="110" Canvas.Top="497"
                    FontSize="29" FontWeight="SemiBold" Foreground="#A4A09E" />
 
-        <!-- Descripcion corta. Cima en 601,4; casi blanca (#EBEDED medido). -->
+        <!-- Short description. Cap top at 601.4; near white (#EBEDED measured). -->
         <TextBlock x:Name="DescriptionText" Canvas.Left="110" Canvas.Top="597.5"
                    FontSize="22" Foreground="#EBEDED" />
 
-        <!-- ===== BOTONES =====
-             Boton principal: relleno verde PLANO #007533 (medido dentro del boton, no es el color del
-             tema: en la Store este boton es verde fijo), 208x97 en (110,694).
-             Boton de lista de deseos: cuadrado de 99x97 en (336,694), gris #212424. -->
+        <!-- ===== BUTTONS =====
+             Primary button: FLAT green fill #007533 (sampled inside the button; this is not the theme
+             colour - in the Store this button is fixed green), 208x97 at (110,694).
+             Wishlist button: 99x97 square at (336,694), grey #212424. -->
         <Border Canvas.Left="112" Canvas.Top="695" Width="206" Height="96"
                 CornerRadius="4" Background="#007533" />
-        <!-- Las dos lineas del boton, en absoluto para clavar las cimas medidas (715,7 y 752,5) y el
-             sangrado de 31 px respecto al borde del boton. -->
+        <!-- The button's two lines, absolutely positioned to hit the measured cap tops (715.7 and
+             752.5) and the 31 px inset from the button edge. -->
         <TextBlock x:Name="ActionText" Canvas.Left="141" Canvas.Top="710.9"
                    FontSize="25" FontWeight="SemiBold" Foreground="White" />
         <TextBlock x:Name="ActionSubText" Canvas.Left="141" Canvas.Top="746.5"
@@ -144,8 +142,8 @@
 
         <Border Canvas.Left="336" Canvas.Top="695" Width="99" Height="96"
                 CornerRadius="4" Background="#212424" />
-        <!-- Corazon con "+" (añadir a una lista). Dibujado a trazo dentro de una caja de 34x32; el
-             conjunto ocupa 31x28, que es lo medido en la captura (x 370..401, y 729..758). -->
+        <!-- Heart with a "+" (add to a list). Stroked inside a 34x32 box; the whole glyph occupies
+             31x28, which is what the reference measures (x 370..401, y 729..758). -->
         <Canvas Canvas.Left="369" Canvas.Top="728" Width="34" Height="32">
             <Path Stroke="#E8E8E8" StrokeThickness="1.9" StrokeJoin="Round" Fill="Transparent"
                   Data="M11.5,29 C11.5,29 1,21.5 1,13.8 C1,10 3.7,7 7.2,7 C9.4,7 11,8.2 11.5,9.8 C12,8.2 13.6,7 15.8,7 C19.3,7 22,10 22,13.8 C22,21.5 11.5,29 11.5,29 Z" />
@@ -153,7 +151,7 @@
                   Data="M28,4 L28,14 M23,9 L33,9" />
         </Canvas>
 
-        <!-- Anillos de foco (inflados 8 px, como en el resto de la app). -->
+        <!-- Focus rings (inflated by 8 px, as everywhere else in the app). -->
         <Border Classes="appRing" x:Name="ActionRing" Canvas.Left="104" Canvas.Top="687"
                 Width="222" Height="112" CornerRadius="9" />
         <Border Classes="appRingInner" x:Name="ActionRingInner" Canvas.Left="110" Canvas.Top="693"
@@ -163,51 +161,50 @@
         <Border Classes="appRingInner" x:Name="WishRingInner" Canvas.Left="334" Canvas.Top="693"
                 Width="103" Height="100" CornerRadius="5" />
 
-        <!-- ===== SECCIONES DE ABAJO =====
-             "Details" y "Ratings and reviews" son las cabeceras de lo que hay mas abajo en la pagina
-             (a esta altura ya estan cortadas por el borde de pantalla). La segunda esta mas apagada
-             que la primera: #818181 y #565656 medidos. -->
+        <!-- ===== BOTTOM SECTIONS =====
+             "Details" and "Ratings and reviews" head the content further down the page (at this
+             scroll position they are already clipped by the screen edge). The second is dimmer than
+             the first: #818181 and #565656 measured. -->
         <TextBlock Text="Details" Canvas.Left="110" Canvas.Top="946" FontSize="32" Foreground="#818181" />
         <TextBlock Text="Ratings and reviews" Canvas.Left="110" Canvas.Top="1005.6" FontSize="32" Foreground="#565656" />
 
-        <!-- Pista de mando de abajo-izquierda: el glifo del boton VIEW del mando (aro con dos
-             rectangulos solapados) + un galon. Es el SVG REAL de la app de Xbox
-             (@gaming/xds-foundation/svg/ButtonView2.svg), el mismo que ya usa la fila CLOSE del rail
-             de la Tienda. Medido aqui: aro de 24,5 px en (36,7 , 981,1) y gris #7D7D7D. -->
+        <!-- Bottom-left gamepad hint: the VIEW button glyph (ring with two overlapping rectangles)
+             plus a chevron. This is the REAL Xbox app SVG
+             (@gaming/xds-foundation/svg/ButtonView2.svg), the same one the Store rail's CLOSE row
+             already uses. Measured here: 24.5 px ring at (36.7 , 981.1), grey #7D7D7D. -->
         <Viewbox Canvas.Left="36.7" Canvas.Top="981.1" Width="24.5" Height="24.5">
             <Canvas Width="32" Height="32">
                 <Path Fill="#7D7D7D" Data="M10 12H18C18 10.8954 17.1046 10 16 10H10C8.89543 10 8 10.8954 8 12V16C8 17.1046 8.89543 18 10 18H12V16H10V12Z" />
-                <!-- "F0" = relleno par-impar (el SVG lleva fill-rule="evenodd"): es lo que deja el
-                     rectangulo y el aro HUECOS por dentro. En Avalonia va dentro del dato del
-                     trazado, no como propiedad del Path. -->
+                <!-- "F0" = even-odd fill (the SVG carries fill-rule="evenodd"): it is what leaves
+                     the rectangle and the ring HOLLOW inside. In Avalonia this goes inside the path
+                     data, not as a Path property. -->
                 <Path Fill="#7D7D7D" Data="F0 M16 14C14.8954 14 14 14.8954 14 16V20C14 21.1046 14.8954 22 16 22H22C23.1046 22 24 21.1046 24 20V16C24 14.8954 23.1046 14 22 14H16ZM22 16H16V20H22V16Z" />
                 <Path Fill="#7D7D7D" Data="F0 M32 16C32 24.8366 24.8366 32 16 32C7.16344 32 0 24.8366 0 16C0 7.16344 7.16344 0 16 0C24.8366 0 32 7.16344 32 16ZM30 16C30 23.732 23.732 30 16 30C8.26801 30 2 23.732 2 16C2 8.26801 8.26801 2 16 2C23.732 2 30 8.26801 30 16Z" />
             </Canvas>
         </Viewbox>
-        <!-- Galon: medido x 68,0..74,8 y 987,9..998,8. -->
+        <!-- Chevron: measured x 68.0..74.8, y 987.9..998.8. -->
         <Path Canvas.Left="68" Canvas.Top="987.9" Stroke="#7D7D7D" StrokeThickness="1.7"
               StrokeLineCap="Round" StrokeJoin="Round" Data="M0,0 L6.8,5.45 L0,10.9" />
 
-        <!-- ===== BLOQUE DE CLASIFICACION POR EDAD (abajo-derecha) =====
-             Los tres textos van alineados a la DERECHA en x=1696 (medido: la etiqueta, la raya y el
-             texto de avisos acaban los tres exactamente ahi) y el sello queda a su derecha. -->
+        <!-- ===== AGE RATING BLOCK (bottom right) =====
+             The three texts are RIGHT-aligned on x=1696 (measured: the label, the rule and the
+             content-descriptor text all end exactly there) and the seal sits to their right. -->
         <TextBlock x:Name="RatingLabel" Canvas.Left="1096" Canvas.Top="911.4" Width="600"
                    TextAlignment="Right" FontSize="19" FontWeight="SemiBold" Foreground="#E6E6E6" />
         <Rectangle x:Name="RatingRule" Canvas.Left="1587" Canvas.Top="951" Width="110" Height="1.5" Fill="#C8C8C8" />
         <TextBlock x:Name="RatingNotes" Canvas.Left="1096" Canvas.Top="970.2" Width="600"
                    TextAlignment="Right" FontSize="17" Foreground="#8E8E8E" />
 
-        <!-- Sello ESRB. Es el fichero OFICIAL que usa el propio Xbox: sale de la app instalada
-             (Microsoft.XboxGamingOverlay, Assets/ESRBRatings/ESRB_T.png, 272x272), copiado a
-             Assets/Icons/Store/esrb-teen.png. Comprobado contra la captura: es el mismo sello exacto.
-             Antes se recortaba de la captura (63x63) y salia borroso; ahora la imagen se REDUCE en vez
-             de ampliarse, asi que queda nitida.
-             Colocacion: el marco negro mide 256 de los 272 del fichero (8 px transparentes por lado).
-             En la captura ese marco ocupa 81,65 px y su borde derecho cae en 1811, el mismo margen de
-             contenido que la caja de arte. Por eso la imagen va a 86,75 de lado, desplazada 2,55 px
-             arriba y a la izquierda para descontar el margen transparente.
-             Nota legal, como con el resto de iconos: material de Microsoft/ESRB usado como referencia
-             visual en un proyecto de uso personal. -->
+        <!-- ESRB seal. This is the OFFICIAL file Xbox itself uses, taken from the installed app
+             (Microsoft.XboxGamingOverlay, Assets/ESRBRatings/ESRB_T.png, 272x272) and copied to
+             Assets/Icons/Store/esrb-teen.png. Verified against the reference: the exact same seal.
+             It used to be cropped from the capture (63x63) and looked blurry; now the image is
+             DOWNSCALED instead of upscaled, so it stays sharp.
+             Placement: the black frame is 256 of the file's 272 px (8 transparent px per side). In
+             the reference that frame is 81.65 px wide and its right edge lands on 1811, the same
+             content margin as the art box. Hence the image is 86.75 per side, shifted 2.55 px up and
+             left to cancel out the transparent margin.
+             Ownership, as with the other icons: Microsoft/ESRB material, see THIRD-PARTY.md. -->
         <Image x:Name="RatingSeal" Canvas.Left="1727" Canvas.Top="903.8" Width="86.75" Height="86.75"
                RenderOptions.BitmapInterpolationMode="HighQuality" />
 

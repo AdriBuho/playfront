@@ -2,25 +2,24 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Playfront.App.Views.StoreCategoryView"
              Width="1920" Height="1080">
-    <!-- PAGINA DE CATEGORIA de la Tienda (la que se abre en Apps > Music apps).
-         Construida 1:1 a partir de la captura de referencia "2.png": todas las
-         coordenadas, colores y tamanos de aqui estan medidos sobre ella, con el porque
-         de cada numero anotado al lado. Si algo hay que retocar, mirar
-         primero la captura antes de mover valores a ojo.
+    <!-- Store CATEGORY PAGE (the one that opens under Apps > Music apps).
+         Built 1:1 from the reference capture: every coordinate, colour and size here is measured
+         from it, with the reason for each number noted alongside. Re-measure against the reference
+         before nudging any value by eye.
 
-         Vive bajo demanda como el resto de pantallas (MainWindow la crea al entrar y la libera al
-         salir), segun la arquitectura de rendimiento del proyecto. -->
+         Created on demand like every other screen (MainWindow builds it on entry and releases it
+         on exit). -->
 
     <UserControl.Styles>
-        <!-- Anillo de foco al estilo Xbox medido en la captura: trazo de acento de 6 px por fuera y
-             banda negra de 5 px por dentro. El color SIGUE EL TEMA del usuario (decision suya; en la
-             captura era verde fijo). Se enciende con la clase "selected". -->
+        <!-- Xbox-style focus ring measured from the reference: 6 px accent stroke outside, 5 px
+             black band inside. The colour FOLLOWS THE ACTIVE THEME (the reference had it fixed
+             green). Turned on with the "selected" class. -->
         <Style Selector="Border.catRing">
             <Setter Property="Background" Value="Transparent" />
-            <!-- OJO: el estado sin foco es AccentFadedBrush (el acento con alpha 0), NO "Transparent".
-                 "Transparent" es blanco transparente, asi que la BrushTransition de abajo interpolaba
-                 el color hacia el blanco mientras bajaba el alfa y el anillo se apagaba en BLANCO en
-                 vez de en el color del tema. Mismo motivo que en Border.selectionRing de la home. -->
+            <!-- The unfocused state is AccentFadedBrush (the accent at alpha 0), NOT "Transparent".
+                 "Transparent" is transparent WHITE, so the BrushTransition below interpolated the
+                 colour towards white while the alpha dropped and the ring faded out through WHITE
+                 instead of the theme colour. Same reason as Border.selectionRing on the home. -->
             <Setter Property="BorderBrush" Value="{DynamicResource AccentFadedBrush}" />
             <Setter Property="BorderThickness" Value="6" />
             <Setter Property="IsHitTestVisible" Value="False" />
@@ -34,7 +33,7 @@
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
             <Setter Property="BoxShadow" Value="{DynamicResource SettingsRingShadow}" />
         </Style>
-        <!-- Banda negra interior del anillo (solo visible cuando el elemento esta enfocado). -->
+        <!-- Inner black band of the ring (only visible while the item is focused). -->
         <Style Selector="Border.catRingInner">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="Transparent" />
@@ -49,14 +48,14 @@
     <Canvas Width="1920" Height="1080">
 
         <!-- ============================================================
-             FONDO. Es el de la Store INVERTIDO: la luz teal cae en la esquina INFERIOR DERECHA
-             (en la home esta arriba a la izquierda). Medido: no es un degradado diagonal - tres
-             esquinas dan luminancia ~23 y la cuarta 72, cuando una diagonal dejaria dos a medio
-             camino. El modelo que encaja (validado a ciegas en 16 puntos, error 1,9 sobre 255) es
-             base horizontal + halo eliptico de esquina + nucleo calido.
-             OJO: todos los stops del halo llevan el MISMO RGB y solo cambia el alfa. Si el ultimo
-             se pusiera como "Transparent" (negro transparente), Avalonia interpolaria tambien el
-             color hacia el negro y el halo saldria sucio de gris por el medio.
+             BACKGROUND. The Store's, INVERTED: the teal light falls in the BOTTOM RIGHT corner (on
+             the home it is top left). Measured: it is not a diagonal gradient - three corners read
+             luminance ~23 and the fourth 72, whereas a diagonal would leave two halfway. The model
+             that fits (validated blind on 16 sample points, error 1.9 out of 255) is horizontal
+             base + elliptical corner halo + warm core.
+             All halo stops carry the SAME RGB and only the alpha changes. Setting the last one to
+             "Transparent" (transparent black) would make Avalonia interpolate the colour towards
+             black too, and the halo would come out muddy grey in the middle.
              ============================================================ -->
         <Rectangle Canvas.Left="0" Canvas.Top="0" Width="1920" Height="1080">
             <Rectangle.Fill>
@@ -68,7 +67,7 @@
                 </LinearGradientBrush>
             </Rectangle.Fill>
         </Rectangle>
-        <!-- Correccion vertical medida (+3 de azul de arriba abajo en el borde izquierdo). -->
+        <!-- Measured vertical correction (+3 blue from top to bottom along the left edge). -->
         <Rectangle Canvas.Left="0" Canvas.Top="0" Width="1920" Height="1080">
             <Rectangle.Fill>
                 <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
@@ -77,7 +76,7 @@
                 </LinearGradientBrush>
             </Rectangle.Fill>
         </Rectangle>
-        <!-- Halo teal de la esquina inferior derecha. -->
+        <!-- Teal halo of the bottom right corner. -->
         <Rectangle Canvas.Left="0" Canvas.Top="0" Width="1920" Height="1080">
             <Rectangle.Fill>
                 <RadialGradientBrush Center="100%,100%" GradientOrigin="100%,100%" RadiusX="76.2%" RadiusY="97.6%">
@@ -95,8 +94,8 @@
                 </RadialGradientBrush>
             </Rectangle.Fill>
         </Rectangle>
-        <!-- Nucleo calido de la misma esquina. No es opcional: sin el, el rojo se queda corto entre
-             3,5 y 5,4 niveles en toda la region inferior derecha (lo comprobo el verificador). -->
+        <!-- Warm core of the same corner. Not optional: without it, red falls short by 3.5 to 5.4
+             levels across the whole bottom right region. -->
         <Rectangle Canvas.Left="0" Canvas.Top="0" Width="1920" Height="1080">
             <Rectangle.Fill>
                 <RadialGradientBrush Center="100%,100%" GradientOrigin="100%,100%" RadiusX="22%" RadiusY="30%">
@@ -106,30 +105,29 @@
             </Rectangle.Fill>
         </Rectangle>
 
-        <!-- FONDO AMBIENTE: con el foco en una TARJETA, toda la pagina se tiñe del color de esa app.
-             Medido: el fondo pasa a ser un granate PLANO (para Apple Music) con una ligerisima rampa
-             vertical, y encima unas manchas grises muy difusas que DESATURAN (suben verde y azul y
-             dejan el rojo igual). El color base sale del propio arte: media del PNG x 0,36 (regla
-             medida; una primera lectura dio 0,417 y hubo que corregirla: aquella media incluia
-             las bandas apagadas de la caja). Los colores los pone el code-behind. -->
-        <!-- La "mancha" difusa del fondo NO es un degradado: es EL PROPIO ARTE de la app, ampliado y
-             muy desenfocado, centrado en la TARJETA ENFOCADA (comprobado en la captura de YouTube,
-             donde se distingue el rojo del logo; con el rosa de Apple sobre granate era imposible
-             saberlo y el primer estudio se quedo sin poder explicarlo). El code-behind le pone la
-             imagen, el tamaño y la posicion. -->
-        <!-- Se usa una copia YA OSCURECIDA del arte (x0,36, el mismo factor del fondo): la mezcla por
-             opacidad no vale porque solo puede ACLARAR, y entonces el blanco del arte de YouTube
-             salia como una mancha blanca en vez de fundirse con el gris del fondo. -->
-        <!-- Va al 35% sobre el tinte: al 100% el arte manda demasiado (con Spotify, cuyo arte es casi
-             negro, la pantalla entera salia negra y en la captura es gris). El tinte plano de cada
-             app viene MEDIDO de su captura; esta capa solo aporta la variacion local. -->
-        <!-- FUNDIDO: el fondo no cambia de golpe al pasar de una app a otra, se funde. Por eso hay DOS
-             capas identicas (A y B) en vez de una: la de abajo se queda al 100% con el fondo anterior
-             y la de arriba, con el nuevo, sube de 0 a 100 por encima. Asi en ningun momento del
-             fundido asoma el fondo morado de la pagina por debajo (que es lo que pasaria si una se
-             apagara mientras la otra se enciende). El contenedor tiene su propio fundido para el
-             paso a/desde el BANNER, donde no hay fondo de app que mostrar.
-             Los textos, iconos y la caja de arte siguen cambiando de golpe, a proposito. -->
+        <!-- AMBIENT BACKGROUND: with focus on a CARD, the whole page takes that app's colour.
+             Measured: the background becomes a FLAT maroon (for Apple Music) with a very slight
+             vertical ramp, plus very diffuse grey blobs on top that DESATURATE (raise green and blue
+             and leave red alone). The base colour comes from the art itself: PNG average x 0.36
+             (measured rule; a first reading gave 0.417 and had to be corrected - that average
+             included the dimmed side bands of the box). The code-behind sets the colours. -->
+        <!-- The diffuse "blob" is NOT a gradient: it is the app's OWN ART, scaled up and heavily
+             blurred, centred on the FOCUSED CARD. Confirmed on the YouTube capture, where the red of
+             the logo is distinguishable; with Apple's pink over maroon it was impossible to tell.
+             The code-behind sets the image, size and position. -->
+        <!-- Uses an ALREADY DARKENED copy of the art (x0.36, the same factor as the background):
+             blending by opacity does not work because it can only LIGHTEN, and then the white in the
+             YouTube art came out as a white patch instead of merging with the grey background. -->
+        <!-- Sits at 35% over the tint: at 100% the art dominates too much (with Spotify, whose art
+             is nearly black, the whole screen came out black while the reference is grey). Each
+             app's flat tint is MEASURED from its capture; this layer only adds local variation. -->
+        <!-- CROSSFADE: the background does not snap when moving between apps, it fades. Hence TWO
+             identical layers (A and B) instead of one: the bottom one stays at 100% with the old
+             background while the top one, holding the new one, rises from 0 to 100 above it. That
+             way the page's purple background never peeks through mid-fade (which is what would
+             happen if one faded out while the other faded in). The container has its own fade for
+             the transition to/from the BANNER, where there is no app background to show.
+             Text, icons and the art box still snap, deliberately. -->
         <Canvas x:Name="AmbientHost" Canvas.Left="0" Canvas.Top="0" Width="1920" Height="1080"
                 Opacity="0" IsHitTestVisible="False">
             <Canvas.Transitions>
@@ -166,15 +164,15 @@
         </Canvas>
 
         <!-- ============================================================
-             BANNER (hero de la categoria). Rect medido 1705x461 en (117,58), radio 5.
-             Solo se ve cuando el foco esta EN EL BANNER; al enfocar una tarjeta lo sustituye el
-             bloque de datos de la app (DetailLayer, mas abajo).
+             BANNER (category hero). Rect measured 1705x461 at (117,58), corner radius 5.
+             Only visible while focus is ON THE BANNER; focusing a card replaces it with the app
+             detail block (DetailLayer, below).
              ============================================================ -->
         <Border x:Name="BannerBox" Canvas.Left="117" Canvas.Top="58" Width="1705" Height="461" CornerRadius="5"
                 Background="#0E0722" ClipToBounds="True">
             <Canvas>
-                <!-- Resplandor teal del arte interno, anclado en la esquina inferior derecha del
-                     banner (medido: centro efectivo fuera del borde, pico #397160). -->
+                <!-- Teal glow from the inner art, anchored to the banner's bottom right corner
+                     (measured: effective centre outside the edge, peak #397160). -->
                 <Rectangle Width="1705" Height="461">
                     <Rectangle.Fill>
                         <RadialGradientBrush Center="100%,100%" GradientOrigin="100%,100%" RadiusX="42%" RadiusY="130%">
@@ -185,7 +183,7 @@
                         </RadialGradientBrush>
                     </Rectangle.Fill>
                 </Rectangle>
-                <!-- Oscurecimiento azul que baja desde la esquina superior derecha. -->
+                <!-- Blue darkening falling from the top right corner. -->
                 <Rectangle Width="1705" Height="461">
                     <Rectangle.Fill>
                         <LinearGradientBrush StartPoint="100%,0%" EndPoint="35%,75%">
@@ -196,21 +194,20 @@
                     </Rectangle.Fill>
                 </Rectangle>
 
-                <!-- Titulo y subtitulo. Se colocan por donde cae la CIMA de las mayusculas (medido:
-                     y=96 el titulo, y=186 el subtitulo, ambos con origen de maquetacion x=177);
-                     como el TextBlock se ancla por su caja de linea y no por la letra, el Top lleva
-                     descontado el hueco del ascendente. -->
-                <!-- Fuente SEGOE UI, no la de la app (Inter): el estudio identifico Segoe UI por sus
-                     proporciones (x-height/cap-height 0,708 medido frente a 0,714 de Segoe UI), y
-                     con Inter -que es mas ancha- el subtitulo rompe linea antes de tiempo y las
-                     medidas del estudio dejan de valer. -->
-                <!-- Peso REGULAR, no SemiBold: el estudio dudaba entre los dos (asta/cap 0,157-0,169,
-                     justo entre ambos) y la comparacion lado a lado del render con la captura lo
-                     resolvio: con SemiBold el trazo sale un 35% mas gordo que el original. -->
-                <!-- LetterSpacing 1,6: con el tamano que clava la altura de las mayusculas (63), el
-                     titulo sale un 5,5% mas estrecho que el original, porque la Store usa la version
-                     variable de Segoe con otro interletraje. Se compensa con el espaciado en vez de
-                     agrandar la fuente, que descuadraria la altura medida. -->
+                <!-- Title and subtitle. Positioned by where the CAP TOP lands (measured: y=96 the
+                     title, y=186 the subtitle, both with layout origin x=177); since a TextBlock is
+                     anchored by its line box and not by the letter, Top has the ascender gap
+                     subtracted. -->
+                <!-- SEGOE UI, not the app font (Inter): identified by its proportions (x-height /
+                     cap-height 0.708 measured against 0.714 for Segoe UI). With Inter - which is
+                     wider - the subtitle wraps too early and the measurements stop holding. -->
+                <!-- REGULAR weight, not SemiBold: the metrics were ambiguous (stem/cap 0.157-0.169,
+                     right between the two) and a side-by-side of the render against the reference
+                     settled it: with SemiBold the stroke comes out 35% heavier than the original. -->
+                <!-- LetterSpacing 1.6: at the size that nails the cap height (63), the title comes
+                     out 5.5% narrower than the original, because the Store uses the variable Segoe
+                     with different tracking. Compensated with spacing rather than a bigger font,
+                     which would break the measured height. -->
                 <TextBlock x:Name="BannerTitle" Canvas.Left="60" Canvas.Top="15" Text="Best music apps"
                            FontFamily="Segoe UI Variable Display" FontSize="63" LetterSpacing="1.6"
                            Foreground="White" />
@@ -219,8 +216,8 @@
                            FontFamily="Segoe UI" FontSize="24" Foreground="White"
                            TextWrapping="Wrap" LineHeight="32" />
 
-                <!-- Los 3 iconos de app del banner: 170x170, radio 6, anclados ARRIBA (su centro no
-                     coincide con el del banner: 235 frente a 289). Sin sombra. -->
+                <!-- The banner's 3 app icons: 170x170, radius 6, anchored TOP (their centre does not
+                     match the banner's: 235 against 289). No shadow. -->
                 <Border Canvas.Left="1016" Canvas.Top="92" Width="170" Height="170" CornerRadius="6" ClipToBounds="True">
                     <Image x:Name="BannerIcon0" Stretch="UniformToFill" />
                 </Border>
@@ -233,31 +230,31 @@
             </Canvas>
         </Border>
 
-        <!-- Anillo de foco del banner: banda negra (112,53) y trazo de acento (106,47). -->
+        <!-- Banner focus ring: black band (112,53) and accent stroke (106,47). -->
         <Border x:Name="BannerRingInner" Classes="catRingInner" Canvas.Left="112" Canvas.Top="53"
                 Width="1715" Height="471" CornerRadius="7" />
         <Border x:Name="BannerRing" Classes="catRing" Canvas.Left="106" Canvas.Top="47"
                 Width="1727" Height="483" CornerRadius="7" />
 
         <!-- ============================================================
-             BLOQUE DE DATOS DE LA APP ENFOCADA. Sustituye al banner cuando el foco esta en una
-             tarjeta. Todo va suelto sobre el fondo: aqui NO hay panel ni caja. Coordenadas medidas
-             en "apple music.png" y llevadas al lienzo; los textos los rellena el code-behind desde
-             Assets/Icons/Store/Apps/apps.json (datos reales del catalogo de la Store).
-             Los Canvas.Top llevan descontado el hueco del ascendente (~0,35 del tamano de fuente),
-             porque lo medido es donde cae la CIMA de las mayusculas.
+             DETAIL BLOCK OF THE FOCUSED APP. Replaces the banner when focus is on a card. Everything
+             sits loose on the background: there is NO panel or box here. Coordinates measured on the
+             Apple Music reference and mapped onto the canvas; the code-behind fills the text from
+             Assets/Icons/Store/Apps/apps.json (real Store catalogue data).
+             Canvas.Top values have the ascender gap subtracted (~0.35 of the font size), because
+             what was measured is where the CAP TOP lands.
              ============================================================ -->
         <Canvas x:Name="DetailLayer" Canvas.Left="0" Canvas.Top="0" IsVisible="False">
-            <!-- Categoria (miga de pan). Blanco algo apagado sobre el fondo teñido. -->
+            <!-- Category (breadcrumb). Slightly dimmed white over the tinted background. -->
             <TextBlock x:Name="DetailCategory" Canvas.Left="114" Canvas.Top="46" Text="Best music apps"
                        FontFamily="Segoe UI" FontSize="33" FontWeight="SemiBold" Foreground="White" Opacity="0.82" />
-            <!-- Titulo de la app. -->
+            <!-- App title. -->
             <TextBlock x:Name="DetailTitle" Canvas.Left="114" Canvas.Top="116" Text=""
                        FontFamily="Segoe UI Variable Display" FontSize="47" Foreground="White" />
 
-            <!-- Contador de AMIGOS que tienen la app (icono de dos personas + numero), a la derecha
-                 del titulo. Solo lo llevan algunas fichas: en la captura de Spotify sale "15" y en las
-                 de Apple, YouTube y Dolby no hay nada. El code-behind lo enseña o lo esconde. -->
+            <!-- FRIENDS counter for who owns the app (two-person icon + number), right of the title.
+                 Only some entries carry it: the Spotify reference shows "15" while Apple, YouTube
+                 and Dolby show nothing. The code-behind shows or hides it. -->
             <Canvas x:Name="FriendsRow" Canvas.Left="1031" Canvas.Top="140" IsVisible="False">
                 <Path Fill="White" Stretch="Uniform" Width="26" Height="20"
                       Data="M9,3 A3,3 0 1,1 9,9 A3,3 0 1,1 9,3 M17,4.5 A2.4,2.4 0 1,1 17,9.3 A2.4,2.4 0 1,1 17,4.5 M9,11 C13,11 15.5,12.6 15.5,14.8 L15.5,16.5 L2.5,16.5 L2.5,14.8 C2.5,12.6 5,11 9,11 M17,11.4 C20.2,11.4 22.2,12.7 22.2,14.5 L22.2,16.5 L17.6,16.5 L17.6,14.8 C17.6,13.6 17,12.5 16,11.6 C16.3,11.5 16.6,11.4 17,11.4" />
@@ -265,9 +262,9 @@
                            FontFamily="Segoe UI" FontSize="24" FontWeight="SemiBold" Foreground="White" />
             </Canvas>
 
-            <!-- Las dos pastillas: valoracion (5 estrellas + votos) y genero. Van en fila con hueco
-                 medido de 20 y se ajustan solas al texto, que cambia con cada app (no todas tienen
-                 el mismo numero de votos ni el mismo genero). -->
+            <!-- The two pills: rating (5 stars + votes) and genre. Laid out in a row with a measured
+                 gap of 20, sizing themselves to the text, which changes per app (not all have the
+                 same vote count or the same genre). -->
             <StackPanel x:Name="PillRow" Canvas.Left="115" Canvas.Top="195" Orientation="Horizontal" Spacing="20">
                 <Border Height="45" CornerRadius="7" Padding="8,0,14,0"
                         Background="#171516" BorderBrush="#58474C" BorderThickness="1">
@@ -284,41 +281,41 @@
                 </Border>
             </StackPanel>
 
-            <!-- Descripcion: 2 lineas como maximo, interlineado medido 35. -->
+            <!-- Description: 2 lines maximum, measured line height 35. -->
             <TextBlock x:Name="DetailDescription" Canvas.Left="114" Canvas.Top="291" Width="950" Text=""
                        FontFamily="Segoe UI" FontSize="25" Foreground="White" Opacity="0.60"
                        TextWrapping="Wrap" LineHeight="35" MaxLines="2" />
-            <!-- Linea de ESTADO: el precio si la app no la tienes ("Free"), o el icono de circulo con
-                 tick + "Owned" si ya es tuya. NO esta a una altura fija: va siempre justo debajo de la
-                 ULTIMA linea de descripcion, asi que sube cuando la descripcion ocupa una sola linea
-                 (medido comparando las fichas de Apple Music y de YouTube). La coloca el code-behind.
-                 El icono empieza 5 px a la IZQUIERDA de la columna de texto (medido). -->
-            <!-- Tamaño del texto MEDIDO en las capturas de Spotify y de Dolby, que coinciden entre si:
-                 la palabra "Owned" ocupa 92,5 px de ancho de tinta en el lienzo de 1920. Con 33 salia
-                 104 (un 12% mas grande, que es lo que el usuario veia). 29,5 da 93. El Canvas.Top de 2
-                 mantiene el centro del texto donde estaba al bajar el tamaño. -->
+            <!-- STATUS line: the price when the app is not owned ("Free"), or the circled tick icon
+                 + "Owned" when it is. NOT at a fixed height: it always sits right under the LAST
+                 description line, so it moves up when the description is a single line (measured by
+                 comparing the Apple Music and YouTube entries). The code-behind positions it.
+                 The icon starts 5 px LEFT of the text column (measured). -->
+            <!-- Text size MEASURED on the Spotify and Dolby captures, which agree with each other:
+                 the word "Owned" occupies 92.5 px of ink width on the 1920 canvas. At 33 it came out
+                 104 (12% too large). 29.5 gives 93. The Canvas.Top of 2 keeps the text centre where
+                 it was after shrinking the size. -->
             <Canvas x:Name="StatusRow" Canvas.Left="0" Canvas.Top="374">
                 <Canvas x:Name="OwnedIconHost" Canvas.Left="109" Canvas.Top="0" IsVisible="False" />
                 <TextBlock x:Name="DetailPrice" Canvas.Left="114" Canvas.Top="3.5" Text=""
                            FontFamily="Segoe UI" FontSize="29.5" FontWeight="SemiBold" Foreground="White" />
             </Canvas>
 
-            <!-- Caja de arte grande. El arte de la app es CUADRADO y la caja APAISADA: la Store
-                 centra el arte sin estirarlo y rellena los lados con un color derivado del propio
-                 arte (medido: banda = arte x 0,26 sobre un solido). Sombra hacia abajo-derecha. -->
+            <!-- Large art box. The app art is SQUARE and the box is LANDSCAPE: the Store centres the
+                 art without stretching it and fills the sides with a colour derived from the art
+                 itself (measured: band = art x 0.26 over a solid). Shadow towards bottom right. -->
             <Border x:Name="DetailArtBox" Canvas.Left="1122" Canvas.Top="106" Width="690" Height="386"
                     CornerRadius="8" ClipToBounds="True" BoxShadow="6 6 27 -4 #59000000">
                 <Panel>
-                    <!-- Las franjas de los lados NO son un color plano: son el mismo arte ampliado y
-                         desenfocado rellenando la caja (se ve en la captura de YouTube, donde en la
-                         banda asoma el rojo del logo). Encima, el arte cuadrado nitido centrado. -->
+                    <!-- The side bands are NOT a flat colour: they are the same art scaled up and
+                         blurred to fill the box (visible on the YouTube reference, where the red of
+                         the logo shows through the band). On top, the sharp square art, centred. -->
                     <Image x:Name="DetailArtBlur" Stretch="UniformToFill">
                         <Image.Effect>
                             <BlurEffect Radius="45" />
                         </Image.Effect>
                     </Image>
-                    <!-- Las franjas van oscurecidas respecto al arte (medido en YouTube: blanco 255
-                         del arte -> 148 en la banda, o sea ~0,58). -->
+                    <!-- The bands are darkened relative to the art (measured on YouTube: white 255
+                         in the art -> 148 in the band, i.e. ~0.58). -->
                     <Rectangle Fill="#6B000000" />
                     <Image x:Name="DetailArt" Width="387" Height="386" Stretch="UniformToFill"
                            HorizontalAlignment="Center" />
@@ -326,15 +323,15 @@
             </Border>
         </Canvas>
 
-        <!-- Avisos de arriba a la derecha (solo en el estado de detalle, medido). -->
+        <!-- Top right hints (detail state only, measured). -->
         <Canvas x:Name="TopHints" Canvas.Left="0" Canvas.Top="0" IsVisible="False">
-            <!-- Boton X del mando + FILTER -->
+            <!-- Gamepad X button + FILTER -->
             <Ellipse Canvas.Left="1471" Canvas.Top="65" Width="26" Height="26" Stroke="White" StrokeThickness="2" />
             <Path Canvas.Left="1471" Canvas.Top="65" Stroke="White" StrokeThickness="2" StrokeLineCap="Round"
                   Data="M8,8 L18,18 M18,8 L8,18" />
             <TextBlock Canvas.Left="1505" Canvas.Top="65" Text="FILTER" FontFamily="Segoe UI" FontSize="26"
                        Foreground="White" />
-            <!-- Boton Menu + QUICK ACTIONS -->
+            <!-- Menu button + QUICK ACTIONS -->
             <Ellipse Canvas.Left="1599" Canvas.Top="65" Width="26" Height="26" Stroke="White" StrokeThickness="2" />
             <Path Canvas.Left="1599" Canvas.Top="65" Stroke="White" StrokeThickness="2" StrokeLineCap="Round"
                   Data="M8,9 H18 M8,13 H18 M8,17 H18" />
@@ -343,27 +340,25 @@
         </Canvas>
 
         <!-- ============================================================
-             REJILLA DE TARJETAS. Las construye el code-behind (BuildGrid): 6 columnas, pitch 287,3
-             (con 288 la sexta se desviaria 4 px), primera fila en y=583 y segunda en 967.
+             CARD GRID. Built by the code-behind (BuildGrid): 6 columns, pitch 287.3 (with 288 the
+             sixth would drift 4 px), first row at y=583 and second at 967.
              ============================================================ -->
         <Canvas x:Name="GridHost" Canvas.Left="0" Canvas.Top="0" />
 
         <!-- ============================================================
-             ADORNOS SUELTOS. En esta pagina NO hay panel de rail: se barrio la franja izquierda
-             entera y la diferencia maxima entre pixeles contiguos es 1 unidad. Solo hay estas dos
-             cosas.
+             LOOSE ORNAMENTS. This page has NO rail panel: the entire left strip was swept and the
+             maximum difference between adjacent pixels is 1 unit. Only these two things exist.
              ============================================================ -->
 
-        <!-- Indicador de 3 puntos (paginacion): el activo en BLANCO FIJO (decision del usuario), los
-             otros dos al 32%. Alineado por ARRIBA con el borde exterior del anillo del banner. -->
+        <!-- 3-dot pagination indicator: the active one is FIXED WHITE (it does not follow the theme),
+             the other two at 32%. TOP-aligned with the outer edge of the banner ring. -->
         <Ellipse Canvas.Left="67" Canvas.Top="49" Width="8" Height="8" Fill="White" />
         <Ellipse Canvas.Left="67" Canvas.Top="61" Width="8" Height="8" Fill="White" Opacity="0.32" />
         <Ellipse Canvas.Left="67" Canvas.Top="73" Width="8" Height="8" Fill="White" Opacity="0.32" />
 
-        <!-- QUITADO a proposito: aqui iba el aro translucido con el glifo del boton VIEW y
-             su chevron, abajo a la izquierda (esta en la captura de referencia, pero no lo vamos a
-             usar). Si algun dia se quiere recuperar, hay que volver a medirlo sobre
-             la captura de referencia. -->
+        <!-- DELIBERATELY OMITTED: the translucent ring with the VIEW button glyph and its chevron
+             went here, bottom left. It is present in the reference but is not used. Restoring it
+             means re-measuring it against the reference. -->
 
     </Canvas>
 </UserControl>
