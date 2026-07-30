@@ -57,6 +57,22 @@ public sealed class WebViewHost : NativeControlHost
     /// <summary>Raised when the browser cannot initialize (typically the WebView2 runtime is missing).</summary>
     public event Action<string>? InitFailed;
 
+    /// <summary>
+    /// A shell key pressed or released while the browser has focus. Second argument is true for a press.
+    ///
+    /// This exists because WebView2 is a NATIVE window: while it is up it owns the keyboard and the
+    /// Avalonia window never sees a KeyDown. Without this, the only way out of this screen was holding
+    /// B on a controller, so a PC with no controller had no way back at all.
+    /// </summary>
+    public event Action<int, bool>? ShellKey;
+
+    // Virtual key codes forwarded to the shell. Deliberately only the "back" keys: everything else the
+    // Leanback interface already handles natively (arrows navigate, Enter selects), and search and
+    // play/pause are reachable through the page's own UI, so intercepting them would only add a
+    // round trip.
+    private const int VkBack = 0x08;
+    private const int VkEscape = 0x1B;
+
     public WebViewHost(string url, string profileFolder)
     {
         _url = url;
@@ -125,6 +141,23 @@ public sealed class WebViewHost : NativeControlHost
                     e.State = CoreWebView2PermissionState.Allow;
                     e.Handled = true;
                 }
+            };
+
+            // Escape and Backspace are marked Handled so the page does NOT also receive them: the shell
+            // reacts and then injects the keypress itself through SendKey, exactly as it does for the
+            // controller. One code path for both, instead of the page seeing a second, native "back".
+            _controller.AcceleratorKeyPressed += (_, e) =>
+            {
+                var key = (int)e.VirtualKey;
+                if (key is not (VkEscape or VkBack))
+                {
+                    return;
+                }
+
+                var down = e.KeyEventKind is CoreWebView2KeyEventKind.KeyDown
+                                          or CoreWebView2KeyEventKind.SystemKeyDown;
+                e.Handled = true;
+                Dispatcher.UIThread.Post(() => ShellKey?.Invoke(key, down));
             };
 
             await core.AddScriptToExecuteOnDocumentCreatedAsync(InjectScript);

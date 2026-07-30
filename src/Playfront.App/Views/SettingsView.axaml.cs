@@ -69,6 +69,12 @@ public partial class SettingsView : UserControl
     /// <summary>Requests opening "System Time" (the "Time" card in System).</summary>
     public event Action? TimeRequested;
 
+    /// <summary>Requests opening "Preferences Idle options" (the "Idle options" card in Preferences).</summary>
+    public event Action? IdleOptionsRequested;
+
+    /// <summary>Requests opening "Preferences Break reminder" (that card in Preferences).</summary>
+    public event Action? BreakReminderRequested;
+
     /// <summary>Requests closing Settings and returning home (B on the category list).</summary>
     public event Action? ExitRequested;
 
@@ -194,6 +200,16 @@ public partial class SettingsView : UserControl
             // "Time" is the lone card on row 3 of the System grid (SysCard6).
             case GamepadButton.A when _inGrid && _category == SystemCategory && _gridRow == 3 && _gridCol == 0:
                 TimeRequested?.Invoke();
+                return;
+
+            // "Idle options" is row 0, column 1 of the Preferences grid (PrefCard1).
+            case GamepadButton.A when _inGrid && _category == PreferencesCategory && _gridRow == 0 && _gridCol == 1:
+                IdleOptionsRequested?.Invoke();
+                return;
+
+            // "Break reminder" is row 1, column 1 of the Preferences grid (PrefCard3).
+            case GamepadButton.A when _inGrid && _category == PreferencesCategory && _gridRow == 1 && _gridCol == 1:
+                BreakReminderRequested?.Invoke();
                 return;
 
             case GamepadButton.B when _inGrid:

@@ -1,0 +1,135 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Playfront.App.Views.PreferencesBreakView"
+             Width="1920" Height="1080">
+    <!-- "Preferences Break reminder": opened with A on the "Break reminder" tile of
+         Settings > Preferences, closed with B. A FULL screen, mounted on demand.
+
+         Measured 1:1. One card, the standard one: 438x98 at (112,264), label at (21,10), value at
+         (21,55), chevron at (392,45) - the chevron measured (391,44) here, the same place as always.
+
+         The explanatory text sits on the BARE BACKGROUND, with no panel behind it, unlike Idle
+         options. It starts at x=620, the same column the Time screen uses for its right-hand block.
+
+         Text 26 with a 34.5 line pitch (verified against the real font: 26 fits the six measured line
+         widths to within 14 px total, against 68 for 25 and 97 for 27). The block is 420 wide, which
+         is the middle of the 406..439 range that makes it wrap where the reference wraps - narrower
+         and "The timer starts counting when you" would break early, wider and "sign" would join it.
+
+         The two paragraphs are separate blocks 104 apart, which is three line pitches: two lines of
+         the first paragraph plus one empty. Same arrangement as Idle options.
+
+         VISUAL ONLY for now: the card takes the ring, A does nothing and the value shown is the
+         reference's, not this machine's. -->
+    <UserControl.Styles>
+        <Style Selector="Border.brkCard">
+            <Setter Property="Background" Value="#303030" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Width" Value="438" />
+            <Setter Property="Height" Value="98" />
+        </Style>
+        <Style Selector="Border.brkCard.selected">
+            <Setter Property="Background" Value="#454545" />
+            <Setter Property="ZIndex" Value="2" />
+        </Style>
+        <Style Selector="TextBlock.brkLabel">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="TextBlock.brkValue">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="#C4C4C4" />
+        </Style>
+        <!-- A row of the dropdown. Ink 27 in from the panel edge, as in every other list.
+             The top nudge is 5, not the 4 the taller lists use, and the reason is worth knowing:
+             with VerticalAlignment=Center the margin only moves the text by HALF of it, because it
+             shrinks the box the text is then centred in. Changing 3 to 4 here moved nothing at all. -->
+        <Style Selector="TextBlock.brkOption">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="27,5,0,0" />
+        </Style>
+    </UserControl.Styles>
+
+    <Canvas Width="1920" Height="1080">
+        <Rectangle Width="1920" Height="1080" Fill="#201F1F" />
+
+        <TextBlock Canvas.Left="110" Canvas.Top="56" FontSize="45" Foreground="White">
+            <Run Text="Preferences " FontFamily="{StaticResource XboxFontDisplaySemibold}" />
+            <Run Text="Break reminder" FontFamily="{StaticResource XboxFontFamily}" />
+        </TextBlock>
+
+        <Border Classes="brkCard" x:Name="BrkCard0" Canvas.Left="112" Canvas.Top="264">
+            <Canvas>
+                <TextBlock Classes="brkLabel" Canvas.Left="21" Canvas.Top="10" Text="Remind me to take a break" />
+                <TextBlock Classes="brkValue" x:Name="BrkValue0" Canvas.Left="21" Canvas.Top="55" Text="Never" />
+                <Path Canvas.Left="392" Canvas.Top="45" Stroke="White" StrokeThickness="2.5"
+                      StrokeLineCap="Round" StrokeJoin="Round" Data="M0,0 L8.5,8.5 L17,0" />
+            </Canvas>
+        </Border>
+        <Border Classes="selectionRing" x:Name="BrkRing0" Canvas.Left="104" Canvas.Top="256" Width="454" Height="114" />
+
+        <TextBlock Classes="settingsDesc" Canvas.Left="620" Canvas.Top="269" Width="420"
+                   Text="Choose a time interval at which to remind you to take a break." />
+        <TextBlock Classes="settingsDesc" Canvas.Left="620" Canvas.Top="373" Width="420"
+                   Text="The timer starts counting when you sign in or change this setting, but only displays the notification when you're playing a game." />
+
+        <!-- ============ "Remind me to take a break" dropdown ============
+             Measured 1:1: panel 438x280 at (112,229) - FIVE rows of 56, not the 68 the time zone and
+             "Turn off after" lists use. Two row heights exist in the reference and this is the short
+             one; do not "unify" them.
+
+             All five options fit, so there is no scrolling and no scrollbar: the panel is fixed and
+             only the ring and the fill travel.
+
+             THE RING IS THE ROW INFLATED BY 8 (454x72), the same rule the cards follow. Proved on this
+             capture rather than guessed: the green stroke peaks at x=106 and x=556, which is exactly
+             where a 454-wide ring starting at 104 puts them - a 438 ring at 112 would peak at 114 and
+             548.
+
+             Its position is taken from a single capture, with "Never" selected. Fixed here for that
+             reason; a capture with another value chosen would say whether it moves. -->
+        <Border x:Name="BrkPanel" Canvas.Left="112" Canvas.Top="229" Width="438" Height="0" ZIndex="10"
+                Background="#303030" BorderBrush="#4B4B4B" BorderThickness="2"
+                ClipToBounds="True" IsVisible="False">
+            <Border.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Height" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                </Transitions>
+            </Border.Transitions>
+            <Canvas>
+                <!-- The selection's fill, kept with the ring rather than painted on the row: same
+                     reasoning as every other list here. -->
+                <Border x:Name="BrkHighlight" Canvas.Left="-2" Canvas.Top="-2" Width="438" Height="56"
+                        Background="#454545">
+                    <Border.Transitions>
+                        <Transitions>
+                            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                        </Transitions>
+                    </Border.Transitions>
+                </Border>
+                <Canvas x:Name="BrkList">
+                    <Canvas.Transitions>
+                        <Transitions>
+                            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                        </Transitions>
+                    </Canvas.Transitions>
+                </Canvas>
+            </Canvas>
+        </Border>
+
+        <Border Classes="selectionRing selected" x:Name="BrkRing" Canvas.Left="104" Canvas.Top="221"
+                Width="454" Height="72" ZIndex="11" IsVisible="False">
+            <Border.Transitions>
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                </Transitions>
+            </Border.Transitions>
+        </Border>
+    </Canvas>
+</UserControl>

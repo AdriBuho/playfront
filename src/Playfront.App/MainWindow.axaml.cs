@@ -97,6 +97,12 @@ public partial class MainWindow : Window
     private bool _inTime;
     private SystemTimeView? _timeView;
 
+    private bool _inIdleOptions;
+    private PreferencesIdleView? _idleView;
+
+    private bool _inBreakReminder;
+    private PreferencesBreakView? _breakView;
+
     // STORE state (opaque full screen covering the home, like Settings). The view is created ON
     // DEMAND on entry (EnterStore) and released on exit (ExitStore). While it is open the gamepad
     // navigates it (see Move) and the home video is paused (see IsHomeCovered).
@@ -472,7 +478,7 @@ public partial class MainWindow : Window
         _gamepad.ButtonPressed += OnGamepadButtonPressed;
         // B HELD: only used to EXIT the YouTube screen (it does nothing elsewhere in the app; a tap
         // of B already acts as "back" on every screen).
-        _gamepad.BHeld += () => CrashLog.Guard(() => { if (_inYouTube) ExitYouTube(); }, "bheld");
+        _gamepad.BHeld += () => CrashLog.Guard(OnBackHeld, "bheld");
         _pollTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
         // Guard: gamepad polling runs here and ALL navigation hangs off it (Poll -> ButtonPressed ->
         // Move -> each screen's handlers), so a failure in any handler would surface here. Catching
@@ -504,6 +510,13 @@ public partial class MainWindow : Window
         }, "dyn-preview-tick");
 
         KeyDown += (s, e) => CrashLog.Guard(() => OnKeyDown(s, e), "keydown");
+        KeyUp += (_, e) => CrashLog.Guard(() =>
+        {
+            if (e.Key is Key.Back or Key.Escape)
+            {
+                ReleaseBackKey();
+            }
+        }, "keyup");
         Opened += (_, _) => CrashLog.Guard(() => { CoverEntireMonitor(); UpdateHomeVideoState(); }, "opened");
         // The background video only decodes while the home is genuinely on screen. On losing focus (a
         // game or another window comes to the front) it is unloaded; on regaining it, reloaded. See
@@ -595,9 +608,12 @@ public partial class MainWindow : Window
         clockTimer.Start();
     }
 
+    // Follows the "24 hour clock" checkbox on Settings > System > Time, which is the account's real
+    // Windows setting - so this clock matches the taskbar instead of disagreeing with it.
     private void UpdateClock()
     {
-        ClockText.Text = DateTime.Now.ToString("h:mm tt", CultureInfo.InvariantCulture);
+        ClockText.Text = DateTime.Now.ToString(
+            SystemTimeSettings.ClockFormat, CultureInfo.InvariantCulture);
     }
 
     private void StartBatteryMonitor()
@@ -612,8 +628,17 @@ public partial class MainWindow : Window
     {
         _battery.Refresh();
 
-        // No battery reading (e.g. a desktop without a battery): keep the last known state instead
-        // of emptying the bar.
+        // A desktop PC has no battery, so it gets no battery indicator. This used to fall into the
+        // branch below and leave the XAML defaults on screen - a full green battery, permanently, on a
+        // machine that is always on mains. Showing nothing is right; showing a confident lie is not.
+        BatteryIcon.IsVisible = _battery.HasBattery;
+        if (!_battery.HasBattery)
+        {
+            return;
+        }
+
+        // There IS a battery but Windows could not read it this time. Keep the last known state rather
+        // than emptying the bar - a momentary failure must not look like a flat battery.
         if (_battery.Percent is not { } percent)
         {
             return;
@@ -690,7 +715,9 @@ public partial class MainWindow : Window
 
         if (_videoBackground == null)
         {
-            _videoBackground = new HardwareVideoBackgroundControl(fullPath) { Width = 1920, Height = 1080 };
+            // No fixed size: this sits outside the Viewbox now and fills the window, so the wallpaper
+            // reaches the edges of a non-16:9 screen instead of stopping at the 16:9 content box.
+            _videoBackground = new HardwareVideoBackgroundControl(fullPath);
             BackgroundHost.Children.Add(_videoBackground);
         }
         else
@@ -731,6 +758,60 @@ public partial class MainWindow : Window
         }
     }
 
+    // Keyboard equivalent of the controller's hold-B, so "back" behaves identically on both. A timer
+    // rather than counting key auto-repeats: auto-repeat depends on the user's Windows settings and
+    // does not fire at all through the WebView2 route, so counting repeats would make the only way out
+    // of the YouTube screen depend on a keyboard preference.
+    private const int BackHoldMs = 800; // matches GamepadPoller.BHoldPolls (16 polls x 50 ms)
+    private DispatcherTimer? _backHoldTimer;
+    private bool _backKeyDown;
+
+    /// <summary>"Back" pressed on the keyboard: acts immediately, and starts the clock for the hold.</summary>
+    private void PressBackKey()
+    {
+        // Windows repeats KeyDown while the key stays down; only the first one is a press.
+        if (_backKeyDown)
+        {
+            return;
+        }
+
+        _backKeyDown = true;
+        Move(GamepadButton.B);
+
+        _backHoldTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(BackHoldMs) };
+        _backHoldTimer.Stop();
+        _backHoldTimer.Tick -= OnBackHoldElapsed;
+        _backHoldTimer.Tick += OnBackHoldElapsed;
+        _backHoldTimer.Start();
+    }
+
+    private void ReleaseBackKey()
+    {
+        _backKeyDown = false;
+        _backHoldTimer?.Stop();
+    }
+
+    private void OnBackHoldElapsed(object? sender, EventArgs e)
+    {
+        _backHoldTimer?.Stop();
+        if (_backKeyDown)
+        {
+            OnBackHeld();
+        }
+    }
+
+    /// <summary>
+    /// "Back" held (~800 ms), from either input device. Today it only leaves the YouTube screen, whose
+    /// tap-B is consumed by the page itself.
+    /// </summary>
+    private void OnBackHeld()
+    {
+        if (_inYouTube)
+        {
+            ExitYouTube();
+        }
+    }
+
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
         switch (e.Key)
@@ -750,14 +831,14 @@ public partial class MainWindow : Window
             case Key.Enter:
                 Move(GamepadButton.A);
                 break;
-            // Keyboard "back": Backspace and ESCAPE do the same as the gamepad's B.
-            // Escape was added because it is the first thing anyone tries to leave a screen, and
-            // until then it did NOTHING: without a gamepad to hand there was no way to go back.
+            // Keyboard "back": Backspace and ESCAPE behave EXACTLY like the gamepad's B, hold
+            // included - a tap is "back", holding is "exit" wherever B-held means something. Routing
+            // both through PressBackKey is what keeps the two input devices from drifting apart.
             // Note it is "back", NOT "close the app": the Escape that used to close the app was
             // removed on purpose and is not coming back.
             case Key.Back:
             case Key.Escape:
-                Move(GamepadButton.B);
+                PressBackKey();
                 break;
             // LB/RB bumpers on the keyboard (for testing without a gamepad): Q and E.
             case Key.Q:
@@ -857,6 +938,18 @@ public partial class MainWindow : Window
         if (_inLanguage)
         {
             _languageView?.Move(button);
+            return;
+        }
+
+        if (_inIdleOptions)
+        {
+            _idleView?.Move(button);
+            return;
+        }
+
+        if (_inBreakReminder)
+        {
+            _breakView?.Move(button);
             return;
         }
 
@@ -1023,6 +1116,8 @@ public partial class MainWindow : Window
         _settingsView.StorageRequested += EnterStorage;
         _settingsView.LanguageRequested += EnterLanguage;
         _settingsView.TimeRequested += EnterTime;
+        _settingsView.IdleOptionsRequested += EnterIdleOptions;
+        _settingsView.BreakReminderRequested += EnterBreakReminder;
         _settingsView.ExitRequested += ExitSettings;
         SettingsHost.Children.Add(_settingsView);
 
@@ -1082,6 +1177,16 @@ public partial class MainWindow : Window
             ExitTime();
         }
 
+        if (_inIdleOptions)
+        {
+            ExitIdleOptions();
+        }
+
+        if (_inBreakReminder)
+        {
+            ExitBreakReminder();
+        }
+
         if (_settingsView != null)
         {
             _settingsView.PersonalizationRequested -= EnterPersonalization;
@@ -1090,6 +1195,8 @@ public partial class MainWindow : Window
             _settingsView.StorageRequested -= EnterStorage;
             _settingsView.LanguageRequested -= EnterLanguage;
             _settingsView.TimeRequested -= EnterTime;
+            _settingsView.IdleOptionsRequested -= EnterIdleOptions;
+            _settingsView.BreakReminderRequested -= EnterBreakReminder;
             _settingsView.ExitRequested -= ExitSettings;
             SettingsHost.Children.Remove(_settingsView);
             _settingsView = null; // release the view: the garbage collector reclaims its memory
@@ -1219,6 +1326,7 @@ public partial class MainWindow : Window
         _inYouTube = true;
         _youTube = new Web.WebViewHost("https://www.youtube.com/tv", YouTubeProfileFolder);
         _youTube.InitFailed += OnYouTubeInitFailed;
+        _youTube.ShellKey += OnYouTubeShellKey;
         YouTubeHost.Children.Add(_youTube);
         YouTubeHost.IsVisible = true;
 
@@ -1231,9 +1339,11 @@ public partial class MainWindow : Window
     private void ExitYouTube()
     {
         _inYouTube = false;
+        ReleaseBackKey(); // the key that got us out is still down; do not leave the hold clock running
         if (_youTube != null)
         {
             _youTube.InitFailed -= OnYouTubeInitFailed;
+            _youTube.ShellKey -= OnYouTubeShellKey;
             YouTubeHost.Children.Remove(_youTube); // fires DestroyNativeControlCore -> closes the browser
             _youTube = null;
         }
@@ -1241,6 +1351,21 @@ public partial class MainWindow : Window
         YouTubeHost.IsVisible = false;
         _gamepad.RepeatEnabled = false;
         UpdateHomeVideoState(); // resume the home background
+    }
+
+    // "Back" pressed on the keyboard while the browser had focus. The browser hands it over instead of
+    // acting on it, so it takes the same route as everywhere else: tap = back inside the page, hold =
+    // leave the screen. Without this the only way out was a controller.
+    private void OnYouTubeShellKey(int virtualKey, bool down)
+    {
+        if (down)
+        {
+            PressBackKey();
+        }
+        else
+        {
+            ReleaseBackKey();
+        }
     }
 
     private void OnYouTubeInitFailed(string message)
@@ -1334,6 +1459,69 @@ public partial class MainWindow : Window
     // released on exit, like the Settings view itself: the Home is the only resident screen. While
     // it is up, SettingsHost is hidden - the screen is opaque and painting Settings underneath would
     // be wasted work.
+    // "Idle options" hangs off Settings > PREFERENCES, not System - the only sub-screen so far that
+    // does. Everything else about it follows the same pattern as the rest.
+    private void EnterIdleOptions()
+    {
+        if (_idleView != null)
+        {
+            return;
+        }
+
+        _inIdleOptions = true;
+        _idleView = new PreferencesIdleView();
+        _idleView.ExitRequested += ExitIdleOptions;
+        _idleView.RepeatRequested += OnTimeRepeatRequested;
+        UpdatesHost.Children.Add(_idleView);
+        SettingsHost.IsVisible = false;
+    }
+
+    private void ExitIdleOptions()
+    {
+        _inIdleOptions = false;
+        SettingsHost.IsVisible = true;
+
+        if (_idleView != null)
+        {
+            _idleView.ExitRequested -= ExitIdleOptions;
+            _idleView.RepeatRequested -= OnTimeRepeatRequested;
+            UpdatesHost.Children.Remove(_idleView);
+            _idleView = null;
+        }
+
+        // As in ExitTime: leaving with a dropdown still open would strand auto-repeat in the "on"
+        // state for every screen after it.
+        _gamepad.RepeatEnabled = false;
+    }
+
+    // "Break reminder" hangs off Settings > Preferences, next to "Idle options".
+    private void EnterBreakReminder()
+    {
+        if (_breakView != null)
+        {
+            return;
+        }
+
+        _inBreakReminder = true;
+        _breakView = new PreferencesBreakView();
+        _breakView.ExitRequested += ExitBreakReminder;
+        UpdatesHost.Children.Add(_breakView);
+        SettingsHost.IsVisible = false;
+    }
+
+    private void ExitBreakReminder()
+    {
+        _inBreakReminder = false;
+        SettingsHost.IsVisible = true;
+
+        if (_breakView != null)
+        {
+            _breakView.ExitRequested -= ExitBreakReminder;
+            UpdatesHost.Children.Remove(_breakView);
+            _breakView = null;
+        }
+    }
+
     // "Time" hangs off Settings > System, like the rest of its sub-screens.
     private void EnterTime()
     {
@@ -1345,6 +1533,8 @@ public partial class MainWindow : Window
         _inTime = true;
         _timeView = new SystemTimeView();
         _timeView.ExitRequested += ExitTime;
+        _timeView.ClockFormatChanged += UpdateClock;
+        _timeView.RepeatRequested += OnTimeRepeatRequested;
         UpdatesHost.Children.Add(_timeView);
         SettingsHost.IsVisible = false;
     }
@@ -1357,10 +1547,18 @@ public partial class MainWindow : Window
         if (_timeView != null)
         {
             _timeView.ExitRequested -= ExitTime;
+            _timeView.ClockFormatChanged -= UpdateClock;
+            _timeView.RepeatRequested -= OnTimeRepeatRequested;
             UpdatesHost.Children.Remove(_timeView);
             _timeView = null;
         }
+
+        // Belt and braces: leaving the screen with the dropdown still open would otherwise strand
+        // auto-repeat in the "on" state for every screen after it.
+        _gamepad.RepeatEnabled = false;
     }
+
+    private void OnTimeRepeatRequested(bool enabled) => _gamepad.RepeatEnabled = enabled;
 
     // "Language & location" hangs off Settings > System, like the rest of its sub-screens.
     private void EnterLanguage()

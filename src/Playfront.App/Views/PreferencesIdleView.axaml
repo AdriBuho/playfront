@@ -1,0 +1,270 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Playfront.App.Views.PreferencesIdleView"
+             Width="1920" Height="1080">
+    <!-- "Preferences Idle options": opened with A on the "Idle options" tile of Settings > Preferences,
+         closed with B. A FULL screen, mounted on demand.
+
+         Measured 1:1 against the console. THREE COLUMNS of 438 at x=112/566/1020 (pitch 454) - the same
+         438 the cards use everywhere else. Each column is a description panel with its controls
+         underneath, and the controls of all three columns are BOTTOM-ALIGNED on the row at y=819.
+
+         The panel of a column with two controls is exactly ONE ROW PITCH shorter (538 - 114 = 424), so
+         the gap between panel and first control is the same 17 in every column. That is the rule behind
+         the two different panel heights; it is not two arbitrary numbers.
+
+         Panel #2B2B2B, description text 26 (verified against the real font: 26 fits the six measured
+         line widths to within 14 px total, against 67 for 25 and 96 for 27), ink 24 in from the panel
+         edge, lines every 34.5.
+
+         The control cards are the SAME component as everywhere else: 438x98, label at (21,10), value at
+         (21,55), chevron at (392,45), checkbox at (384,36). Confirmed on this capture - the checkbox
+         measured exactly (384,36) and the chevron (391,44).
+
+         VISUAL ONLY for now: the cards take the ring and move, but A does nothing and the values shown
+         are the reference's, not this machine's. -->
+    <UserControl.Styles>
+        <Style Selector="Border.idlePanel">
+            <Setter Property="Background" Value="#2B2B2B" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Width" Value="438" />
+        </Style>
+        <Style Selector="TextBlock.idleDesc">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="LineHeight" Value="34.5" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Width" Value="392" />
+        </Style>
+        <Style Selector="Border.idleCard">
+            <Setter Property="Background" Value="#303030" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Width" Value="438" />
+            <Setter Property="Height" Value="98" />
+        </Style>
+        <Style Selector="Border.idleCard.selected">
+            <Setter Property="Background" Value="#454545" />
+            <!-- Above the description panel it overlaps, and above the unselected cards. -->
+            <Setter Property="ZIndex" Value="2" />
+        </Style>
+        <Style Selector="TextBlock.idleLabel">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="TextBlock.idleValue">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="#C4C4C4" />
+        </Style>
+        <!-- A row of the "Turn off after" dropdown. Ink 27 in from the panel edge and the 4 px top
+             nudge, both the same as the time zone list. -->
+        <Style Selector="TextBlock.offOption">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="27,4,0,0" />
+        </Style>
+    </UserControl.Styles>
+
+    <Canvas Width="1920" Height="1080">
+        <Rectangle Width="1920" Height="1080" Fill="#201F1F" />
+
+        <TextBlock Canvas.Left="110" Canvas.Top="56" FontSize="45" Foreground="White">
+            <Run Text="Preferences " FontFamily="{StaticResource XboxFontDisplaySemibold}" />
+            <Run Text="Idle options" FontFamily="{StaticResource XboxFontFamily}" />
+        </TextBlock>
+
+        <!-- ============ Column 1: automatic power off ============ -->
+        <!-- 424 tall, not 538: this column carries two controls (see the header). -->
+        <Border Classes="idlePanel" Canvas.Left="112" Canvas.Top="264" Height="424">
+            <Canvas>
+                <TextBlock Classes="idleDesc" Canvas.Left="24" Canvas.Top="29"
+                           Text="Automatically turn off your console when not in use. This helps you save energy and reduce emissions." />
+                <!-- Second paragraph placed by hand rather than with a blank line in the text: a real
+                     empty line is 34.5 tall and the reference's gap is that exact pitch, but keeping
+                     them as two blocks means neither paragraph's wrapping depends on the other. -->
+                <TextBlock Classes="idleDesc" Canvas.Left="24" Canvas.Top="202"
+                           Text="Increasing this may result in higher energy costs." />
+            </Canvas>
+        </Border>
+
+        <Border Classes="idleCard" x:Name="IdCard0" Canvas.Left="112" Canvas.Top="705">
+            <Canvas>
+                <TextBlock Classes="idleLabel" Canvas.Left="21" Canvas.Top="10" Text="Turn off after" />
+                <TextBlock Classes="idleValue" x:Name="IdValue0" Canvas.Left="21" Canvas.Top="55" Text="Don't turn off automatically" />
+                <Path Canvas.Left="392" Canvas.Top="45" Stroke="White" StrokeThickness="2.5"
+                      StrokeLineCap="Round" StrokeJoin="Round" Data="M0,0 L8.5,8.5 L17,0" />
+            </Canvas>
+        </Border>
+        <Border Classes="selectionRing" x:Name="IdRing0" Canvas.Left="104" Canvas.Top="697" Width="454" Height="114" />
+
+        <Border Classes="idleCard" x:Name="IdCard1" Canvas.Left="112" Canvas.Top="819">
+            <Canvas>
+                <TextBlock Classes="idleLabel" Canvas.Left="21" Canvas.Top="10" Text="Turn off after" />
+                <TextBlock Classes="idleValue" x:Name="IdValue1" Canvas.Left="21" Canvas.Top="55" Text="Don't turn off for media" />
+                <Path Canvas.Left="392" Canvas.Top="45" Stroke="White" StrokeThickness="2.5"
+                      StrokeLineCap="Round" StrokeJoin="Round" Data="M0,0 L8.5,8.5 L17,0" />
+            </Canvas>
+        </Border>
+        <Border Classes="selectionRing" x:Name="IdRing1" Canvas.Left="104" Canvas.Top="811" Width="454" Height="114" />
+
+        <!-- ============ Column 2: show things while idle ============ -->
+        <Border Classes="idlePanel" Canvas.Left="566" Canvas.Top="264" Height="538">
+            <Canvas>
+                <TextBlock Classes="idleDesc" Canvas.Left="24" Canvas.Top="29"
+                           Text="When your console goes idle, XBOX will continue to show you things on the screen." />
+            </Canvas>
+        </Border>
+
+        <Border Classes="idleCard" x:Name="IdCard2" Canvas.Left="566" Canvas.Top="819">
+            <Canvas>
+                <TextBlock Classes="idleLabel" Canvas.Left="21" Canvas.Top="34" Text="Show me things when idle" />
+                <Border Classes="checkBox" Canvas.Left="384" Canvas.Top="36" />
+                <Path Classes="checkTick" Canvas.Left="391" Canvas.Top="45" />
+            </Canvas>
+        </Border>
+        <Border Classes="selectionRing" x:Name="IdRing2" Canvas.Left="558" Canvas.Top="811" Width="454" Height="114" />
+
+        <!-- ============ Column 3: dim the screen ============ -->
+        <Border Classes="idlePanel" Canvas.Left="1020" Canvas.Top="264" Height="538">
+            <Canvas>
+                <TextBlock Classes="idleDesc" Canvas.Left="24" Canvas.Top="29"
+                           Text="Dim your screen while you're not using your XBOX console. This helps to preserve your TV screen." />
+            </Canvas>
+        </Border>
+
+        <Border Classes="idleCard" x:Name="IdCard3" Canvas.Left="1020" Canvas.Top="819">
+            <Canvas>
+                <TextBlock Classes="idleLabel" Canvas.Left="21" Canvas.Top="10" Text="Dim screen after" />
+                <TextBlock Classes="idleValue" Canvas.Left="21" Canvas.Top="55" Text="60 minutes" />
+                <Path Canvas.Left="392" Canvas.Top="45" Stroke="White" StrokeThickness="2.5"
+                      StrokeLineCap="Round" StrokeJoin="Round" Data="M0,0 L8.5,8.5 L17,0" />
+            </Canvas>
+        </Border>
+        <Border Classes="selectionRing" x:Name="IdRing3" Canvas.Left="1012" Canvas.Top="811" Width="454" Height="114" />
+
+        <!-- ============ "Turn off after" dropdown (the TOP-LEFT card) ============
+             Measured 1:1: panel 438x476 at (112,312) - seven rows of 68, the same component as the
+             time zone list, only narrower because the options are short.
+
+             Its position is taken from a SINGLE capture, with "15 minutes" selected. In the time zone
+             list the rule was "the selected row lands on the card it replaces"; that rule does NOT
+             reproduce this capture, and one state is not enough to derive the real one. Fixed at 312,
+             which is what the reference shows, until a capture with a different value says otherwise.
+
+             The card underneath is NOT hidden while this is open, unlike the time zone one: the
+             reference keeps it drawn and merely unselected, so a strip of it shows below the panel.
+
+             Ink 27 in from the panel edge and rows of 68, both shared with the time zone list. -->
+        <Border x:Name="OffPanel" Canvas.Left="112" Canvas.Top="312" Width="438" Height="0" ZIndex="10"
+                Background="#303030" BorderBrush="#4B4B4B" BorderThickness="2"
+                ClipToBounds="True" IsVisible="False">
+            <Border.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Height" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                </Transitions>
+            </Border.Transitions>
+            <Canvas>
+                <!-- The selection's fill, kept with the ring rather than painted on the row, so the two
+                     stay together while the list slides. Same reasoning as the time zone list. -->
+                <Border x:Name="OffHighlight" Canvas.Left="-2" Canvas.Top="-2" Width="438" Height="68"
+                        Background="#454545">
+                    <Border.Transitions>
+                        <Transitions>
+                            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                        </Transitions>
+                    </Border.Transitions>
+                </Border>
+                <Canvas x:Name="OffList">
+                    <Canvas.Transitions>
+                        <Transitions>
+                            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                        </Transitions>
+                    </Canvas.Transitions>
+                </Canvas>
+            </Canvas>
+        </Border>
+
+        <Border Classes="selectionRing selected" x:Name="OffRing" Canvas.Left="112" Canvas.Top="312"
+                Width="438" Height="68" ZIndex="11" IsVisible="False">
+            <Border.Transitions>
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                </Transitions>
+            </Border.Transitions>
+        </Border>
+
+        <Border x:Name="OffThumb" Canvas.Left="542" Canvas.Top="314" Width="4" Height="24" ZIndex="12"
+                Background="White" CornerRadius="2" IsVisible="False">
+            <Border.Transitions>
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                </Transitions>
+            </Border.Transitions>
+        </Border>
+
+        <!-- ============ "Turn off after ... for media" dropdown (the card BELOW) ============
+             Measured 1:1: panel 438 wide, rows of 68, and NO scrollbar - it never holds more than two
+             options, so it always fits and the panel is sized to the option count instead of to seven
+             rows.
+
+             Its position follows the rule the time zone list uses and the upper dropdown does not: the
+             SELECTED ROW IS CENTRED ON THE CARD it replaces (card centre 868, measured row centre 866).
+             Placed from code for that reason.
+
+             Its contents depend on the upper dropdown - see BuildMediaOptions. -->
+        <Border x:Name="MedPanel" Canvas.Left="112" Canvas.Top="832" Width="438" Height="0" ZIndex="10"
+                Background="#303030" BorderBrush="#4B4B4B" BorderThickness="2"
+                ClipToBounds="True" IsVisible="False">
+            <Border.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Height" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                </Transitions>
+            </Border.Transitions>
+            <Canvas>
+                <Border x:Name="MedHighlight" Canvas.Left="-2" Canvas.Top="-2" Width="438" Height="68"
+                        Background="#454545">
+                    <Border.Transitions>
+                        <Transitions>
+                            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                        </Transitions>
+                    </Border.Transitions>
+                </Border>
+                <!-- Slides during the unfold so the row on show is the SELECTED one and not row 0,
+                     the same trick the other dropdowns use. -->
+                <Canvas x:Name="MedList">
+                    <Canvas.Transitions>
+                        <Transitions>
+                            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                        </Transitions>
+                    </Canvas.Transitions>
+                </Canvas>
+            </Canvas>
+        </Border>
+
+        <Border Classes="selectionRing selected" x:Name="MedRing" Canvas.Left="112" Canvas.Top="832"
+                Width="438" Height="68" ZIndex="11" IsVisible="False">
+            <Border.Transitions>
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                </Transitions>
+            </Border.Transitions>
+        </Border>
+
+        <!-- Only appears when this list is longer than the panel, which happens as soon as a short
+             inactivity timeout is set above: with the shortest one there are 12 rows to fit in 7. -->
+        <Border x:Name="MedThumb" Canvas.Left="542" Canvas.Top="834" Width="4" Height="24" ZIndex="12"
+                Background="White" CornerRadius="2" IsVisible="False">
+            <Border.Transitions>
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                </Transitions>
+            </Border.Transitions>
+        </Border>
+    </Canvas>
+</UserControl>

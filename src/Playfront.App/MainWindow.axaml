@@ -529,32 +529,42 @@
     </Window.Styles>
 
     <Panel>
+    <!-- THE BACKGROUND LIVES OUTSIDE THE VIEWBOX, and that is deliberate.
+         The interface keeps a fixed 16:9 shape (see the Viewbox below), so on a 16:10, 3:2 or
+         ultrawide monitor it cannot fill the screen - on a 32:9 half the width is margin. Leaving the
+         wallpaper inside the Viewbox made those margins pure black, which reads as a broken window
+         rather than as a console UI. Out here these layers fill the WHOLE window at any shape, so the
+         video or colour runs edge to edge and only the controls stay 16:9. It is what console and TV
+         interfaces do.
+         Consequence to respect: nothing that has to line up with a measured coordinate may go here.
+         TopBarGradient stays inside for exactly that reason - it hugs the top bar, which is content. -->
+
+    <!-- Background: animated video decoded in hardware (see
+         Video/HardwareVideoBackgroundControl.cs). The video control is created from the code-behind
+         (it needs the video path as a constructor argument) and inserted here, ON TOP of the poster
+         below. -->
+    <Panel x:Name="BackgroundHost">
+        <!-- First frame (poster) of the background video, ALWAYS behind the video. While the video is
+             loaded it covers this; when the video is unloaded (the home is not on screen: Settings is
+             in front, a game is in the foreground, etc.) this still image remains, so the background
+             does not go black and reloading the video - which starts at its frame 0 - shows no jump.
+             The code-behind (ApplyBackground) sets the active background's poster.
+             UniformToFill crops to the window instead of distorting on a non-16:9 screen. -->
+        <Image x:Name="HomeBackgroundPoster" Stretch="UniformToFill" IsVisible="False" />
+    </Panel>
+
+    <!-- Solid colour background: covers the video when a "Solid color" is chosen (see
+         SolidColorsScreen). The code-behind (ApplyBackground) sets its colour and makes it visible;
+         with a dynamic background it stays hidden. Sits ON TOP of the video but BELOW the dark veil
+         below, so it gets the same darkening as the video and text and tiles read the same over it. -->
+    <Rectangle x:Name="SolidBackgroundLayer" IsVisible="False" />
+
+    <!-- Subtle dark veil so text and tiles stand out over the video. Covers the whole window with the
+         background: darkening only the 16:9 middle would make the margins visibly brighter. -->
+    <Rectangle Fill="#20000000" />
+
     <Viewbox Stretch="Uniform">
         <Grid Width="1920" Height="1080" ClipToBounds="True">
-
-            <!-- Background: animated video decoded in hardware (see
-                 Video/HardwareVideoBackgroundControl.cs). The video control is created from the
-                 code-behind (it needs the video path as a constructor argument) and inserted here,
-                 ON TOP of the poster below. -->
-            <Panel x:Name="BackgroundHost" Width="1920" Height="1080">
-                <!-- First frame (poster) of the background video, ALWAYS behind the video. While the
-                     video is loaded it covers this; when the video is unloaded (the home is not on
-                     screen: Settings is in front, a game is in the foreground, etc.) this still image
-                     remains, so the background does not go black and reloading the video - which
-                     starts at its frame 0 - shows no jump. The code-behind (ApplyBackground) sets the
-                     active background's poster. -->
-                <Image x:Name="HomeBackgroundPoster" Width="1920" Height="1080" Stretch="UniformToFill" IsVisible="False" />
-            </Panel>
-
-            <!-- Solid colour background: covers the video when a "Solid color" is chosen (see
-                 SolidColorsScreen). The code-behind (ApplyBackground) sets its colour and makes it
-                 visible; with a dynamic background it stays hidden. Sits ON TOP of the video but
-                 BELOW the dark veil below, so it gets the same darkening as the video and text and
-                 tiles read the same over it. -->
-            <Rectangle x:Name="SolidBackgroundLayer" Width="1920" Height="1080" IsVisible="False" />
-
-            <!-- Subtle dark veil so text and tiles stand out over the video -->
-            <Rectangle Width="1920" Height="1080" Fill="#20000000" />
 
             <!-- Extra dark gradient hugging the top edge (same as the Xbox original), so the top
                  bar's icons and text stay readable whatever the background is doing at that moment.
@@ -632,7 +642,9 @@
                      green fill bar inside whose width tracks the real percentage (code-behind). The
                      original SVGs for ALL battery states (levels 0-4, charging with bolt, and saver)
                      are kept in Assets/Icons/Battery in case they are needed later. -->
-                <Viewbox Canvas.Left="1639" Canvas.Top="85" Width="46" Height="46">
+                <!-- Hidden on a machine with no battery (a desktop PC), see UpdateBatteryIcon. It
+                     starts visible so a laptop never flickers before the first reading. -->
+                <Viewbox x:Name="BatteryIcon" Canvas.Left="1639" Canvas.Top="85" Width="46" Height="46">
                     <Canvas Width="32" Height="32">
                         <!-- Continuous green fill (real %). The fill area Xbox uses in Battery4
                              (x 4..24, y 10..22, corners ~1.5). Sits BEHIND the outline and shows

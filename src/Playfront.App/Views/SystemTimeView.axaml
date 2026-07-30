@@ -10,10 +10,9 @@
          chevron sits at (391,44) and the checkboxes at (384,36), the same places they do everywhere
          else.
 
-         The time, the date and the time zone are READ FROM THE MACHINE and the clock ticks. The two
-         checkboxes are replicas: they render ticked because that is how the reference shows them, and
-         they neither read nor write anything. Worth knowing before wiring them: the home clock is
-         12-hour ("h:mm tt"), so "24 hour clock" ticked does not describe what the app actually does. -->
+         Everything on this screen is live: the three controls read the real Windows settings and
+         write them back (see SystemTimeSettings). Changing the time zone moves the system clock, so
+         the ticking time and date to the right follow within the second. -->
     <UserControl.Styles>
         <Style Selector="Border.tmCard">
             <Setter Property="Background" Value="#303030" />
@@ -45,13 +44,14 @@
             <Setter Property="FontSize" Value="26" />
             <Setter Property="Foreground" Value="White" />
         </Style>
-        <!-- Ticked checkbox: the box plus the tick traced from the reference at 10x. -->
-        <Style Selector="Path.tmTick">
-            <Setter Property="Stroke" Value="White" />
-            <Setter Property="StrokeThickness" Value="2.6" />
-            <Setter Property="StrokeLineCap" Value="Round" />
-            <Setter Property="StrokeJoin" Value="Round" />
-            <Setter Property="Data" Value="M0,7 L6,14 L18,0" />
+        <!-- A row of the time zone dropdown. Ink 27 in from the panel edge, and the 4 px top nudge is
+             what puts the text where the reference has it (measured centres 3 px below the row's). -->
+        <Style Selector="TextBlock.tzOption">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="27,4,0,0" />
         </Style>
     </UserControl.Styles>
 
@@ -79,9 +79,8 @@
             <Canvas>
                 <TextBlock Classes="tmLabel" Canvas.Left="21" Canvas.Top="18" Width="280"
                            TextWrapping="Wrap" LineHeight="34" Text="Automatically adjust for daylight saving" />
-                <Border Canvas.Left="384" Canvas.Top="36" Width="32" Height="32"
-                        BorderBrush="White" BorderThickness="2" CornerRadius="2" />
-                <Path Classes="tmTick" Canvas.Left="393" Canvas.Top="46" />
+                <Border Classes="checkBox" Canvas.Left="384" Canvas.Top="36" />
+                <Path Classes="checkTick" x:Name="TmTickDst" Canvas.Left="391" Canvas.Top="45" />
             </Canvas>
         </Border>
         <Border Classes="selectionRing" x:Name="TmRing1" Canvas.Left="104" Canvas.Top="370" Width="454" Height="114" />
@@ -89,9 +88,8 @@
         <Border Classes="tmCard" x:Name="TmCard2" Canvas.Left="112" Canvas.Top="492">
             <Canvas>
                 <TextBlock Classes="tmLabel" Canvas.Left="21" Canvas.Top="34" Text="24 hour clock" />
-                <Border Canvas.Left="384" Canvas.Top="36" Width="32" Height="32"
-                        BorderBrush="White" BorderThickness="2" CornerRadius="2" />
-                <Path Classes="tmTick" Canvas.Left="393" Canvas.Top="46" />
+                <Border Classes="checkBox" Canvas.Left="384" Canvas.Top="36" />
+                <Path Classes="checkTick" x:Name="TmTick24" Canvas.Left="391" Canvas.Top="45" />
             </Canvas>
         </Border>
         <Border Classes="selectionRing" x:Name="TmRing2" Canvas.Left="104" Canvas.Top="484" Width="454" Height="114" />
@@ -101,5 +99,96 @@
 
         <TextBlock Classes="tmFieldName"  Canvas.Left="620" Canvas.Top="385" Text="Date" />
         <TextBlock Classes="tmFieldValue" x:Name="TmDate" Canvas.Left="620" Canvas.Top="439" Text="" />
+
+        <!-- Only ever visible when Windows refused a change. Silence would leave the control looking
+             stuck with no way to tell why. -->
+        <TextBlock x:Name="TmError" Canvas.Left="112" Canvas.Top="640" Width="892" IsVisible="False"
+                   TextWrapping="Wrap" FontFamily="{StaticResource XboxFontFamily}" FontSize="24"
+                   Foreground="#F0A0A0" Text="" />
+
+        <!-- Time zone dropdown. Measured 1:1: panel 778x476 at (112,75), seven rows of 68, option ink
+             27 in from the panel edge, selected row #454545 on a #303030 panel.
+
+             Its position is FIXED, and that is the whole trick: row 3 of the seven sits at y=279..347,
+             whose centre (313) is the centre of the "Time zone" card it replaces. So the selected zone
+             always appears exactly where the card was, and the list scrolls under it.
+
+             ROWS ARE BUILT IN CODE, ONE PER ZONE - all 141, not a handful recycled. That is a change
+             of approach and it is deliberate: recycling rows and re-texting them can only ever swap one
+             label for another, never slide. Rows that really MOVE are what makes the list glide the way
+             a phone picker does. The cost is the one the performance rule calls acceptable - controls
+             weigh kilobytes, images weigh megabytes, and these carry only text. They are built the
+             first time the list opens and go away with the screen.
+
+             The 2 px border is drawn OVER the first and last rows, so the row Canvas positions carry
+             a -2 to cancel the Border's own inset and line up with the outer box. -->
+        <Border x:Name="TzPanel" Canvas.Left="112" Canvas.Top="75" Width="778" Height="0" ZIndex="10"
+                Background="#303030" BorderBrush="#4B4B4B" BorderThickness="2" CornerRadius="3"
+                ClipToBounds="True" IsVisible="False">
+            <Border.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Height" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                </Transitions>
+            </Border.Transitions>
+            <Canvas>
+                <!-- The selected row's fill, and it is NOT painted on the row. It belongs to the
+                     selection, which stays put while the list slides underneath; painting it on the
+                     row made it travel with the text and run visibly out of step with the green ring
+                     for the length of the animation. Declared before the list so it paints under the
+                     text, and inside the panel so the panel's clipping applies to it. -->
+                <Border x:Name="TzHighlight" Canvas.Left="-2" Canvas.Top="-2" Width="778" Height="68"
+                        Background="#454545">
+                    <Border.Transitions>
+                        <Transitions>
+                            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                        </Transitions>
+                    </Border.Transitions>
+                </Border>
+
+                <!-- Filled by BuildTimeZoneRows. It slides as ONE piece: the transition below is what
+                     turns a change of selection into the list gliding, and it is also what animates
+                     the unfold when the panel opens. -->
+                <Canvas x:Name="TzList">
+                    <Canvas.Transitions>
+                        <Transitions>
+                            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                        </Transitions>
+                    </Canvas.Transitions>
+                </Canvas>
+            </Canvas>
+        </Border>
+
+        <!-- One ring for the whole list. It normally does NOT move: the selection stays on the middle
+             row and the list slides under it. It only travels near the two ends of the list, where
+             there is nothing left to scroll - hence its own transition, matching the list's so the two
+             read as one movement.
+
+             The ring is the row box exactly, not the row inflated by 8 that the CARDS use: the
+             reference draws it flush here.
+
+             "selected" is not optional: without it the ring renders in the faded brush and with no
+             glow, which on this dark panel reads as no ring at all. It is fixed here rather than
+             toggled because the only row that ever carries a ring is the active one. -->
+        <Border Classes="selectionRing selected" x:Name="TzRing" Canvas.Left="112" Canvas.Top="75"
+                Width="778" Height="68" ZIndex="11" IsVisible="False">
+            <Border.Transitions>
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                </Transitions>
+            </Border.Transitions>
+        </Border>
+
+        <!-- Scrollbar. 4 px wide at x=882, and the thumb is proportional: 7 rows out of 141 gave the
+             24 px measured in the reference, which is how the thumb height is derived rather than
+             fixed. It slides with the list instead of stepping, for the same reason. -->
+        <Border x:Name="TzThumb" Canvas.Left="882" Canvas.Top="77" Width="4" Height="24" ZIndex="12"
+                Background="White" CornerRadius="2" IsVisible="False">
+            <Border.Transitions>
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="QuadraticEaseOut" />
+                </Transitions>
+            </Border.Transitions>
+        </Border>
     </Canvas>
 </UserControl>

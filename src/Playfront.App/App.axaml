@@ -66,5 +66,47 @@
 
     <Application.Styles>
         <FluentTheme />
+
+        <!-- THE ON/OFF CHECKBOX, defined ONCE for the whole app.
+             It used to be copied into every screen that needed one, and the copies drifted: the tick
+             ended up 8 px from the left edge of its box and 3 from the right, visibly off-centre,
+             everywhere. Anything that needs a checkbox uses these two classes and nothing else.
+
+             Measured on the console, 1:1. Box 32x32 with a 2 px stroke. The tick's centre line runs
+             (7,14.9) -> (13,20.9) -> (24.9,9) inside that box, so BOTH ARMS ARE AT EXACTLY 45 degrees
+             - that is the property to preserve if this is ever redrawn.
+
+             The Path is placed at (7,9) inside the box, which is why the data starts at (0,5.9). With
+             a 2.1 stroke and round caps that paints x 6..25 and y 8..21 of the box: 6 px clear on the
+             left and 6 on the right (centred), 8 above and 10 below (sitting slightly high). Those
+             four numbers are the check - they were measured off the console and they match.
+
+             The fractions are load-bearing, not sloppiness. Round numbers put the stroke's edge
+             exactly on a pixel boundary, where it lights the pixel by 5% and effectively disappears:
+             that cost the tick a pixel of length and made it look shifted. -->
+        <Style Selector="Border.checkBox">
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="BorderBrush" Value="White" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="2" />
+        </Style>
+        <!-- Explanatory paragraph on a Settings sub-screen. Size 26 and a 34.5 line pitch are the same
+             on every screen measured so far, so they live here; the WIDTH is not, because it is what
+             decides where each screen's text wraps, and each screen sets its own. -->
+        <Style Selector="TextBlock.settingsDesc">
+            <Setter Property="FontFamily" Value="{StaticResource XboxFontFamily}" />
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="LineHeight" Value="34.5" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="Path.checkTick">
+            <Setter Property="Stroke" Value="White" />
+            <Setter Property="StrokeThickness" Value="2.1" />
+            <Setter Property="StrokeLineCap" Value="Round" />
+            <Setter Property="StrokeJoin" Value="Round" />
+            <Setter Property="Data" Value="M0,5.9 L6,11.9 L17.9,0" />
+        </Style>
     </Application.Styles>
 </Application>
