@@ -490,6 +490,14 @@ public partial class MainWindow : Window
         // THE XBOX BUTTON: back to Home from anywhere, including from a program that has the whole
         // screen. It replaced holding B, which needed a badge on screen to be discoverable at all.
         _gamepad.GuidePressed += () => CrashLog.Guard(GoHome, "guide");
+        // The pad is not always on XInput slot 0, and it moves when pads connect or reconnect. The
+        // pointer thread reads XInput itself, so it has to be told; logged as well, because "the
+        // controller does nothing" is otherwise impossible to diagnose from a machine you cannot see.
+        _gamepad.ActiveSlotChanged += slot =>
+        {
+            _pointer.Slot = slot;
+            CrashLog.Info(slot >= 0 ? $"Gamepad on XInput slot {slot}" : "No gamepad connected");
+        };
         _pollTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
         // Guard: gamepad polling runs here and ALL navigation hangs off it (Poll -> ButtonPressed ->
         // Move -> each screen's handlers), so a failure in any handler would surface here. Catching
@@ -956,6 +964,13 @@ public partial class MainWindow : Window
         if (_inStore) ExitStore();
         if (_inLibrary) ExitLibrary();
 
+        // And COME TO THE FRONT. Unwinding our own screens is useless if the shell stays behind
+        // whatever the user was looking at: with the desktop running, the Xbox button has to reach
+        // Playfront from anywhere, which is the whole point of it. Activate() does not do this -
+        // Windows only lets the process that owns the input change the foreground window, and by
+        // definition that is not us here. See ExternalWindow.ForceForeground.
+        ExternalWindow.ForceForeground(TryGetPlatformHandle()?.Handle ?? IntPtr.Zero);
+
         // Whatever was used last may have changed while we were away.
         RefreshRecents();
     }
@@ -1154,6 +1169,7 @@ public partial class MainWindow : Window
         if (_inCategory)
         {
             _categoryView?.Move(button);
+            _appsHomeView?.Move(button);
             return;
         }
 
@@ -1396,11 +1412,25 @@ public partial class MainWindow : Window
     // without rebuilding it or losing its position.
     private bool _inCategory;
     private StoreCategoryView? _categoryView;
+    private StoreAppsHomeView? _appsHomeView;
 
     private void EnterCategory(string category)
     {
         if (_inCategory)
         {
+            return;
+        }
+
+        // "Apps Home" is the Apps section's landing page, not a category: different layout, its own
+        // view. It rides the same host and the same enter/exit path so B behaves identically.
+        if (category == "Apps Home")
+        {
+            _inCategory = true;
+            _appsHomeView = new StoreAppsHomeView();
+            _appsHomeView.ExitRequested += ExitCategory;
+            CategoryHost.Children.Add(_appsHomeView);
+            // The Store stays VISIBLE here, unlike a category page: Apps Home keeps the rail, and the
+            // page leaves the left strip transparent so the real one shows through.
             return;
         }
 
@@ -1421,6 +1451,13 @@ public partial class MainWindow : Window
             _categoryView.AppRequested -= EnterApp;
             CategoryHost.Children.Remove(_categoryView);
             _categoryView = null; // release the view and its art
+        }
+
+        if (_appsHomeView != null)
+        {
+            _appsHomeView.ExitRequested -= ExitCategory;
+            CategoryHost.Children.Remove(_appsHomeView);
+            _appsHomeView = null;
         }
 
         StoreHost.IsVisible = true;

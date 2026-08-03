@@ -65,6 +65,14 @@ class Program
         Input.SystemCursor.Restore();
         AppDomain.CurrentDomain.ProcessExit += (_, _) => Input.SystemCursor.Restore();
 
+        // The Xbox button, same shape and for the same reason: Windows would otherwise open its own
+        // overlay on top of the shell. Restore FIRST - that repairs a previous run that was killed
+        // before it could tidy up - and only then take the button over. Handing it back on exit is
+        // the point: with Playfront closed it has to behave the way Windows means it to.
+        Input.XboxButton.Restore();
+        Input.XboxButton.Divert();
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => Input.XboxButton.Restore();
+
         try
         {
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);

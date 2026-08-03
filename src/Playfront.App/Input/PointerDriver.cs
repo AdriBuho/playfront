@@ -38,6 +38,18 @@ public sealed class PointerDriver
     private Thread? _thread;
     private volatile bool _running;
 
+    // XInput slot to read, -1 for none. Written from the UI thread and read from the pointer thread,
+    // hence volatile. It MUST track whichever slot GamepadPoller settled on: reading slot 0 on its
+    // own would move the cursor from a pad nobody is holding, or from no pad at all.
+    private volatile int _slot = -1;
+
+    /// <summary>Slot of the pad that drives the pointer. Follows <c>GamepadPoller.ActiveSlot</c>.</summary>
+    public int Slot
+    {
+        get => _slot;
+        set => _slot = value;
+    }
+
     /// <summary>Pixels per second at full tilt.</summary>
     public double Speed { get; set; } = 1100;
 
@@ -102,7 +114,8 @@ public sealed class PointerDriver
                 dt = 0.1;
             }
 
-            if (XInputGetState(0, out var state) == 0)
+            var slot = _slot;
+            if (slot >= 0 && XInputGetState((uint)slot, out var state) == 0)
             {
                 var (nx, ny) = Curved(state.Gamepad.sThumbLX, state.Gamepad.sThumbLY);
                 if (nx != 0 || ny != 0)

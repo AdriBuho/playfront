@@ -36,7 +36,7 @@ public partial class StoreView : UserControl
     public event Action<string>? CategoryRequested;
 
     /// <summary>Subcategories that already have a screen built.</summary>
-    private static bool HasPage(string sub) => sub is "Music apps" or "Launchers";
+    private static bool HasPage(string sub) => sub is "Music apps" or "Launchers" or "Apps Home";
 
     // One navigable element: its selection ring (to toggle "selected") plus its rectangle in ABSOLUTE
     // 1920x1080 canvas coordinates, used by the directional search. The rectangle is the TILE's, not

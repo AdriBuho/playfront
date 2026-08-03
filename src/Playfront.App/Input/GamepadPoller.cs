@@ -73,6 +73,34 @@ public sealed class GamepadPoller
 
     public bool IsConnected { get; private set; }
 
+    // XInput has FOUR slots (0..3) and the pad does not always land on the first one. Anything that
+    // presents itself as a controller takes a slot: a virtual pad, a wheel, a second controller left
+    // plugged in - and a pad that reconnects usually comes back on a different one. Reading slot 0
+    // only leaves the shell dead to the controller with nothing on screen to explain why, which on a
+    // shell means an unusable machine.
+    private const int MaxSlots = 4;
+
+    // Gap between looks at slots believed EMPTY. That read goes off and enumerates devices, and is
+    // the one XInput warns not to do every frame: measured 57.7 us against 6.7 us for a slot with a
+    // pad in it. Slots that HAVE a pad are therefore read every poll, which is the point - sampling a
+    // second pad a few times a second misses an ordinary button press (~150 ms), so it would only be
+    // noticed if its buttons were held down.
+    private const int DiscoverMs = 1000;
+
+    private int _activeSlot = -1; // -1 = no pad
+    private readonly bool[] _connected = new bool[MaxSlots];
+    private int _discoverCountdown; // polls left; 0 on start = look on the very first poll
+
+    /// <summary>Slot the pad in use is on, or -1 when there is none.</summary>
+    public int ActiveSlot => _activeSlot;
+
+    /// <summary>
+    /// The pad moved to a different slot (or there is no longer one, -1). Anything else that reads
+    /// XInput directly - the pointer thread - has to follow, or it ends up reading a slot nobody is
+    /// touching.
+    /// </summary>
+    public event Action<int>? ActiveSlotChanged;
+
     // Whether accelerating auto-repeat is active. Off by default: normal screens move one step per
     // press. Turned on only where paging through many items fast matters ("Dynamic backgrounds");
     // MainWindow toggles it on entering and leaving that screen.
@@ -105,8 +133,73 @@ public sealed class GamepadPoller
 
     public void Poll()
     {
-        var result = XInputGetState(0, out var state);
-        IsConnected = result == 0;
+        XInputState state = default;
+        var haveState = false;
+
+        // 1. The pad in use, every poll.
+        if (_activeSlot >= 0)
+        {
+            haveState = XInputGetState(_activeSlot, out state) == 0;
+            _connected[_activeSlot] = haveState;
+            if (!haveState)
+            {
+                SetActiveSlot(-1);
+                _discoverCountdown = 0; // unplugged: go looking on this same poll
+            }
+        }
+
+        // 2. Every OTHER pad already known to be plugged in, also every poll - cheap, and the only
+        //    sampling rate at which a normal button press is not missed.
+        for (var slot = 0; slot < MaxSlots; slot++)
+        {
+            if (slot == _activeSlot || !_connected[slot])
+            {
+                continue;
+            }
+
+            if (XInputGetState(slot, out var other) != 0)
+            {
+                _connected[slot] = false;
+                continue;
+            }
+
+            // Being plugged in is not enough to take over. A pad left on a table would grab the
+            // input in the middle of navigating with the one in hand, which is worse than the bug
+            // this replaces - so it has to be BEING USED.
+            if (_activeSlot < 0 || IsBeingUsed(other.Gamepad))
+            {
+                SetActiveSlot(slot);
+                state = other;
+                haveState = true;
+            }
+        }
+
+        // 3. Slots believed empty: the slow read, about once a second.
+        if (--_discoverCountdown <= 0)
+        {
+            _discoverCountdown = Math.Max(1, DiscoverMs / Math.Max(1, PollIntervalMs));
+
+            for (var slot = 0; slot < MaxSlots; slot++)
+            {
+                if (_connected[slot] || XInputGetState(slot, out var found) != 0)
+                {
+                    continue;
+                }
+
+                _connected[slot] = true;
+
+                // Only adopted right away when there is nothing else; a pad appearing mid-session
+                // waits until someone presses something on it (step 2).
+                if (_activeSlot < 0)
+                {
+                    SetActiveSlot(slot);
+                    state = found;
+                    haveState = true;
+                }
+            }
+        }
+
+        IsConnected = haveState;
 
         if (!IsConnected)
         {
@@ -206,6 +299,38 @@ public sealed class GamepadPoller
             }
         }
     }
+
+    private void SetActiveSlot(int slot)
+    {
+        if (_activeSlot == slot)
+        {
+            return;
+        }
+
+        _activeSlot = slot;
+
+        // Start clean on the new pad: nothing it holds was ever seen before, so whatever is down now
+        // must read as a fresh press. That press is normally the very one that caused the handover,
+        // and swallowing it would make the second pad feel like it needs a button pressed twice.
+        _previousButtons = 0;
+        _repeatButton = null;
+        _prevLT = false;
+        _prevRT = false;
+
+        ActiveSlotChanged?.Invoke(slot);
+    }
+
+    // "Somebody is using this pad." Deliberately blunt: any button, a trigger past the same pull the
+    // rest of the app uses, or a stick past half way. A worn stick's drift never reaches that, so a
+    // pad left face down on a table cannot steal the input from the one in hand.
+    private static bool IsBeingUsed(in XInputGamepad pad) =>
+        pad.wButtons != 0
+        || pad.bLeftTrigger > TriggerThreshold
+        || pad.bRightTrigger > TriggerThreshold
+        || Math.Abs((int)pad.sThumbLX) > StickThreshold
+        || Math.Abs((int)pad.sThumbLY) > StickThreshold
+        || Math.Abs((int)pad.sThumbRX) > StickThreshold
+        || Math.Abs((int)pad.sThumbRY) > StickThreshold;
 
     // First direction present in the mask (or null). D-pad/stick only, not A/B.
     private static GamepadButton? DirectionOf(ushort mask)
