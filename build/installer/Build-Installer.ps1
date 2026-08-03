@@ -6,15 +6,18 @@
   The installer carries nothing inside. It downloads the three pieces from the GitHub release and puts
   each one where it belongs, which is why it weighs 2 MB instead of 500.
 
-  These must already be attached to the release (build\Pack-Playfront.ps1 produces them):
+  These must already be attached to a release (build\Pack-Playfront.ps1 produces them), and NOT all to
+  the same one:
 
-    PlayfrontShell-win-Setup.exe   the app
-    PlayfrontHelper.zip            the privileged service
-    PlayfrontAssets-Games.zip      artwork and video
+    PlayfrontShell-win-Setup.exe   the app       -> release v<PlayfrontVersion>
+    PlayfrontHelper.zip            the service   -> release HelperTag  (pinned, see the .iss)
+    PlayfrontAssets-Games.zip      artwork       -> release AssetsTag  (pinned, see the .iss)
 
-  Which release it downloads from is derived from the version: it always points at the release tagged
-  'v<PlayfrontVersion>'. The version is read here from Directory.Build.props and passed to the
-  compiler, so it cannot drift from the app's.
+  Only the app follows the version. The other two are 450 MB that do not change when the app does, so
+  pinning them is what keeps cutting a version to a ~55 MB upload instead of 470.
+
+  The version is read here from Directory.Build.props and passed to the compiler, so it cannot drift
+  from the app's. The pinned helper cannot go stale either: its source is fingerprinted below.
 
 .PARAMETER Output
   Folder to leave the .exe in. Defaults to 'dist\installer' (outside git).
@@ -79,6 +82,59 @@ Drop them: 0.1.1, 0.1.2, 0.1.3 ... 0.1.87 (no cap, and it sorts correctly withou
 "@
 }
 Write-Ok "Version $version (from Directory.Build.props)"
+
+# --- The helper's fingerprint ---------------------------------------------------------------------
+#  The helper service is downloaded from a PINNED release (HelperTag in the .iss), not from the
+#  version's, because it is 35 MB that almost never change. The risk that buys is real though: change
+#  its source, forget the tag, and the installer hands out an app talking to an OLD service. That
+#  installs, reports success, and only misbehaves later when the app sends a verb the service does not
+#  know - the silent kind of failure this project keeps getting bitten by.
+#
+#  So the source is fingerprinted and compared with what the .iss says was published under that tag.
+function Get-HelperSourceId {
+    param([string] $Root)
+    $files = Get-ChildItem $Root -Recurse -File |
+        Where-Object { $_.Extension -in '.cs', '.csproj', '.json' } |
+        Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' } |
+        Sort-Object FullName
+    $sb = [Text.StringBuilder]::new()
+    foreach ($f in $files) {
+        $null = $sb.Append($f.FullName.Substring($Root.Length))
+        $null = $sb.Append((Get-FileHash $f.FullName -Algorithm SHA256).Hash)
+    }
+    $stream = [IO.MemoryStream]::new([Text.Encoding]::UTF8.GetBytes($sb.ToString()))
+    return (Get-FileHash -InputStream $stream -Algorithm SHA256).Hash.Substring(0, 10).ToLower()
+}
+
+$helperRoot = Join-Path $repoRoot 'src\Playfront.Helper'
+$issText    = Get-Content $issPath -Raw
+$pinnedId   = ([regex]::Match($issText, '#define\s+HelperSourceId\s+"([0-9a-f]+)"')).Groups[1].Value
+$helperTag  = ([regex]::Match($issText, '#define\s+HelperTag\s+"([^"]+)"')).Groups[1].Value
+$assetsTag  = ([regex]::Match($issText, '#define\s+AssetsTag\s+"([^"]+)"')).Groups[1].Value
+$actualId   = Get-HelperSourceId $helperRoot
+
+if ($actualId -ne $pinnedId) {
+    Fail @"
+The helper service's source has changed since '$helperTag' was published.
+
+    published under $helperTag : $pinnedId
+    what is here now           : $actualId
+
+The installer downloads the helper from that tag, so building now would ship the NEW app with the OLD
+service, and nothing would say so. Do this instead:
+
+    1. build\Pack-Playfront.ps1        (produces a fresh PlayfrontHelper.zip)
+    2. Publish a release tagged helper-vN with that zip attached
+    3. In build\installer\Playfront.iss set:
+           HelperTag      "helper-vN"
+           HelperSourceId "$actualId"
+    4. Run this script again
+
+Old installers keep pointing at $helperTag and keep working; only new ones move.
+"@
+}
+Write-Ok "Helper pinned to $helperTag (source $actualId)"
+Write-Ok "Artwork pinned to $assetsTag"
 
 $null = New-Item -ItemType Directory -Force $Output
 

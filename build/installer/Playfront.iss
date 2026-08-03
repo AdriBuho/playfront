@@ -45,9 +45,27 @@
 #define AppPublisher   "Playfront"
 #define AppUrl         "https://github.com/AdriBuho/playfront"
 
-; Where everything is downloaded from: the release tagged with this same version.
+; Where the APP is downloaded from: the release tagged with this same version.
 #define ReleaseTag     "v" + PfVersion
 #define BaseUrl        "https://github.com/AdriBuho/playfront/releases/download/" + ReleaseTag
+
+; The artwork and the helper service are NOT downloaded from the version's release. They are pinned to
+; releases of their own, and that is what keeps cutting a version cheap: the app is ~55 MB, the helper
+; 35 and the artwork 416, and neither of the last two changes when the app does. Tied to the version,
+; every release meant re-uploading 470 MB of files identical to the previous ones.
+;
+; To move either one: publish a release under the NEXT tag (assets-v2, helper-v2) with the new file
+; attached and bump the tag here. Old installers keep pointing at the old tag and keep working, which
+; is the other half of why this is safe.
+;
+; The helper is CODE and must match the app it talks to, so a stale tag here would be a real bug.
+; Build-Installer.ps1 will not let that happen: it fingerprints src/Playfront.Helper and refuses to
+; compile when the source moved but HelperSourceId below did not.
+#define AssetsTag      "assets-v1"
+#define HelperTag      "helper-v1"
+#define HelperSourceId "1850f8dd3f"
+#define AssetsBaseUrl  "https://github.com/AdriBuho/playfront/releases/download/" + AssetsTag
+#define HelperBaseUrl  "https://github.com/AdriBuho/playfront/releases/download/" + HelperTag
 
 #define ShellSetupFile "PlayfrontShell-win-Setup.exe"
 #define HelperZipFile  "PlayfrontHelper.zip"
@@ -232,9 +250,11 @@ begin
   if not FilesDownloaded then
   begin
     DownloadPage.Clear;
-    DownloadPage.Add('{#BaseUrl}/{#ShellSetupFile}', '{#ShellSetupFile}', '');
-    DownloadPage.Add('{#BaseUrl}/{#HelperZipFile}',  '{#HelperZipFile}',  '');
-    DownloadPage.Add('{#BaseUrl}/{#AssetsZipFile}',  '{#AssetsZipFile}',  '');
+    // Three files, three releases: the app follows the version, the other two are pinned (see the
+    // tags at the top). Nothing else here cares where they came from.
+    DownloadPage.Add('{#BaseUrl}/{#ShellSetupFile}',       '{#ShellSetupFile}', '');
+    DownloadPage.Add('{#HelperBaseUrl}/{#HelperZipFile}',  '{#HelperZipFile}',  '');
+    DownloadPage.Add('{#AssetsBaseUrl}/{#AssetsZipFile}',  '{#AssetsZipFile}',  '');
     if not WizardSilent then
       DownloadPage.Show;
     try

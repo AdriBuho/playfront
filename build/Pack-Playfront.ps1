@@ -280,8 +280,19 @@ Get-ChildItem -Path $Output -File | Sort-Object Length -Descending | ForEach-Obj
     Write-Host ("    {0,10} MB   {1}" -f [math]::Round($_.Length/1MB,1), $_.Name)
 }
 Write-Host ''
-Write-Host '    These files are attached to a GitHub release. What pulls them together and installs them' -ForegroundColor White
-Write-Host '    is build\installer\Playfront.iss (Inno Setup), which produces a single 2 MB .exe:'
+Write-Host '    These files go on GitHub releases - and NOT all on the same one:' -ForegroundColor White
+Write-Host ''
+Write-Host "      PlayfrontShell-*  + RELEASES/*.json  -> release v$version   (the app, every time)"
+Write-Host '      PlayfrontHelper.zip                  -> release helper-vN  (only when it changes)'
+Write-Host '      PlayfrontAssets-Games.zip            -> release assets-vN  (only when it changes)'
+Write-Host ''
+Write-Host '    The last two are pinned by tag in build\installer\Playfront.iss. That is deliberate: they'
+Write-Host '    are 450 MB that do not change when the app does, and tying them to the version meant'
+Write-Host '    re-uploading all of it on every release. Moving one means publishing the next tag and'
+Write-Host '    editing the tag there; the build refuses to compile if the helper drifts from its tag.'
+Write-Host ''
+Write-Host '    What pulls them together and installs them is build\installer\Playfront.iss (Inno Setup),'
+Write-Host '    which produces a single 2 MB .exe:'
 Write-Host ''
 Write-Host "      1. The app     -> $recommendedInstallDir  (user folder, NO admin rights)"
 Write-Host '      2. The helper  -> %ProgramFiles%\Playfront\Helper + service  (admin rights)'

@@ -18,7 +18,7 @@
        updater, with no error raised. build/Pack-Playfront.ps1 refuses to package when it sees them.
        They are not needed for ordering either: 0.1.10 sorts after 0.1.9, the comparison is numeric. -->
   <PropertyGroup>
-    <PlayfrontVersion>0.1.0</PlayfrontVersion>
+    <PlayfrontVersion>0.1.1</PlayfrontVersion>
   </PropertyGroup>
 
   <PropertyGroup>
