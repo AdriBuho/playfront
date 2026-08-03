@@ -62,6 +62,13 @@
              To list what a font actually defines, do not guess codepoint ranges: read
              System.Windows.Media.GlyphTypeface(...).CharacterToGlyphMap. -->
         <FontFamily x:Key="XboxIconFont">avares://Playfront.App/Assets/Fonts/XboxFluent2.ttf#Xbox Fluent v2</FontFamily>
+
+        <!-- The console's OTHER icon font, shipped alongside the Fluent one in the same app. Both are
+             needed: they do not cover the same glyphs. The Store's wishlist heart (E734, and E735 for
+             the already-added state) exists only here - the Fluent font has nothing at those points,
+             and its closest heart is the one with list lines in the notch, not the plus.
+             Search BOTH before hand-drawing an icon. -->
+        <FontFamily x:Key="XboxMdl2Font">avares://Playfront.App/Assets/Fonts/SegoeXboxMDL2Assets.ttf#Segoe Xbox MDL2 Assets</FontFamily>
     </Application.Resources>
 
     <Application.Styles>

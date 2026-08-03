@@ -36,7 +36,7 @@ public partial class StoreView : UserControl
     public event Action<string>? CategoryRequested;
 
     /// <summary>Subcategories that already have a screen built.</summary>
-    private static bool HasPage(string sub) => sub == "Music apps";
+    private static bool HasPage(string sub) => sub is "Music apps" or "Launchers";
 
     // One navigable element: its selection ring (to toggle "selected") plus its rectangle in ABSOLUTE
     // 1920x1080 canvas coordinates, used by the directional search. The rectangle is the TILE's, not
@@ -126,9 +126,10 @@ public partial class StoreView : UserControl
             "Coming soon", "Top paid", "Optimized for Series X|S", "Game demos", "Top free",
             "Most played",
         }), // 3
-        // "Music apps" is the only entry not taken verbatim from the capture, which reads "Popular
-        // music apps".
-        new("Apps",          399,  new[] { "Apps Home", "Entertainment apps", "Apps for gamers", "Apps with trials", "Popular apps", "Music apps" }), // 4
+        // Two entries here are OURS, not the reference's. "Launchers" heads the list because it is
+        // what this store is actually for on a PC - Steam, Epic and the rest - and the console has no
+        // equivalent. "Music apps" is a shortened "Popular music apps".
+        new("Apps",          399,  new[] { "Launchers", "Apps Home", "Entertainment apps", "Apps for gamers", "Apps with trials", "Popular apps", "Music apps" }), // 4
         new("Hardware",      482,  NoSub),  // 5
         new("Lists",         577,  NoSub),  // 6 (after the divider)
         new("Cart",          660,  NoSub),  // 7

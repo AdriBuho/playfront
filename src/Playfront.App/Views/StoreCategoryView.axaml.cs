@@ -66,8 +66,17 @@ public partial class StoreCategoryView : UserControl
     // rather than having them invented.
     internal sealed record AppInfo(
         string File, string Title, string Genre, string Price, bool Owned,
-        double Rating, string Votes, string Description, string Tint, string? Friends = null,
-        string? Publisher = null, string? Esrb = null, string? EsrbNotes = null);
+        // NO review score, NO vote count and NO friends-who-own-this count. All three were numbers
+        // nobody had, and a store page inventing them is claiming things about the product and about
+        // the user's friends. See the notes where each used to be drawn.
+        string Description, string Tint,
+        string? Publisher = null, string? Esrb = null, string? EsrbNotes = null,
+        // Product page, DETAILS section. ReleaseDate is the publisher's, not ours. Description stays
+        // the one-liner shown on the first section; LongDescription is the paragraph on the details
+        // card. Features is the short bulleted list the console puts in a card of its own - labels
+        // only, a handful of words each.
+        string? ReleaseDate = null, string? LongDescription = null,
+        IReadOnlyList<string>? Features = null);
 
     internal static readonly Dictionary<string, AppInfo> Apps = LoadApps();
 
@@ -93,17 +102,43 @@ public partial class StoreCategoryView : UserControl
     // they are not identifiable, so that artwork comes later.
     private sealed record Card(string? Art, string Label, bool Owned);
 
-    private static readonly Card[] Row1 =
+    /// <summary>
+    /// What a category page is made of. Same layout for all of them - the console uses one page for
+    /// every subcategory of Apps - so only the contents change.
+    /// </summary>
+    /// <param name="Banner">
+    /// False leaves the page with no promo box at the top and the selection starting on the first
+    /// card. Not every subcategory has one: measured on the console, "Apps for gamers" goes straight
+    /// from the title to the product detail.
+    /// </param>
+    /// <param name="Header">
+    /// The line at the top left. NOT the subcategory's name: on the console the two are different
+    /// texts - "Entertainment apps" is headed "Top entertainment apps for you".
+    /// </param>
+    private sealed record Category(string Header, Card[] Cards, bool Banner);
+
+    private static readonly Dictionary<string, Category> Categories = new(StringComparer.OrdinalIgnoreCase)
     {
         // Several read "Owned" in the Store capture, from that account. Here they are ALL "Free": no
         // tick, text against the edge, like the others.
-        new("apple-music.png",  "Free",  false),
-        new("youtube.png",      "Free",  false),
-        new("dolby-access.png", "Free",  false),
-        new("spotify-black.png", "Free",  false),
-        new("pandora.png",      "Free",  false),
-        new(null,               "Free",  false),
+        ["Music apps"] = new("Best music apps", new[]
+        {
+            new Card("apple-music.png",  "Free",  false),
+            new Card("youtube.png",      "Free",  false),
+            new Card("dolby-access.png", "Free",  false),
+            new Card("spotify-black.png", "Free", false),
+            new Card("pandora.png",      "Free",  false),
+            new Card(null,               "Free",  false),
+        }, Banner: true),
+
+        // OURS, not the console's: a PC store needs the launchers, and Steam is the only one so far.
+        ["Launchers"] = new("Launchers", new[]
+        {
+            new Card("steam.png", "Free", false),
+        }, Banner: false),
     };
+
+    private Card[] _cards = Array.Empty<Card>();
 
     // ===== Focus =====
     // 0 = banner; 1.. = cards by row (row 1 = 1..6, row 2 = 7..12).
@@ -112,17 +147,32 @@ public partial class StoreCategoryView : UserControl
     private readonly List<Border> _cardRingsInner = new();
     private readonly List<Border> _cardVeils = new();
 
-    public StoreCategoryView()
+    public StoreCategoryView(string category)
     {
         InitializeComponent();
+
+        var data = Categories.TryGetValue(category, out var found)
+            ? found
+            : new Category(category, Array.Empty<Card>(), Banner: false);
+        _cards = data.Cards;
+        DetailCategory.Text = data.Header;
+        BannerTitle.Text = data.Header;
 
         BannerIcon0.Source = LoadArt("pandora.png");
         BannerIcon1.Source = LoadArt("spotify-black.png");
         BannerIcon2.Source = LoadArt("amazon-music-zoom.png");
 
+        // With no banner there is nothing at index 0 to land on, so the selection starts on the first
+        // card. The box itself needs no hiding: it is only drawn while index 0 has the focus, and
+        // without a banner the focus never goes there.
+        _hasBanner = data.Banner;
+        _focus = _hasBanner ? 0 : 1;
+
         BuildGrid();
         UpdateSelection();
     }
+
+    private readonly bool _hasBanner;
 
     private static Bitmap? LoadArt(string? file)
     {
@@ -151,7 +201,7 @@ public partial class StoreCategoryView : UserControl
             var col = i % Cols;
             var x = GridLeft + col * PitchX;
             var y = GridTop + row * PitchY;
-            var data = row == 0 ? Row1[col] : new Card(null, "Free", false);
+            var data = CardAt(i);
 
             // The card has NO background of its own. The footer is translucent and what has to show
             // through is the PAGE background - which is why in the reference the footer grows greener
@@ -332,7 +382,7 @@ public partial class StoreCategoryView : UserControl
                 {
                     _focus -= Cols;
                 }
-                else if (_focus >= 1)
+                else if (_focus >= 1 && _hasBanner)
                 {
                     _focus = 0; // back to the banner
                 }
@@ -395,11 +445,15 @@ public partial class StoreCategoryView : UserControl
         ShowDetail(info, art);
     }
 
-    private static Card CardAt(int index)
+    // A slot with nothing in it: dark box, no artwork, no data. A category with one product leaves
+    // eleven of these, which is what the grid is for.
+    private static readonly Card Empty = new(null, "Free", false);
+
+    private Card CardAt(int index)
     {
         var row = index / Cols;
         var col = index % Cols;
-        return row == 0 ? Row1[col] : new Card(null, "Free", false);
+        return row == 0 && col < _cards.Length ? _cards[col] : Empty;
     }
 
     // Fills the detail block with the focused app's data and tints the background with its colour. For
@@ -410,10 +464,7 @@ public partial class StoreCategoryView : UserControl
         DetailTitle.Text = info?.Title ?? string.Empty;
         DetailDescription.Text = info?.Description ?? string.Empty;
         GenreText.Text = info?.Genre ?? string.Empty;
-        FriendsRow.IsVisible = !string.IsNullOrEmpty(info?.Friends);
-        FriendsCount.Text = info?.Friends ?? string.Empty;
-        RatingVotes.Text = info?.Votes ?? string.Empty; // verbatim from the capture, unformatted
-        BuildStars(info?.Rating ?? 0);
+        GenrePill.IsVisible = !string.IsNullOrEmpty(info?.Genre);
 
         // Status line: "Owned" with its icon when the app is owned, otherwise the price.
         var owned = info?.Owned == true;
@@ -570,34 +621,8 @@ public partial class StoreCategoryView : UserControl
         return box;
     }
 
-    // The 5 rating stars: filled up to the score, outlined for the rest.
-    // Measured: 23x22 box, 24 pitch, filled ones solid white and empty ones ~2 stroke.
-    private void BuildStars(double rating)
-    {
-        StarHost.Children.Clear();
-        var filled = (int)Math.Round(rating);
-        for (var i = 0; i < 5; i++)
-        {
-            var star = new Path
-            {
-                Data = Geometry.Parse("M12,2 L15.1,8.3 L22,9.3 L17,14.1 L18.2,21 L12,17.8 L5.8,21 L7,14.1 L2,9.3 L8.9,8.3 Z"),
-                Stretch = Stretch.Uniform,
-                Width = 23,
-                Height = 22,
-            };
-            if (i < filled)
-            {
-                star.Fill = Brushes.White;
-            }
-            else
-            {
-                star.Stroke = Brushes.White;
-                star.StrokeThickness = 1.6;
-            }
-
-            Canvas.SetLeft(star, i * 24);
-            Canvas.SetTop(star, 10);
-            StarHost.Children.Add(star);
-        }
-    }
+    // The star rating that used to sit beside the genre pill is gone, drawing code included. It was
+    // fed by numbers nobody had measured, and a score is not decoration: five stars next to a product
+    // is a claim about what people think of it. If real review data ever arrives, the pill goes back
+    // where the reference has it, to the left of the genre one.
 }

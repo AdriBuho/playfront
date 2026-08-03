@@ -36,12 +36,16 @@ public sealed class GamepadPoller
     private const ushort ButtonStart = 0x0010;
     private const ushort ButtonBack = 0x0020; // View/Select button
 
-    // Hold-B: how many polls (Poll runs every ~50 ms) B must stay down to count as HELD rather than a
-    // tap. 16 x 50 ms = 800 ms. Used, for instance, to leave the YouTube screen (tap B = back, hold =
-    // exit). The event fires ONCE per long press.
-    private const int BHoldPolls = 16;
-    private int _bHeldPolls;
-    private bool _bHoldFired;
+    // The Xbox button. Only ever set through the undocumented entry point - see the import below.
+    private const ushort ButtonGuide = 0x0400;
+
+    /// <summary>
+    /// How often <see cref="Poll"/> is being called, in milliseconds. Whoever owns the timer must
+    /// keep this in step with it. It exists because the hold-B threshold is counted in POLLS: the
+    /// pointer needs a much faster timer, and without this "hold B" would trigger after a quarter of
+    /// a second instead of 800 ms.
+    /// </summary>
+    public int PollIntervalMs { get; set; } = 50;
 
     // The stick is treated as D-pad buttons: tilted past this threshold on an axis counts as that
     // direction being pressed.
@@ -76,9 +80,28 @@ public sealed class GamepadPoller
 
     public event Action<GamepadButton>? ButtonPressed;
 
-    // B HELD (~800 ms). Distinct from ButtonPressed(B), which is the TAP (rising edge). Used by the
-    // YouTube screen: tap = back, hold = exit.
-    public event Action? BHeld;
+    /// <summary>Fired at the end of every poll, connected or not. For anything that needs the raw
+    /// stick rather than button events - the mouse pointer, which has to move smoothly.</summary>
+    public event Action? Polled;
+
+    // Raw stick, -32768..32767, as the pad reports it. Buttons are no use for a pointer: how far the
+    // stick is pushed decides how fast it moves.
+    public short LeftX { get; private set; }
+    public short LeftY { get; private set; }
+    public short RightX { get; private set; }
+    public short RightY { get; private set; }
+
+    /// <summary>
+    /// While true the left stick does NOT act as a d-pad. Set when the pointer is driving an outside
+    /// window: otherwise Playfront would keep navigating its own screens behind that window, where
+    /// nobody can see what is happening.
+    /// </summary>
+    public bool PointerMode { get; set; }
+
+    /// <summary>
+    /// The Xbox button was pressed. The way back to the shell from anywhere, the same as on a console.
+    /// </summary>
+    public event Action? GuidePressed;
 
     public void Poll()
     {
@@ -89,19 +112,28 @@ public sealed class GamepadPoller
         {
             _previousButtons = 0;
             _repeatButton = null;
-            _bHeldPolls = 0;
-            _bHoldFired = false;
             _prevLT = false;
             _prevRT = false;
+            LeftX = LeftY = RightX = RightY = 0;
+            Polled?.Invoke();
             return;
         }
 
+        LeftX = state.Gamepad.sThumbLX;
+        LeftY = state.Gamepad.sThumbLY;
+        RightX = state.Gamepad.sThumbRX;
+        RightY = state.Gamepad.sThumbRY;
+
         var buttons = state.Gamepad.wButtons;
 
-        if (state.Gamepad.sThumbLY > StickThreshold) buttons |= DPadUp;
-        if (state.Gamepad.sThumbLY < -StickThreshold) buttons |= DPadDown;
-        if (state.Gamepad.sThumbLX < -StickThreshold) buttons |= DPadLeft;
-        if (state.Gamepad.sThumbLX > StickThreshold) buttons |= DPadRight;
+        // In pointer mode the stick MOVES the pointer, so it must not also count as a direction.
+        if (!PointerMode)
+        {
+            if (state.Gamepad.sThumbLY > StickThreshold) buttons |= DPadUp;
+            if (state.Gamepad.sThumbLY < -StickThreshold) buttons |= DPadDown;
+            if (state.Gamepad.sThumbLX < -StickThreshold) buttons |= DPadLeft;
+            if (state.Gamepad.sThumbLX > StickThreshold) buttons |= DPadRight;
+        }
 
         // Rising edge only (was up, is now down); otherwise holding a button would move the selection
         // on every poll.
@@ -126,26 +158,20 @@ public sealed class GamepadPoller
         _prevLT = ltDown;
         _prevRT = rtDown;
 
-        // B HELD: counts polls with B down; past the threshold, fires BHeld exactly once.
-        if ((buttons & ButtonB) != 0)
+        // THE XBOX BUTTON. Rising edge, and handled apart from every other button: it does not
+        // navigate the screen you are on, it goes home from wherever you are - including from an
+        // outside program that has the whole display. It replaced holding B, which had to be
+        // explained on screen to be usable at all.
+        if ((buttons & ButtonGuide) != 0 && (_previousButtons & ButtonGuide) == 0)
         {
-            _bHeldPolls++;
-            if (_bHeldPolls >= BHoldPolls && !_bHoldFired)
-            {
-                _bHoldFired = true;
-                BHeld?.Invoke();
-            }
-        }
-        else
-        {
-            _bHeldPolls = 0;
-            _bHoldFired = false;
+            GuidePressed?.Invoke();
         }
 
         // Directions: rising edge, plus accelerating auto-repeat while held.
         HandleDirections(buttons, pressedNow);
 
         _previousButtons = buttons;
+        Polled?.Invoke();
     }
 
     private void HandleDirections(ushort buttons, ushort pressedNow)
@@ -200,7 +226,14 @@ public sealed class GamepadPoller
         _ => 0,
     };
 
-    [DllImport("xinput1_4.dll", EntryPoint = "XInputGetState")]
+    // ORDINAL 100, not the documented XInputGetState. Same signature, one difference that matters
+    // here: the public entry point deliberately MASKS OUT the Guide button (the Xbox one), and this
+    // undocumented twin reports it in bit 0x0400. There is no supported way to read that button, and
+    // without it there is nothing to return to the shell with.
+    //
+    // Verified on this machine: pressing Guide sets the bit through this call and never through the
+    // public one. It has been present in every xinput1_3/1_4 Windows has shipped.
+    [DllImport("xinput1_4.dll", EntryPoint = "#100")]
     private static extern int XInputGetState(int dwUserIndex, out XInputState pState);
 
     [StructLayout(LayoutKind.Sequential)]

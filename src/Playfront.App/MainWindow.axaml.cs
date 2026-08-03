@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Playfront.App.Input;
+using Playfront.App.Library;
 using Playfront.App.System;
 using Playfront.App.Video;
 using Playfront.App.Views;
@@ -11,6 +14,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Media.Transformation;
 using Avalonia.Threading;
 
@@ -423,7 +428,10 @@ public partial class MainWindow : Window
         // circles.
         _rowCenters = new[]
         {
-            new double[] { 813.5, 885.5, 958.5, 1030.5, 1102.5 },
+            // Nav circles: these MUST track the XAML, because the label under the selected icon is
+            // centred on them. They had drifted from it - 813.5 against the circle's real 774.5 - so
+            // the label sat 39 px to the right of the icon it names.
+            new double[] { 805.5, 881.5, 957.5, 1033.5, 1109.5 },
             new double[] { 187, 382, 577, 772, 967, 1162, 1357, 1552, 1747 },
             new double[] { 310, 748, 1186, 1624 },
         };
@@ -472,18 +480,22 @@ public partial class MainWindow : Window
         // here.
         _row = 1;
         _col = 0;
+        RefreshRecents();
         UpdateSelection();
         UserNameText.Text = global::System.Environment.UserName;
 
         _gamepad.ButtonPressed += OnGamepadButtonPressed;
         // B HELD: only used to EXIT the YouTube screen (it does nothing elsewhere in the app; a tap
         // of B already acts as "back" on every screen).
-        _gamepad.BHeld += () => CrashLog.Guard(OnBackHeld, "bheld");
+        // THE XBOX BUTTON: back to Home from anywhere, including from a program that has the whole
+        // screen. It replaced holding B, which needed a badge on screen to be discoverable at all.
+        _gamepad.GuidePressed += () => CrashLog.Guard(GoHome, "guide");
         _pollTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
         // Guard: gamepad polling runs here and ALL navigation hangs off it (Poll -> ButtonPressed ->
         // Move -> each screen's handlers), so a failure in any handler would surface here. Catching
         // it keeps the shell from going down.
         _pollTimer.Tick += (_, _) => CrashLog.Guard(_gamepad.Poll, "poll");
+        _pollTimer.Tick += (_, _) => CrashLog.Guard(RightStickScroll, "rstick");
         _pollTimer.Start();
 
         // Settle delay before starting the focused background's preview video: scrubbing the
@@ -521,8 +533,11 @@ public partial class MainWindow : Window
         // The background video only decodes while the home is genuinely on screen. On losing focus (a
         // game or another window comes to the front) it is unloaded; on regaining it, reloaded. See
         // UpdateHomeVideoState.
-        Activated += (_, _) => CrashLog.Guard(UpdateHomeVideoState, "activated");
-        Deactivated += (_, _) => CrashLog.Guard(UpdateHomeVideoState, "deactivated");
+        // The true/false is passed EXPLICITLY and must stay that way: Avalonia raises these events
+        // BEFORE it updates IsActive, so letting UpdateHomeVideoState read IsActive here made the
+        // window report "not in the foreground" the moment it came back and the video never restarted.
+        Activated += (_, _) => CrashLog.Guard(() => UpdateHomeVideoState(true), "activated");
+        Deactivated += (_, _) => CrashLog.Guard(() => UpdateHomeVideoState(false), "deactivated");
         // CoverEntireMonitor() in the Opened handler above only covers startup. If the display then
         // changes at runtime (e.g. the ROG Ally switching between its built-in screen and an external
         // monitor without closing the app), Avalonia does not fire Opened again - the window kept the
@@ -729,34 +744,120 @@ public partial class MainWindow : Window
 
     private void OnGamepadButtonPressed(GamepadButton button) => Move(button);
 
-    private bool _steamInstalling;
+    // ===== RECENTS ROW (Home) =====
+    // The row of small tiles holds what was last installed, updated or opened, newest on the LEFT.
+    // Same as the console: only the tile with the focus shows its name, the rest are just artwork.
+    private const int RecentTiles = 9;
 
-    // TEMPORARY: the "Game 1" tile acts as the install-Steam button. It asks the helper service
-    // (SYSTEM) to install it (download + verify signature + install without UAC); if it is already
-    // installed, it says so. The label tracks the status. Moves to its proper place when the library
-    // is built.
-    private async global::System.Threading.Tasks.Task InstallSteamFromButtonAsync()
+    /// <summary>
+    /// Fills the row from the library. Called at startup and whenever something is installed or
+    /// opened, so the order is never stale.
+    ///
+    /// Only INSTALLED products appear. Something merely added to the library has not been used, and a
+    /// "recently used" row that lists things you have never opened is not telling the truth.
+    /// </summary>
+    private void RefreshRecents()
     {
-        if (_steamInstalling)
+        var recientes = LibraryStore.Recent()
+            .Where(e => e.State == LibraryState.Installed)
+            .Take(RecentTiles)
+            .ToList();
+
+        // Kept, not just counted: pressing A on a tile has to open the product that tile is showing,
+        // and the only reliable way to know which is to hold the same list the tiles were built from.
+        _recentEntries = recientes;
+        _recentCount = recientes.Count;
+
+        for (var i = 0; i < RecentTiles; i++)
+        {
+            var tile = this.FindControl<Border>($"Tile{i}");
+            var ring = this.FindControl<Border>($"Ring{i}");
+            if (tile is null)
+            {
+                continue;
+            }
+
+            // A slot with nothing in it is NOT DRAWN AT ALL - not even as an empty box. The row grows
+            // to the right as products are used, and until then that space is just the wallpaper.
+            var hay = i < recientes.Count;
+            tile.IsVisible = hay;
+            if (ring is not null)
+            {
+                ring.IsVisible = hay;
+            }
+
+            if (!hay)
+            {
+                continue;
+            }
+
+            var entrada = recientes[i];
+
+            // Artwork goes in the BACKGROUND, not as a child: the label has to stay the tile's
+            // direct child or the style that reveals it on focus stops matching.
+            var arte = LoadTileArt(entrada.Art);
+            tile.Background = arte is not null
+                ? new ImageBrush(arte) { Stretch = Stretch.UniformToFill }
+                : EmptyTileFill;
+
+            if (tile.Child is Border { Child: TextBlock text })
+            {
+                text.Text = entrada.Title;
+            }
+        }
+
+        // The selection cannot sit past the last tile that exists, which it would after something is
+        // removed from the library.
+        if (_row == RecentsRow && _col >= _recentCount)
+        {
+            _col = Math.Max(0, _recentCount - 1);
+        }
+    }
+
+    // Which row of Home holds the recents, and how many of its tiles currently exist. Navigation is
+    // bounded by the second, not by the fixed size of the array.
+    private const int RecentsRow = 1;
+    private int _recentCount;
+    private List<LibraryEntry> _recentEntries = new();
+
+    /// <summary>Opens the product shown on a tile of the recents row.</summary>
+    private void LaunchRecent(int index)
+    {
+        if (index < 0 || index >= _recentEntries.Count)
         {
             return;
         }
-        _steamInstalling = true;
-        SteamButtonLabel.Text = "Installing…";
+
+        LaunchLibraryEntry(_recentEntries[index]);
+    }
+
+    /// <summary>How many tiles a row of Home actually has right now.</summary>
+    private int ColumnsIn(int row) => row == RecentsRow ? _recentCount : _rows[row].Length;
+
+    // The tile colour when there is nothing in it, taken from the style so both agree.
+    private static readonly IBrush EmptyTileFill = new SolidColorBrush(Color.FromRgb(0x2A, 0x2E, 0x36));
+
+    private static Bitmap? LoadTileArt(string? file)
+    {
+        if (string.IsNullOrEmpty(file))
+        {
+            return null;
+        }
+
         try
         {
-            var response = await HelperClient.SendAsync("install-steam", TimeSpan.FromSeconds(5));
-            SteamButtonLabel.Text = response.Ok ? "Steam ready" : "Failed";
+            return new Bitmap(AssetLoader.Open(
+                new Uri($"avares://Playfront.App/Assets/Icons/Store/Apps/{file}")));
         }
-        catch (global::System.Exception)
+        catch
         {
-            SteamButtonLabel.Text = "Helper off";
-        }
-        finally
-        {
-            _steamInstalling = false;
+            return null; // no artwork for this one: the tile stays a plain box
         }
     }
+
+    // The install-Steam button that used to sit on the "Game 1" tile is gone: Steam belongs in the
+    // store, under Apps > Launchers. The helper still answers "install-steam", so whatever drives the
+    // install next only has to call it.
 
     // Keyboard equivalent of the controller's hold-B, so "back" behaves identically on both. A timer
     // rather than counting key auto-repeats: auto-repeat depends on the user's Windows settings and
@@ -796,20 +897,67 @@ public partial class MainWindow : Window
         _backHoldTimer?.Stop();
         if (_backKeyDown)
         {
-            OnBackHeld();
+            GoHome();
         }
     }
 
     /// <summary>
-    /// "Back" held (~800 ms), from either input device. Today it only leaves the YouTube screen, whose
-    /// tap-B is consumed by the page itself.
+    /// Back to Home from wherever the user is - the Xbox button's whole job, and the same thing it
+    /// does on a console.
+    ///
+    /// Screens are unwound INNERMOST FIRST, each through its own exit, so every one of them gets to
+    /// put back what it changed: pointer mode restores the system cursor and the other program's
+    /// window, the YouTube screen tears down its browser. Closing them by hiding a panel would leave
+    /// those behind.
+    ///
+    /// Safe to call from anywhere, including Home itself, where it does nothing.
     /// </summary>
-    private void OnBackHeld()
+    private void GoHome()
     {
+        // First, because an outside program owns the display and nothing of ours is even visible.
+        if (_pointerMode)
+        {
+            ExitPointerMode();
+        }
+
         if (_inYouTube)
         {
             ExitYouTube();
         }
+
+        if (_inSpotify)
+        {
+            ExitSpotify();
+        }
+
+        // Then the shell's own screens, from the deepest out. Each Exit is a no-op when its screen
+        // is not up, so the order only has to be inside-out, not exact.
+        if (_inColorPicker) ExitColorPicker();
+        if (_inCustomColor) ExitCustomColor();
+        if (_inSolidColors) ExitSolidColors();
+        if (_inCustomImage) ExitCustomImage();
+        if (_inDynamic) ExitDynamic();
+        if (_inMyBackground) ExitMyBackground();
+        if (_inColorTheme) ExitColorTheme();
+        if (_inPersonalizationHome) ExitPersonalizationHome();
+        if (_inPersonalization) ExitPersonalization();
+
+        if (_inUpdates) ExitUpdates();
+        if (_inConsoleInfo) ExitConsoleInfo();
+        if (_inStorage) ExitStorage();
+        if (_inLanguage) ExitLanguage();
+        if (_inTime) ExitTime();
+        if (_inBreakReminder) ExitBreakReminder();
+        if (_inIdleOptions) ExitIdleOptions();
+        if (_inSettings) ExitSettings();
+
+        if (_inApp) ExitApp();
+        if (_inCategory) ExitCategory();
+        if (_inStore) ExitStore();
+        if (_inLibrary) ExitLibrary();
+
+        // Whatever was used last may have changed while we were away.
+        RefreshRecents();
     }
 
     private void OnKeyDown(object? sender, KeyEventArgs e)
@@ -857,6 +1005,15 @@ public partial class MainWindow : Window
 
     private void Move(GamepadButton button)
     {
+        // POINTER MODE FIRST, above every screen. Another program has the display, so nothing of
+        // Playfront's may react: navigating screens nobody can see would leave the app somewhere
+        // unexpected when the user comes back.
+        if (_pointerMode)
+        {
+            MovePointerButtons(button);
+            return;
+        }
+
         // The order here decides which screen receives the gamepad: checked topmost first. "My color
         // & theme" sits above Personalization, which sits above Settings; all of them stay mounted
         // behind (with their _inX true) so that closing with B reveals each one exactly as it was.
@@ -981,6 +1138,12 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (_inSpotify)
+        {
+            MoveSpotify(button);
+            return;
+        }
+
         // The product page sits ABOVE the category page, so it is checked first.
         if (_inApp)
         {
@@ -1022,14 +1185,18 @@ public partial class MainWindow : Window
             case GamepadButton.A when _row == 0 && _col == 1:
                 EnterStore();
                 return;
-            // TEMPORARY: the "Game 1" tile (row 1, col 0) acts as the "Install Steam" button for now.
-            case GamepadButton.A when _row == 1 && _col == 0:
-                _ = InstallSteamFromButtonAsync();
+            // A tile of the recents row opens what it shows. This went missing when the temporary
+            // install-Steam button that used to live on the first tile was removed, which left the
+            // whole row doing nothing.
+            case GamepadButton.A when _row == RecentsRow:
+                LaunchRecent(_col);
                 return;
             case GamepadButton.Left when _col > 0:
                 _col--;
                 break;
-            case GamepadButton.Right when _col < _rows[_row].Length - 1:
+            // Bounded by how many tiles EXIST, not by the size of the array: the recents row is short
+            // until enough products have been used, and Right must stop at the last real one.
+            case GamepadButton.Right when _col < ColumnsIn(_row) - 1:
                 _col++;
                 break;
             case GamepadButton.Up when _row > 0:
@@ -1238,7 +1405,7 @@ public partial class MainWindow : Window
         }
 
         _inCategory = true;
-        _categoryView = new StoreCategoryView();
+        _categoryView = new StoreCategoryView(category);
         _categoryView.ExitRequested += ExitCategory;
         _categoryView.AppRequested += EnterApp;
         CategoryHost.Children.Add(_categoryView);
@@ -1280,14 +1447,555 @@ public partial class MainWindow : Window
         CategoryHost.IsVisible = false;
     }
 
-    // Primary button (INSTALL/PLAY) of an app page. Only YouTube has behaviour so far: it launches
-    // its web app. Persisting the "installed" state (record + PLAY button + tile) comes next; for
-    // now the button already OPENS YouTube, which is the part worth testing.
+    // Primary button of a Store product page, the same as the console:
+    //   GET      -> acquire AND start the install in one press, which is what the dialog announces
+    //   INSTALL  -> bring it down; only reachable for something that does download
+    //   PLAY     -> run it
+    // The page relabels itself after each press, so the user sees where they are.
     private void OnAppActionInvoked(string art)
     {
-        if (art == "youtube.png")
+        var catalogo = LibraryCatalog.ForArt(art);
+        if (catalogo is null)
         {
-            EnterYouTube();
+            return; // Playfront does not provide this product: the button does nothing, on purpose
+        }
+
+        // A product Playfront offers but does not build (Spotify): winget installs it and it runs as
+        // a normal Windows program. Different enough that it gets its own path.
+        var externa = LibraryCatalog.ExternalFor(catalogo.Id);
+        if (externa is not null)
+        {
+            _ = HandleExternalAsync(art, catalogo, externa);
+            return;
+        }
+
+        var entrada = LibraryStore.Find(catalogo.Id);
+        if (entrada is null)
+        {
+            LibraryStore.Add(LibraryCatalog.NewEntryForArt(art)!);
+
+            // A web app has nothing to fetch, so the install is done the moment it is acquired and
+            // GET goes straight to PLAY. Anything that DOES download stops at INSTALL until that
+            // machinery exists - inventing a finished download would be a lie.
+            if (!catalogo.NeedsDownload)
+            {
+                LibraryStore.SetState(catalogo.Id, LibraryState.Installed);
+            }
+        }
+        else if (entrada.State == LibraryState.Owned)
+        {
+            // Nothing to download for a web app (NeedsDownload is false), so it goes straight to
+            // installed. When something that DOES download arrives, this is where that goes, and
+            // only then is a progress bar honest.
+            LibraryStore.SetState(catalogo.Id, LibraryState.Installed);
+        }
+        else
+        {
+            LaunchLibraryEntry(entrada);
+            return;
+        }
+
+        _appView?.RefreshAction();
+    }
+
+    /// <summary>
+    /// Runs an installed library entry: Playfront's own web apps open inside the shell, an external
+    /// Windows program is launched as itself.
+    /// </summary>
+    private void LaunchLibraryEntry(LibraryEntry entrada)
+    {
+        // Opening it counts as using it, which is what puts it at the head of Home's recents row.
+        // Stamped here rather than in each branch below so no route can forget.
+        LibraryStore.Touch(entrada.Id);
+        RefreshRecents();
+
+        var externa = LibraryCatalog.ExternalFor(entrada.Id);
+        if (externa is not null)
+        {
+            LaunchExternal(externa);
+            return;
+        }
+
+        switch (entrada.Id)
+        {
+            case "playfront:youtube":
+                EnterYouTube();
+                break;
+        }
+    }
+
+    private void LaunchExternal(LibraryCatalog.ExternalApp app)
+    {
+        if (!app.IsInstalled)
+        {
+            return; // uninstalled from Windows behind our back; the page will say so on its next refresh
+        }
+
+        try
+        {
+            var arranque = new ProcessStartInfo(app.ExePath) { UseShellExecute = true };
+            if (app.Arguments is { Length: > 0 } args)
+            {
+                arranque.Arguments = args;
+            }
+
+            Process.Start(arranque);
+
+            // Watched by NAME, not by the handle Process.Start returns: Spotify launches a whole
+            // family of processes and the one started first is not the one that stays alive. And the
+            // name is the one that owns the WINDOW, which for Steam is not the program we just ran.
+            EnterPointerMode(app.WindowProcessName, drivesMouse: !app.ControllerNative);
+        }
+        catch (Exception e)
+        {
+            CrashLog.Log($"Could not launch {app.ExePath}", e);
+        }
+    }
+
+    // ===== POINTER MODE =====
+    // An outside program (Spotify) has the screen. Playfront cannot draw on it or inject into it, so
+    // the controller drives the REAL Windows mouse instead, and the system pointer is swapped for the
+    // console-style one. XInput is what makes this possible at all: it keeps reporting the pad even
+    // though Playfront no longer has focus.
+    private bool _pointerMode;
+
+    // Movement lives on its own thread: a pointer driven from the UI timer stutters, because that
+    // timer only fires when the UI thread is free and Playfront is decoding video on it.
+    private readonly PointerDriver _pointer = new();
+
+    // Covers the close / minimise / maximise buttons the driven program paints itself. See
+    // WindowButtonMask for the two routes that were tried before settling on covering them.
+    private WindowButtonMask? _buttonMask;
+
+    // Process name being watched, so pointer mode ends by itself when that program closes. Without
+    // this the controller keeps driving an invisible mouse and the shell looks broken - it happened,
+    // and the only way out was a shortcut nobody could have guessed.
+    private string? _pointerWatchProcess;
+    private DispatcherTimer? _pointerWatchTimer;
+
+    /// <param name="drivesMouse">
+    /// Whether the controller should drive the real Windows mouse over the program. False for one
+    /// that already takes a controller by itself: it then gets the screen and nothing else - no
+    /// cursor, no stick-as-mouse, no cover over its window buttons. Playfront still knows an outside
+    /// program is up, so its own screens stop reacting to the pad behind it.
+    /// </param>
+    private void EnterPointerMode(string? watchProcess = null, bool drivesMouse = true)
+    {
+        // Already driving something else: close that down first instead of walking away. Returning
+        // early left the shell watching the PREVIOUS program while the new one was on screen - so the
+        // cover, the fullscreen and the "is it still in front" check all pointed at the wrong window.
+        if (_pointerMode)
+        {
+            ExitPointerMode();
+        }
+
+        _pointerMode = true;
+        _pointerWindowFound = false;
+        _gamepad.PointerMode = true;
+        _pointerWatchProcess = watchProcess;
+        _pointerStarted = DateTime.UtcNow;
+        _pointerAwayChecks = 0;
+
+        _pointerDrivesMouse = drivesMouse;
+
+        if (drivesMouse)
+        {
+            // Movement runs on its own thread; the UI timer stays at its normal rate and only handles
+            // buttons. Trying to move the pointer from the UI timer is what made the first version
+            // feel like it was stuttering - see PointerDriver.
+            _pointer.Start();
+
+            SystemCursor.Apply();
+
+            // Alt+Tab, the Windows key and the rest stop working from here until pointer mode ends.
+            // Every one of them would hand the screen to something else while the controller is still
+            // driving a mouse. The ways out are the Xbox button and, with no controller, holding
+            // Escape - both go through GoHome, which puts the cursor and the window back.
+            KioskKeys.Enable(
+                () => CrashLog.Guard(PressBackKey, "exitkeydown"),
+                () => CrashLog.Guard(ReleaseBackKey, "exitkeyup"));
+        }
+
+        // Watched once a second: cheap, and a second of delay after closing the other program is not
+        // noticeable. Started even when there is nothing to watch is pointless, so it is conditional.
+        // Always started, not only when there is a process to watch: it also catches the user
+        // Alt-Tabbing back to Playfront.
+        _pointerWatchTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _pointerWatchTimer.Tick += (_, _) => CrashLog.Guard(CheckWatchedProcess, "pointerwatch");
+        _pointerWatchTimer.Start();
+
+        // The other program is given the whole screen with no frame, and its own close and minimise
+        // buttons are covered: with either left the user can drop out of it with a click and be left
+        // looking at a shell that still thinks it is driving a mouse. Done a moment later because a
+        // program that has just started does not have its window yet.
+        if (_pointerWatchProcess is { } proc)
+        {
+            // 40 tries at 1.5 s = a minute of waiting. Twelve seconds was not enough: Steam in Big
+            // Picture took about 25 to put its window up from cold, and giving up early left it
+            // running BEHIND the shell, never raised and never made fullscreen.
+            _pointerFinder = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
+            var tries = 0;
+            _pointerFinder.Tick += (_, _) => CrashLog.Guard(() =>
+            {
+                // Pointer mode may have ended while we were still waiting for the window. Without
+                // this the timer carried on and, up to a minute later, threw a program fullscreen and
+                // dropped the button cover on screen while the user was back on Home looking at the
+                // shell. That is the stray cover appearing out of nowhere.
+                if (!_pointerMode)
+                {
+                    StopPointerFinder();
+                    return;
+                }
+
+                var w = ExternalWindow.FindMainWindow(proc);
+                if (w == IntPtr.Zero && ++tries < 40)
+                {
+                    return;
+                }
+
+                StopPointerFinder();
+
+                if (w == IntPtr.Zero)
+                {
+                    // It never appeared. Staying in pointer mode would leave the controller driving a
+                    // mouse over the shell's own screens, which is the worst state to be left in.
+                    CrashLog.Info($"'{proc}' never showed a window: leaving pointer mode");
+                    ExitPointerMode();
+                    return;
+                }
+
+                // A controller-native program is left ALONE: it already fills the screen its own way
+                // and has no window buttons to hide. Reshaping it and dropping the cover on top only
+                // covered its clock.
+                if (_pointerDrivesMouse)
+                {
+                    ExternalWindow.MakeFullscreen(w);
+                    ShowButtonMask(w);
+                }
+
+                // Raised either way. Being made fullscreen puts it on top in the drawing order, but
+                // the program still has to OWN the input, and a window that opened behind the shell
+                // does not get that on its own.
+                ExternalWindow.ForceForeground(w);
+
+                // Only from here does "is it still in front?" mean anything. Before the window
+                // exists the answer is always no, and the watchdog below would end pointer mode
+                // seconds after launching something slow - Steam takes about 25 to appear.
+                _pointerWindowFound = true;
+                _pointerAwayChecks = 0;
+                CrashLog.Info($"'{proc}' is on screen: fullscreen and in front");
+            }, "fullscreen");
+            _pointerFinder.Start();
+        }
+
+        CrashLog.Info($"Pointer mode ON (watching '{_pointerWatchProcess ?? "nothing"}')");
+    }
+
+    /// <summary>
+    /// Right stick, read every poll: it scrolls the text inside a card that holds more than it shows.
+    /// Separate from the button path on purpose - a stick is held, not pressed, so it has no press
+    /// event and reading its position each frame is what makes it feel continuous.
+    /// </summary>
+    private void RightStickScroll()
+    {
+        if (_pointerMode || !_inApp || _appView is not { } vista)
+        {
+            return;
+        }
+
+        // XInput's own recommended dead zone for the right stick. Below it the stick reports movement
+        // while sitting still, and the text would creep on its own.
+        const short DeadZone = 8689;
+        const double PixelsPerFrame = 26; // full deflection at 50 ms per poll
+
+        double y = _gamepad.RightY;
+        if (Math.Abs(y) <= DeadZone)
+        {
+            vista.SetDescriptionScrollInput(0);
+            return;
+        }
+
+        // Squared response, same as the pointer: fine control near the centre, full speed at the edge.
+        var t = (Math.Abs(y) - DeadZone) / (32767.0 - DeadZone);
+
+        // Only how HARD it is being pushed. The view turns that into motion on its own clock, because
+        // this runs 20 times a second and moving the text on those beats reads as stuttering.
+        // Stick up is positive on XInput and scrolling up shows EARLIER text, so the sign flips.
+        vista.SetDescriptionScrollInput(-t * t * Math.Sign(y));
+    }
+
+    private void ShowButtonMask(IntPtr window)
+    {
+        HideButtonMask();
+
+        var (left, top, right, bottom) = ExternalWindow.MonitorBounds(window);
+        _buttonMask = new WindowButtonMask(
+            new PixelRect(left, top, right - left, bottom - top));
+        _buttonMask.Show();
+    }
+
+    private void HideButtonMask()
+    {
+        var mask = _buttonMask;
+        _buttonMask = null;
+        mask?.Close();
+    }
+
+    // The "hold B to return" badge is gone, and so is the hold it announced. The Xbox button does the
+    // job now, needs no explaining, and is what anyone coming from a console already reaches for.
+    //
+    // Escape still works and is deliberately NOT advertised: it is the way back on a machine with no
+    // controller, which the shell must always have, but it is not what this screen is about.
+
+    // When pointer mode began, so the first checks can be skipped while the other program is still
+    // coming up and Playfront is briefly still the foreground window.
+    private DateTime _pointerStarted;
+
+    /// <summary>
+    /// Runs once a second while the pointer is in charge, and ends it on either of the two ways the
+    /// user can leave without telling us:
+    ///
+    ///   - the program closed (it was closed from its own window, or it crashed);
+    ///   - the user Alt-Tabbed back to Playfront, which used to leave the shell driving a mouse over
+    ///     its own interface with no way to navigate it. That one had to be found by using it.
+    /// </summary>
+    private void CheckWatchedProcess()
+    {
+        if (!_pointerMode)
+        {
+            return;
+        }
+
+        // "It closed" only means anything once it has been SEEN. A process that has not started yet
+        // looks exactly like one that has quit, and the watched process is not always the one that
+        // was launched: Steam's window belongs to steamwebhelper, which steam.exe spawns a moment
+        // later. Judging it straight away ended pointer mode ONE SECOND after launching Steam, every
+        // single time, before it had even drawn anything.
+        //
+        // Until the window shows up the finder is in charge, and it gives up on its own after a
+        // minute.
+        if (_pointerWindowFound &&
+            _pointerWatchProcess is not null &&
+            Process.GetProcessesByName(_pointerWatchProcess).Length == 0)
+        {
+            CrashLog.Info($"'{_pointerWatchProcess}' closed: leaving pointer mode");
+            ExitPointerMode();
+            return;
+        }
+
+        // NOTHING below counts until the program's window has actually been found and put on screen.
+        // It used to be a flat 4-second grace, which was fine for Spotify and wrong for everything
+        // slower: Steam in Big Picture takes about 25 seconds from cold, so pointer mode ended about
+        // six seconds in - long before Steam appeared - and the leftover finder then dropped it
+        // fullscreen with the cover on top while the shell thought it was back Home.
+        if (_pointerWatchProcess is null || !_pointerWindowFound)
+        {
+            return;
+        }
+
+        // The condition is "is the program we are driving still in front?", NOT "is Playfront in
+        // front?". Minimising it hands the foreground to whatever happens to be behind - which is
+        // often neither - and asking the narrower question left the shell driving a mouse over a
+        // window nobody was looking at.
+        if (ExternalWindow.ForegroundIsProcess(_pointerWatchProcess))
+        {
+            _pointerAwayChecks = 0;
+
+            // Its own title bar is still draggable, so this puts the window back if it was dragged
+            // out of place. A no-op the rest of the time, which is why it rides along here instead of
+            // costing a timer of its own.
+            if (ExternalWindow.KeepFullscreen())
+            {
+                CrashLog.Info($"'{_pointerWatchProcess}' was moved: put back over the screen");
+            }
+
+            return;
+        }
+
+        // Two checks in a row, not one: a program can lose the foreground for an instant on its own
+        // (a dialog opening, a splash closing) and bouncing out of pointer mode on that would be
+        // worse than waiting a second.
+        if (++_pointerAwayChecks >= 2)
+        {
+            CrashLog.Info($"'{_pointerWatchProcess}' is no longer in front: leaving pointer mode");
+            ExitPointerMode();
+        }
+    }
+
+    private int _pointerAwayChecks;
+
+    // Whether the driven program's window has appeared yet. Until it has, the shell is still WAITING
+    // for it and must not judge whether it is in front.
+    private bool _pointerWindowFound;
+
+    // Whether the controller is driving a real mouse over the program, as opposed to the program
+    // taking the pad by itself. Both states stop Playfront's own screens reacting to the pad; only
+    // this one puts a cursor on screen.
+    private bool _pointerDrivesMouse;
+
+    // The clock that keeps looking for that window. Held in a field so leaving pointer mode can stop
+    // it: a timer left running would act on a program the shell is no longer driving.
+    private DispatcherTimer? _pointerFinder;
+
+    private void StopPointerFinder()
+    {
+        _pointerFinder?.Stop();
+        _pointerFinder = null;
+    }
+
+    private void ExitPointerMode()
+    {
+        if (!_pointerMode)
+        {
+            return;
+        }
+
+        _pointerMode = false;
+        _gamepad.PointerMode = false;
+        _pointer.Stop();
+
+        _pointerWatchTimer?.Stop();
+        _pointerWatchTimer = null;
+        _pointerWatchProcess = null;
+
+        // Stopped here as well: a finder still running would put a program fullscreen and drop the
+        // button cover on screen after the shell had already come back.
+        StopPointerFinder();
+        _pointerWindowFound = false;
+
+        KioskKeys.Disable();
+        HideButtonMask();
+
+        // Its title bar and size go back before anything else: leaving another program without a
+        // frame is not ours to do beyond the moment we are driving it.
+        ExternalWindow.Restore();
+
+        SystemCursor.Restore();
+        CrashLog.Info("Pointer mode OFF");
+
+        // Playfront is behind the other program now, so it has to ask for the screen back - otherwise
+        // the controller would be driving a window the user cannot see. Activate() on its own is not
+        // enough here and was measured failing: the other program owns the input, so Windows refuses
+        // the change. See ExternalWindow.ForceForeground.
+        try
+        {
+            Activate();
+            ExternalWindow.ForceForeground(TryGetPlatformHandle()?.Handle ?? IntPtr.Zero);
+        }
+        catch (Exception e)
+        {
+            CrashLog.Log("Could not bring Playfront back to the front", e);
+        }
+    }
+
+    // Buttons while the pointer is in charge. Deliberately few: this is a mouse, not a menu.
+    //   A  = left click
+    //   X  = right click (context menus)
+    //   B  = TAP does nothing, HOLD leaves - see OnBackHeld. A tap must not exit, or brushing B
+    //        while reaching for A would throw the user out of the app they are using.
+    private void MovePointerButtons(GamepadButton button)
+    {
+        // Nothing at all when the program takes the pad by itself: the buttons are ITS to handle, and
+        // a click synthesised on top would land wherever the invisible cursor happened to be.
+        if (!_pointerDrivesMouse)
+        {
+            return;
+        }
+
+        switch (button)
+        {
+            case GamepadButton.A:
+                VirtualMouse.Click();
+                break;
+            case GamepadButton.X:
+                VirtualMouse.RightClick();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// GET / INSTALL / LAUNCH for an external app. The SYSTEM decides which of the three it is - the
+    /// file being on disk - rather than Playfront's own library file, which could drift if the user
+    /// uninstalled it from Windows.
+    /// </summary>
+    /// <summary>
+    /// Asks the helper service to install something, and turns its reply into the same shape the
+    /// winget path returns so the caller does not care which route ran.
+    /// </summary>
+    private static async Task<WingetInstaller.Result> InstallViaHelperAsync(string command)
+    {
+        try
+        {
+            var r = await HelperClient.SendAsync(command, TimeSpan.FromSeconds(10));
+            return new WingetInstaller.Result(r.Ok, r.Message ?? string.Empty);
+        }
+        catch (Exception e)
+        {
+            // Almost always the service being stopped or never installed. Said plainly, because the
+            // user can act on it - the alternative is a button that fails without saying why.
+            CrashLog.Log($"The helper did not answer '{command}'", e);
+            return new WingetInstaller.Result(false, "The Playfront helper service is not running.");
+        }
+    }
+
+    private async Task HandleExternalAsync(
+        string art, LibraryEntry catalogo, LibraryCatalog.ExternalApp externa)
+    {
+        if (externa.IsInstalled)
+        {
+            // It may be on the machine without being in the library - installed by the user long
+            // before Playfront, or before this product existed here. Opening it is enough to put it
+            // in: the library is what Playfront knows about, and now it knows.
+            if (LibraryStore.Find(catalogo.Id) is null)
+            {
+                LibraryStore.Add(LibraryCatalog.NewEntryForArt(art)!);
+            }
+
+            LibraryStore.SetState(catalogo.Id, LibraryState.Installed);
+            LibraryStore.Touch(catalogo.Id);
+            RefreshRecents();
+            LaunchExternal(externa);
+            return;
+        }
+
+        if (LibraryStore.Find(catalogo.Id) is null)
+        {
+            LibraryStore.Add(LibraryCatalog.NewEntryForArt(art)!);
+        }
+
+        if (_appView is { } vista)
+        {
+            vista.Installing = true;
+            vista.RefreshAction();
+        }
+
+        // Two install routes. The helper one is for anything that writes outside the user's folders:
+        // doing that from here would raise a UAC prompt, which a controller cannot answer.
+        //
+        // The timeout below is only for CONNECTING to the pipe. Reading the reply has none, which is
+        // what this needs: the helper downloads the installer and runs it before answering, and that
+        // takes as long as it takes.
+        var resultado = externa.HelperCommand is { } orden
+            ? await InstallViaHelperAsync(orden)
+            : await WingetInstaller.InstallAsync(externa.WingetId!);
+
+        if (resultado.Ok)
+        {
+            // Settings are applied with Spotify CLOSED - it rewrites its preferences on exit and
+            // would undo them. A silent winget install does not launch it, so this is the moment.
+            if (catalogo.Id == "playfront:spotify")
+            {
+                SpotifyTweaks.Apply();
+            }
+
+            LibraryStore.SetState(catalogo.Id, LibraryState.Installed);
+        }
+
+        if (_appView is { } v2)
+        {
+            v2.Installing = false;
+            v2.InstallError = resultado.Ok ? null : resultado.Message;
+            v2.RefreshAction();
         }
     }
 
@@ -1324,7 +2032,8 @@ public partial class MainWindow : Window
         }
 
         _inYouTube = true;
-        _youTube = new Web.WebViewHost("https://www.youtube.com/tv", YouTubeProfileFolder);
+        _youTube = new Web.WebViewHost("https://www.youtube.com/tv", YouTubeProfileFolder,
+            Web.WebViewHost.LeanbackAgent);
         _youTube.InitFailed += OnYouTubeInitFailed;
         _youTube.ShellKey += OnYouTubeShellKey;
         YouTubeHost.Children.Add(_youTube);
@@ -1409,6 +2118,98 @@ public partial class MainWindow : Window
         }
     }
 
+    // ===== Spotify web app (inside a WebView2) =====
+    // Same shape as YouTube, with one difference that decides everything about how it is driven:
+    // Spotify has NO TV build on the web, so this is the normal web player and the page leaves
+    // navigation to the BROWSER. Synthetic key events (SendKey) cannot move focus or activate a
+    // link - the browser ignores untrusted events for its own jobs - so every key here goes through
+    // SendRealKey. Getting this wrong looks like "the controller does nothing".
+    private bool _inSpotify;
+    private Web.WebViewHost? _spotify;
+
+    // Its own profile, separate from YouTube's: two sites, two sessions, and removing one product
+    // must not sign the user out of the other.
+    private static string SpotifyProfileFolder => AppData.File("Spotify");
+
+    // Laid out for a desktop monitor, so it is unreadable at arm's length on a handheld. Starting
+    // point, tuned by looking at it.
+    private const double SpotifyZoom = 1.35;
+
+    private void EnterSpotify()
+    {
+        if (_inSpotify)
+        {
+            return;
+        }
+
+        _inSpotify = true;
+        // DEFAULT user agent on purpose: Spotify serves a supported-browser check and its DRM
+        // expects Edge. The Leanback agent used for YouTube would break it.
+        _spotify = new Web.WebViewHost("https://open.spotify.com/", SpotifyProfileFolder,
+            userAgent: null, zoom: SpotifyZoom);
+        _spotify.InitFailed += OnSpotifyInitFailed;
+        _spotify.ShellKey += OnYouTubeShellKey; // same tap/hold "back" handling
+        YouTubeHost.Children.Add(_spotify);
+        YouTubeHost.IsVisible = true;
+
+        UpdateHomeVideoState();
+        _gamepad.RepeatEnabled = true;
+    }
+
+    private void ExitSpotify()
+    {
+        _inSpotify = false;
+        ReleaseBackKey();
+        if (_spotify != null)
+        {
+            _spotify.InitFailed -= OnSpotifyInitFailed;
+            _spotify.ShellKey -= OnYouTubeShellKey;
+            YouTubeHost.Children.Remove(_spotify); // closes the browser and frees its processes
+            _spotify = null;
+        }
+
+        YouTubeHost.IsVisible = false;
+        _gamepad.RepeatEnabled = false;
+        UpdateHomeVideoState();
+    }
+
+    private void OnSpotifyInitFailed(string message)
+    {
+        CrashLog.Log($"WebView2 failed to initialize (Spotify): {message}", null);
+        ExitSpotify();
+    }
+
+    // Controller -> Spotify. Every entry is a REAL keypress (see WebViewHost.SendRealKey).
+    //
+    // The face buttons use Spotify's OWN documented shortcuts rather than anything injected: they
+    // are published and maintained by Spotify, so they do not break when the page is rebuilt, which
+    // is the failure mode of every CSS/DOM-based approach to this page.
+    //
+    // Up/Down are Tab and Shift+Tab because that is what actually moves focus on a normal web page;
+    // Left/Right are the real arrows, which the page handles inside lists and carousels.
+    private void MoveSpotify(GamepadButton button)
+    {
+        const int Alt = 1, Ctrl = 2, Shift = 8;
+
+        switch (button)
+        {
+            case GamepadButton.Down: _spotify?.SendRealKey("Tab", "Tab", 9); break;
+            case GamepadButton.Up: _spotify?.SendRealKey("Tab", "Tab", 9, Shift); break;
+            case GamepadButton.Left: _spotify?.SendRealKey("ArrowLeft", "ArrowLeft", 37); break;
+            case GamepadButton.Right: _spotify?.SendRealKey("ArrowRight", "ArrowRight", 39); break;
+            case GamepadButton.A: _spotify?.SendRealKey("Enter", "Enter", 13, 0, "\r"); break;
+            // No "back" inside the page: the web player is a normal site, so B is browser history.
+            case GamepadButton.B: _spotify?.GoBack(); break;
+            case GamepadButton.X: _spotify?.SendRealKey(" ", "Space", 32, 0, " "); break;
+            case GamepadButton.Y: _spotify?.SendRealKey("k", "KeyK", 75, Ctrl); break;       // search
+            case GamepadButton.Start: _spotify?.SendRealKey("0", "Digit0", 48, Alt | Shift); break; // library
+            case GamepadButton.LB: _spotify?.SendRealKey("ArrowLeft", "ArrowLeft", 37, Ctrl); break;  // previous
+            case GamepadButton.RB: _spotify?.SendRealKey("ArrowRight", "ArrowRight", 39, Ctrl); break; // next
+            case GamepadButton.LT: _spotify?.SendRealKey("ArrowDown", "ArrowDown", 40, Ctrl); break;   // volume -
+            case GamepadButton.RT: _spotify?.SendRealKey("ArrowUp", "ArrowUp", 38, Ctrl); break;       // volume +
+        }
+    }
+
     private void ExitStore()
     {
         _inStore = false;
@@ -1435,6 +2236,7 @@ public partial class MainWindow : Window
         _inLibrary = true;
         _libraryView = new LibraryView();
         _libraryView.ExitRequested += ExitLibrary;
+        _libraryView.LaunchRequested += LaunchLibraryEntry;
         LibraryHost.Children.Add(_libraryView);
         UpdateHomeVideoState(); // home covered by the Library: pause the background video (not visible)
     }
@@ -1445,6 +2247,7 @@ public partial class MainWindow : Window
         if (_libraryView != null)
         {
             _libraryView.ExitRequested -= ExitLibrary;
+            _libraryView.LaunchRequested -= LaunchLibraryEntry;
             LibraryHost.Children.Remove(_libraryView);
             _libraryView = null; // release the view: the garbage collector reclaims its memory
         }
@@ -2518,8 +3321,13 @@ public partial class MainWindow : Window
     // avoid triggering the delicate teardown on every entry, but decoding IS PAUSED while those
     // opaque screens cover the home: it is not visible, so decoding would only burn GPU and battery.
     // Pausing is instant to undo (the decoder stays alive) and carries none of the teardown risk.
-    private bool ShouldHomeVideoRun()
-        => IsActive && _backgroundSolidHex is null;
+    // The caller may pass whether the window is in the foreground instead of letting this read
+    // IsActive. It has to: inside the Activated handler Avalonia has NOT updated IsActive yet, so
+    // reading it there returns False and the video is torn down again the instant it should come
+    // back - the background freezes on its poster and never recovers for the rest of the session,
+    // with nothing in the log because nothing threw.
+    private bool ShouldHomeVideoRun(bool? foreground = null)
+        => (foreground ?? IsActive) && _backgroundSolidHex is null;
 
     // The home is COVERED by an opaque full screen: Settings or Personalization (off which hang ALL
     // its subscreens: My background, Dynamic backgrounds, colours...). Besides saving on those
@@ -2528,9 +3336,9 @@ public partial class MainWindow : Window
     private bool IsHomeCovered()
         => _inSettings || _inPersonalization || _inStore || _inYouTube || _inLibrary;
 
-    private void UpdateHomeVideoState()
+    private void UpdateHomeVideoState(bool? foreground = null)
     {
-        if (!ShouldHomeVideoRun())
+        if (!ShouldHomeVideoRun(foreground))
         {
             SetVideoBackground(null);                   // full unload (game in foreground / solid colour)
             return;
@@ -3362,9 +4170,13 @@ public partial class MainWindow : Window
     private int NearestColumn(int row, double targetCenterX)
     {
         var centers = _rowCenters[row];
+
+        // Only over the tiles that exist. Landing on a hidden slot after changing row would leave the
+        // ring floating over nothing.
+        var hasta = Math.Min(centers.Length, Math.Max(1, ColumnsIn(row)));
         var bestIndex = 0;
         var bestDistance = double.MaxValue;
-        for (var i = 0; i < centers.Length; i++)
+        for (var i = 0; i < hasta; i++)
         {
             var distance = Math.Abs(centers[i] - targetCenterX);
             if (distance < bestDistance)

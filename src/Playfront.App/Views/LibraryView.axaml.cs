@@ -1,11 +1,17 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
+using Playfront.App.Library;
 using Playfront.App.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Media.Transformation;
+using Avalonia.Platform;
+using Avalonia.Threading;
 
 namespace Playfront.App.Views;
 
@@ -29,14 +35,15 @@ public partial class LibraryView : UserControl
     private enum FocusArea { Menu, Content }
 
     private FocusArea _focus = FocusArea.Menu;
-    private int _menuIndex;      // 0=Games,1=Apps,2=Groups,3=Game history,4=Full library,5=Manage
+    private int _menuIndex;      // 0=Games,1=Apps,2=Groups,3=Play history,4=Full library,5=Manage
     private int _contentIndex;   // within the active category: game (Games 0..9) or card (Manage 0..8)
 
     private const int GamesCat = 0;
+    private const int AppsCat = 1;
     private const int ManageCat = 5;
 
     // Display title of each category.
-    private static readonly string[] CategoryNames = { "Games", "Apps", "Groups", "Game history", "Full library", "Manage" };
+    private static readonly string[] CategoryNames = { "Games", "Apps", "Groups", "Play history", "Full library", "Manage" };
 
     // Canvas.Top of each menu category (the highlight/indicator slides to these). The first five are
     // contiguous; "Manage" sits lower because of the divider.
@@ -55,6 +62,16 @@ public partial class LibraryView : UserControl
     private Border[] _labels = null!;       // game name labels (Games)
     private Border[] _manageRings = null!;  // card rings (Manage)
 
+    // The grid's ten slots. The layout is fixed (every coordinate is measured against the console),
+    // so the library fills the first N slots and the rest are hidden. Ten is the ceiling for now;
+    // paging comes with the providers, when there can be more than ten of anything.
+    private Control[] _tiles = null!;
+    private Image[] _arts = null!;
+    private TextBlock[] _names = null!;
+
+    /// <summary>What is on the grid right now: the library entries of the active category.</summary>
+    private List<LibraryEntry> _shown = new();
+
     public LibraryView()
     {
         InitializeComponent();
@@ -66,17 +83,95 @@ public partial class LibraryView : UserControl
         _labels = new[] { LLabel0, LLabel1, LLabel2, LLabel3, LLabel4, LLabel5, LLabel6, LLabel7, LLabel8, LLabel9 };
         _manageRings = new[] { MRing0, MRing1, MRing2, MRing3, MRing4, MRing5, MRing6, MRing7, MRing8 };
 
+        _tiles = new Control[] { LTile0, LTile1, LTile2, LTile3, LTile4, LTile5, LTile6, LTile7, LTile8, LTile9 };
+        _arts = new[] { LArt0, LArt1, LArt2, LArt3, LArt4, LArt5, LArt6, LArt7, LArt8, LArt9 };
+        _names = new[] { LName0, LName1, LName2, LName3, LName4, LName5, LName6, LName7, LName8, LName9 };
+
         UpdateStorage();
+        ReloadLibrary();
         UpdateVisuals();
     }
 
     // How many navigable items the active category has (0 when it has no content).
-    private int ContentCount => _menuIndex == GamesCat ? _rings.Length
-        : _menuIndex == ManageCat ? _manageRings.Length : 0;
+    private int ContentCount => _menuIndex == ManageCat ? _manageRings.Length
+        : HasGrid(_menuIndex) ? _shown.Count : 0;
+
+    /// <summary>Which categories draw the tile grid. Games and Apps share it; the console's look the same.</summary>
+    private static bool HasGrid(int cat) => cat == GamesCat || cat == AppsCat;
+
+    /// <summary>
+    /// Rebuilds the grid from the user's library for the active category. Called when the view opens
+    /// and whenever the category changes.
+    ///
+    /// The category is NOT guessed from the title: every entry carries where it came from, and that
+    /// decides whether it is a game or an app. That is what the console gets for free from its store
+    /// and what Playfront has to keep for itself on Windows.
+    /// </summary>
+    private void ReloadLibrary()
+    {
+        _shown = HasGrid(_menuIndex)
+            ? LibraryStore.OfKind(_menuIndex == GamesCat ? LibraryKind.Game : LibraryKind.App).ToList()
+            : new List<LibraryEntry>();
+
+        for (var i = 0; i < _tiles.Length; i++)
+        {
+            var hay = i < _shown.Count;
+            _tiles[i].IsVisible = hay;
+            if (!hay)
+            {
+                continue;
+            }
+
+            var e = _shown[i];
+            _names[i].Text = e.Title;
+            _arts[i].Source = LoadStoreArt(e.Art);
+        }
+
+        if (_contentIndex >= _shown.Count)
+        {
+            _contentIndex = Math.Max(0, _shown.Count - 1);
+        }
+
+        // Real counts, from the same list the grid shows, so the number and the tiles cannot
+        // disagree. An empty category shows nothing rather than a zero.
+        var juegos = LibraryStore.OfKind(LibraryKind.Game).Count();
+        var apps = LibraryStore.OfKind(LibraryKind.App).Count();
+        LCount0.Text = juegos > 0 ? juegos.ToString(CultureInfo.InvariantCulture) : "";
+        LCount1.Text = apps > 0 ? apps.ToString(CultureInfo.InvariantCulture) : "";
+        LCount2.Text = "";
+        LGamesCount.Text = _shown.Count == 1
+            ? "1 " + (_menuIndex == GamesCat ? "game" : "app")
+            : _shown.Count + " " + (_menuIndex == GamesCat ? "games" : "apps");
+
+        // Nothing in this category yet: say so instead of leaving an unexplained blank.
+        LEmptyText.IsVisible = HasGrid(_menuIndex) && _shown.Count == 0;
+        LEmptyText.Text = _menuIndex == GamesCat
+            ? "No games in your library yet. Add some from the Store."
+            : "No apps in your library yet. Add some from the Store.";
+    }
+
+    private static Bitmap? LoadStoreArt(string? file)
+    {
+        if (string.IsNullOrEmpty(file))
+        {
+            return null;
+        }
+
+        try
+        {
+            return new Bitmap(AssetLoader.Open(new Uri($"avares://Playfront.App/Assets/Icons/Store/Apps/{file}")));
+        }
+        catch
+        {
+            return null; // no art: the tile stays as the plain placeholder rather than breaking
+        }
+    }
 
     // ===== Storage meter (bottom left) =====
     // Ring geometry, matching the XAML: stroke centre and radius.
-    private const double RingCx = 330, RingCy = 993, RingR = 42.5;
+    // Centre and radius of the storage ring, measured on the console: outer diameter 96 with a
+    // 4 px stroke, so the centreline radius is (96-4)/2 = 46. Must match the Ellipse in the XAML.
+    private const double RingCx = 327, RingCy = 968, RingR = 46;
 
     // Fills "available" (free GB), the centre percentage and the accent arc from the REAL free space on
     // the system drive. The arc covers the free percentage; the remainder shows the track underneath.
@@ -99,7 +194,8 @@ public partial class LibraryView : UserControl
             // "Windows GB" = base 1024, matching what Explorer shows, not base 10.
             var freeGiB = free / (1024.0 * 1024.0 * 1024.0);
 
-            LStorageSize.Text = FormatSize(freeGiB);
+            // "64.0 GB free" - the word is part of the line on the console, not a separate one.
+            LStorageSize.Text = FormatSize(freeGiB) + " free";
             LStoragePercent.Text = percentFree.ToString("0.0", CultureInfo.InvariantCulture) + "%";
             LStorageArc.Data = BuildRingArc(percentFree);
         }
@@ -166,6 +262,10 @@ public partial class LibraryView : UserControl
             case GamepadButton.Down when _menuIndex < MenuRowTops.Length - 1:
                 _menuIndex++;
                 break;
+            // Start does nothing while focus is on the menu: it removes an ENTRY, and there is none
+            // focused here. Swallowed so it does not fall through to the default.
+            case GamepadButton.Start:
+                return;
             // Enter the highlighted category's content, if it has any (Games or Manage).
             case GamepadButton.A when ContentCount > 0:
             case GamepadButton.Right when ContentCount > 0:
@@ -178,13 +278,46 @@ public partial class LibraryView : UserControl
                 return;
         }
 
+        // The grid follows the highlighted category, so moving through the menu swaps its contents.
+        ReloadLibrary();
         UpdateVisuals();
+        AnimarEntradaContenido(button == GamepadButton.Down ? 1 : -1);
+    }
+
+    /// <summary>
+    /// Plays the console's category-change animation: the new content appears offset in the
+    /// direction of travel and almost transparent, then slides into place while fading in.
+    ///
+    /// The starting state has to be applied with the transitions SUSPENDED. Otherwise Avalonia
+    /// animates the jump to the offset as well and what you see is the content swinging out and
+    /// back, which is not what the console does - it only animates the way IN.
+    /// </summary>
+    private void AnimarEntradaContenido(int direccion)
+    {
+        // Travel extrapolated from the measured decay: the element is still 140 px out when it
+        // first becomes visible, and the curve puts its origin around 190 px in the direction of
+        // travel. Down through the menu -> content rises from below, up -> descends from above.
+        const double Desplazamiento = 190;
+
+        var trans = LContentAnim.Transitions;
+        LContentAnim.Transitions = null;
+        LContentAnim.RenderTransform = TransformOperations.Parse(
+            $"translateY({(direccion * Desplazamiento).ToString(CultureInfo.InvariantCulture)}px)");
+        LContentAnim.Opacity = 0;
+        LContentAnim.Transitions = trans;
+
+        // Next frame, or the two states collapse into one and nothing animates.
+        Dispatcher.UIThread.Post(() =>
+        {
+            LContentAnim.RenderTransform = TransformOperations.Parse("translateY(0px)");
+            LContentAnim.Opacity = 1;
+        }, DispatcherPriority.Render);
     }
 
     // Inside the content: route by active category.
     private void MoveContent(GamepadButton button)
     {
-        if (_menuIndex == GamesCat)
+        if (HasGrid(_menuIndex))
         {
             MoveGamesGrid(button);
         }
@@ -194,6 +327,14 @@ public partial class LibraryView : UserControl
         }
     }
 
+    /// <summary>Asks MainWindow to run the focused entry (it owns the screens an entry can open).</summary>
+    public event Action<LibraryEntry>? LaunchRequested;
+
+    /// <summary>The focused entry, or null when focus is not on a tile.</summary>
+    private LibraryEntry? Focused
+        => _focus == FocusArea.Content && HasGrid(_menuIndex) && _contentIndex < _shown.Count
+            ? _shown[_contentIndex] : null;
+
     // GAMES grid navigation (6 on top + 4 below).
     private void MoveGamesGrid(GamepadButton button)
     {
@@ -202,6 +343,28 @@ public partial class LibraryView : UserControl
 
         switch (button)
         {
+            // A runs the focused entry. If it is only OWNED it gets installed first; for a web app
+            // there is nothing to fetch, so that step is immediate.
+            case GamepadButton.A when Focused is not null:
+                var entrada = Focused!;
+                if (entrada.State == LibraryState.Owned)
+                {
+                    LibraryStore.SetState(entrada.Id, LibraryState.Installed);
+                }
+                LaunchRequested?.Invoke(entrada);
+                return;
+            // Start (the "hamburger"/Menu button) takes the entry OUT of the library, like the console's
+            // "Remove". It only forgets it - nothing on disk is touched - and it can be added again
+            // from the Store.
+            case GamepadButton.Start when Focused is not null:
+                LibraryStore.Remove(Focused!.Id);
+                ReloadLibrary();
+                if (_shown.Count == 0)
+                {
+                    ExitContent();
+                    return;
+                }
+                break;
             case GamepadButton.Left when col > 0:
                 _contentIndex--;
                 break;
@@ -210,7 +373,7 @@ public partial class LibraryView : UserControl
             case GamepadButton.B:
                 ExitContent();
                 return;
-            case GamepadButton.Right when col < GridRowLengths[row] - 1:
+            case GamepadButton.Right when col < GridRowLengths[row] - 1 && _contentIndex + 1 < _shown.Count:
                 _contentIndex++;
                 break;
             case GamepadButton.Down when row == 0:
@@ -294,7 +457,7 @@ public partial class LibraryView : UserControl
 
         // Right-hand content follows the active category (Games / Manage / empty), title included.
         LContentTitle.Text = CategoryNames[_menuIndex];
-        LGamesContent.IsVisible = _menuIndex == GamesCat;
+        LGamesContent.IsVisible = HasGrid(_menuIndex);
         LManageContent.IsVisible = _menuIndex == ManageCat;
 
         // Solid accent highlight (focus in menu) vs the "category open" indicator (focus in content).
@@ -305,11 +468,22 @@ public partial class LibraryView : UserControl
         LCategoryIndicator.IsVisible = inContent;
         LCategoryIndicator.RenderTransform = shift;
 
+        // The count on the highlighted row turns WHITE. In grey it is nearly unreadable against the
+        // solid accent, and the console does the same. Only while focus is on the menu: with the
+        // category open the band is grey and the count stays grey.
+        var cuentas = new[] { LCount0, LCount1, LCount2 };
+        for (var i = 0; i < cuentas.Length; i++)
+        {
+            cuentas[i].Foreground = !inContent && i == _menuIndex
+                ? Brushes.White
+                : new SolidColorBrush(Color.FromRgb(0x9A, 0x9A, 0x9A));
+        }
+
         // GAME rings and labels: only the focused item, and only with content focus in Games.
-        var gamesFocus = inContent && _menuIndex == GamesCat;
+        var gamesFocus = inContent && HasGrid(_menuIndex);
         for (var i = 0; i < _rings.Length; i++)
         {
-            var on = gamesFocus && i == _contentIndex;
+            var on = gamesFocus && i == _contentIndex && i < _shown.Count;
             SetClass(_rings[i], "selected", on);
             _labels[i].IsVisible = on;
         }

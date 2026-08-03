@@ -54,6 +54,17 @@ class Program
             CrashLog.Info($"Heavy assets NOT found: the UI will have no backgrounds or artwork. Searched {AssetPaths.Describe()}.");
         }
 
+        // SAFETY NET for the system-wide mouse pointer. Playfront replaces it while driving an
+        // outside program, and that change survives the process: a crash would leave the user with
+        // our pointer on every application until they signed out.
+        //
+        // Restoring here, unconditionally, is what actually protects them - the tidy-up paths inside
+        // the app cannot run if the process is killed, but this one runs on the next launch. It costs
+        // nothing when there is nothing to repair, since it just tells Windows to reload the user's
+        // own cursor scheme.
+        Input.SystemCursor.Restore();
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => Input.SystemCursor.Restore();
+
         try
         {
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);

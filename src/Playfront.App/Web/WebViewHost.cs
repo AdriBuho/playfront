@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -27,13 +29,20 @@ namespace Playfront.App.Web;
 /// </summary>
 public sealed class WebViewHost : NativeControlHost
 {
-    // Console user-agent: makes YouTube serve the TV (Leanback) interface instead of the normal site.
-    // Cobalt 19 on purpose - it stops YouTube assuming Widevine DRM, which WebView2 does not carry.
-    private const string UserAgent =
+    /// <summary>
+    /// Console user-agent: makes YouTube serve the TV (Leanback) interface instead of the normal
+    /// site. Cobalt 19 on purpose - it stops YouTube assuming Widevine DRM.
+    ///
+    /// Only pass this for YouTube. A site that has no TV build (Spotify) must be left on the
+    /// DEFAULT Edge agent: it is a browser those sites support, and their DRM check expects it.
+    /// </summary>
+    public const string LeanbackAgent =
         "Mozilla/5.0 (PS4; Leanback Shell) Cobalt/19.lts.0-qa; compatible; Playfront/1.0";
 
     private readonly string _url;
     private readonly string _profileFolder;
+    private readonly string? _userAgent;
+    private readonly double _zoom;
 
     // Pre-injected JS helper, called as __playfrontKey(code) to synthesize a keypress (keydown+keyup)
     // the Leanback UI understands. This is the reliable route; posting WM_KEYDOWN to the HWND is not.
@@ -73,10 +82,12 @@ public sealed class WebViewHost : NativeControlHost
     private const int VkBack = 0x08;
     private const int VkEscape = 0x1B;
 
-    public WebViewHost(string url, string profileFolder)
+    public WebViewHost(string url, string profileFolder, string? userAgent = null, double zoom = 1.0)
     {
         _url = url;
         _profileFolder = profileFolder;
+        _userAgent = userAgent;
+        _zoom = zoom;
 
         // Whenever Avalonia moves or resizes this view, resize the browser to fill it (the whole window
         // in the YouTube case).
@@ -117,8 +128,12 @@ public sealed class WebViewHost : NativeControlHost
 
             var core = _controller.CoreWebView2;
 
-            // UA BEFORE navigating - it applies to every request the control makes.
-            core.Settings.UserAgent = UserAgent;
+            // UA BEFORE navigating - it applies to every request the control makes. Left alone when
+            // none is given, which is what a site with no TV build needs.
+            if (_userAgent is not null)
+            {
+                core.Settings.UserAgent = _userAgent;
+            }
 
             // Kiosk settings: no menus, browser accelerator keys, devtools, zoom or bars. This is a
             // full-screen controller-driven app, not a browser.
@@ -162,6 +177,13 @@ public sealed class WebViewHost : NativeControlHost
 
             await core.AddScriptToExecuteOnDocumentCreatedAsync(InjectScript);
 
+            // Applied here, not by the caller: the controller does not exist until this point, so a
+            // SetZoom from outside right after construction would silently do nothing.
+            if (Math.Abs(_zoom - 1.0) > 0.001)
+            {
+                _controller.ZoomFactor = _zoom;
+            }
+
             _controller.IsVisible = true;
             UpdateBounds();
             core.Navigate(_url);
@@ -192,6 +214,78 @@ public sealed class WebViewHost : NativeControlHost
     {
         var core = _controller?.CoreWebView2;
         _ = core?.ExecuteScriptAsync($"window.__playfrontKey({keyCode})");
+    }
+
+    /// <summary>
+    /// Sends a REAL keypress - one the browser itself acts on: Tab to move focus, Enter to activate
+    /// what has focus, arrows to move inside a list, a shortcut with Ctrl or Alt.
+    ///
+    /// <see cref="SendKey"/> CANNOT do any of that. Events built in JavaScript are marked untrusted,
+    /// and the browser deliberately ignores untrusted events for anything that is its own job -
+    /// otherwise any web page could fake clicks on the user's behalf. It works for YouTube only
+    /// because the Leanback interface listens for the keys and does the moving itself. A normal web
+    /// page leaves that to the browser, so it needs this route.
+    ///
+    /// The DevTools protocol is the only trusted-input door WebView2 opens.
+    /// </summary>
+    /// <param name="key">DOM key value, e.g. "Tab", "Enter", "ArrowDown", "k".</param>
+    /// <param name="code">Physical code, e.g. "Tab", "Enter", "ArrowDown", "KeyK".</param>
+    /// <param name="virtualKey">Windows virtual-key code.</param>
+    /// <param name="modifiers">Bit flags: Alt=1, Ctrl=2, Meta=4, Shift=8.</param>
+    /// <param name="text">Only for keys that type a character; leave null otherwise.</param>
+    public void SendRealKey(string key, string code, int virtualKey, int modifiers = 0, string? text = null)
+    {
+        // rawKeyDown for keys that produce no character; keyDown (with text) for the ones that do.
+        // Getting this wrong is what makes Enter "arrive" but activate nothing.
+        Dispatch(text is null ? "rawKeyDown" : "keyDown", key, code, virtualKey, modifiers, text);
+        Dispatch("keyUp", key, code, virtualKey, modifiers, null);
+    }
+
+    private void Dispatch(string type, string key, string code, int virtualKey, int modifiers, string? text)
+    {
+        var core = _controller?.CoreWebView2;
+        if (core is null)
+        {
+            return;
+        }
+
+        var p = new Dictionary<string, object>
+        {
+            ["type"] = type,
+            ["key"] = key,
+            ["code"] = code,
+            ["windowsVirtualKeyCode"] = virtualKey,
+            ["nativeVirtualKeyCode"] = virtualKey,
+            ["modifiers"] = modifiers,
+        };
+
+        if (text is not null)
+        {
+            p["text"] = text;
+        }
+
+        _ = core.CallDevToolsProtocolMethodAsync("Input.dispatchKeyEvent", JsonSerializer.Serialize(p));
+    }
+
+    /// <summary>Browser-level back, for pages that have no "back" of their own.</summary>
+    public void GoBack()
+    {
+        var core = _controller?.CoreWebView2;
+        if (core is { CanGoBack: true })
+        {
+            core.GoBack();
+        }
+    }
+
+    /// <summary>
+    /// Page zoom. A site laid out for a desktop monitor is unreadable from a sofa at 100%.
+    /// </summary>
+    public void SetZoom(double factor)
+    {
+        if (_controller is not null)
+        {
+            _controller.ZoomFactor = factor;
+        }
     }
 
     /// <summary>

@@ -38,12 +38,16 @@ it is licensed to us.** It is included because the interface is meaningless with
 | Battery icons | `src/Playfront.App/Assets/Icons/Battery/` | Microsoft |
 | Age-rating seals | `src/Playfront.App/Assets/Icons/Store/` | ESRB |
 | Store logos | `src/Playfront.App/Assets/Icons/Store/` | their respective owners |
+| `steam.png` (Steam logo) | `src/Playfront.App/Assets/Icons/Store/Apps/` | Valve (taken from the icon of the installed Steam client) |
+| `steam-hero.png` | `src/Playfront.App/Assets/Icons/Store/Apps/` | the publisher of each game shown; assembled here from the game artwork above |
+| `spotify-black-hero.png` | `src/Playfront.App/Assets/Icons/Store/Apps/` | Spotify (its own store artwork, from Microsoft's product catalogue) |
 | Game cover art | `src/Playfront.App/Assets/Library/` | the publisher of each game |
 | Game backgrounds and videos | shipped in releases, not in this repository | the publisher of each game |
 | `Segoe-Sans-Text.ttf` | `src/Playfront.App/Assets/Fonts/` | Microsoft |
 | `Segoe-Sans-Text-Semibold.ttf` | `src/Playfront.App/Assets/Fonts/` | Microsoft |
 | `Segoe-Sans-Display-Semibold.ttf` | `src/Playfront.App/Assets/Fonts/` | Microsoft |
 | `XboxFluent2.ttf` | `src/Playfront.App/Assets/Fonts/` | Microsoft |
+| `SegoeXboxMDL2Assets.ttf` | `src/Playfront.App/Assets/Fonts/` | Microsoft |
 | Xbox sphere (the vector from `Xenon.svg`, inlined) | `src/Playfront.App/Views/SystemConsoleInfoView.axaml` | Microsoft |
 
 Each icon was taken from its original file rather than cropped from a screenshot, so the

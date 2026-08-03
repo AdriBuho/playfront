@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:pf="clr-namespace:Playfront.App"
              x:Class="Playfront.App.Views.StoreAppView"
              Width="1920" Height="1080">
     <!-- Store PRODUCT PAGE: opens when pressing A on a card of the category page
@@ -87,20 +88,141 @@
             </Rectangle.Fill>
         </Rectangle>
 
-        <!-- ===== Scroll indicator (top left) =====
-             Four dots in a column, ALL centred on the same x (65) with equal spacing. The top one is
-             white and slightly larger (= we are at the start of the page); the other THREE are
-             identical to each other: same size and SAME tone. Measured pixel by pixel: the centre
-             colour of the bottom three is 81,81,81 in all three, not a gradient. -->
-        <Ellipse Canvas.Left="60.3" Canvas.Top="45.6" Width="9.5" Height="9.5" Fill="White" />
-        <Ellipse Canvas.Left="60.9" Canvas.Top="58.5" Width="8.2" Height="8.2" Fill="#515151" />
-        <Ellipse Canvas.Left="60.9" Canvas.Top="70.1" Width="8.2" Height="8.2" Fill="#515151" />
-        <Ellipse Canvas.Left="60.9" Canvas.Top="82.3" Width="8.2" Height="8.2" Fill="#515151" />
+        <!-- ===== HERO ART (products that ship one) =====
+             Some products give the store a full-bleed 1920x1080 image instead of just a square icon,
+             and when there is one the console drops the art box entirely and uses it as the whole
+             background. The two treatments are mutually exclusive: see HasHero in the code-behind.
+
+             Sits ABOVE the black/halo/blob background (which stays for products with no hero) and
+             BELOW the section-2 backdrop, so leaving for the details page still covers it. -->
+        <Image x:Name="Hero" Width="1920" Height="1080" Stretch="UniformToFill" IsVisible="False"
+               RenderOptions.BitmapInterpolationMode="HighQuality" />
+
+        <!-- The scrim over it, in three layers.
+
+             Measured against the original file: how much of its brightness survives on the console,
+             sampled in blocks that touch NO interface (a block overlapping the white title reads as
+             "bright background" and every earlier model built on that was nonsense).
+
+                          x=300   x=700  x=1100  x=1500  x=1840
+                 y=  90   0.167   0.492   0.669   0.494   0.288
+                 y= 230   0.137   0.225   0.320   0.225   0.163
+                 y= 480       -       -   0.128   0.197   0.378
+                 y= 700       -       -   0.104   0.131   0.213
+                 y=1000   0.014   0.017   0.047       -       -
+
+             So: brightest across the top, near black along the bottom, and darker down the left where
+             the text column goes. Hence a flat multiply for the level, a vertical wash that takes the
+             bottom to almost nothing, and a left-hand wash for the text column. -->
+        <!-- LIGHTENED from the values measured off the console. Those left the artwork barely
+             readable here; these let it show. The left-hand wash is the one that cannot be dropped
+             much further - the title, the publisher line and the buttons sit on top of it. -->
+        <Rectangle x:Name="HeroScrim" Width="1920" Height="1080" Fill="#1F000000" IsVisible="False" />
+        <Rectangle x:Name="HeroWash" Width="1920" Height="1080" IsVisible="False">
+            <Rectangle.Fill>
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Offset="0.00" Color="#00000000" />
+                    <GradientStop Offset="0.20" Color="#1A000000" />
+                    <GradientStop Offset="0.40" Color="#3D000000" />
+                    <GradientStop Offset="0.60" Color="#6B000000" />
+                    <GradientStop Offset="0.80" Color="#A8000000" />
+                    <GradientStop Offset="1.00" Color="#DE000000" />
+                </LinearGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+        <Rectangle x:Name="HeroLeft" Width="1920" Height="1080" IsVisible="False">
+            <Rectangle.Fill>
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                    <GradientStop Offset="0.00" Color="#A3000000" />
+                    <GradientStop Offset="0.25" Color="#47000000" />
+                    <GradientStop Offset="0.50" Color="#00000000" />
+                </LinearGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+
+        <!-- Anything in the artwork that must NOT be dimmed goes here, ABOVE the scrim: a product's
+             own logo sunk to a third of its brightness reads as a watermark. The file holds just that
+             part, cut out of the same image and aligned with it, so it lands exactly over the copy
+             underneath. Optional - most products have none. -->
+        <Image x:Name="HeroTop" Width="1920" Height="1080" Stretch="UniformToFill" IsVisible="False"
+               RenderOptions.BitmapInterpolationMode="HighQuality" />
+
+        <!-- ===== SECTION 2 BACKGROUND =====
+             The PRODUCT'S OWN artwork, blurred flat and sunk into its tint. It reads as a flat grey at
+             a glance, which is how an earlier version came to be a single hardcoded colour - and that
+             colour was YouTube's, so every other product's details page wore YouTube's background.
+
+             It is not flat. Sampled outside the cards on the console, against the same points in the
+             original art file: where the art is purple (77,35,98) the background goes purple
+             (42,33,49); where it is warm (137,121,108) it goes warm (46,41,38). Same shape, a fifth of
+             the brightness.
+
+             Fades in with the same curve as the content: measured frame by frame, the background
+             lightens over the same window the cards take to slide in (~720 ms) rather than switching. -->
+        <Canvas x:Name="Section2Bg" Width="1920" Height="1080" Opacity="0" IsHitTestVisible="False">
+            <Canvas.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.79">
+                        <DoubleTransition.Easing>
+                            <pf:ConsoleSettleEasing />
+                        </DoubleTransition.Easing>
+                    </DoubleTransition>
+                </Transitions>
+            </Canvas.Transitions>
+            <Rectangle x:Name="S2BgFill" Width="1920" Height="1080" Fill="#5A5D5C" />
+            <Image x:Name="S2BgArt" Width="1920" Height="1080" Stretch="UniformToFill" Opacity="0.14">
+                <Image.Effect>
+                    <BlurEffect Radius="120" />
+                </Image.Effect>
+            </Image>
+            <!-- Brings the whole thing down the last few levels. With the tint and the artwork alone
+                 the hues came out right but everything sat about 10 levels brighter than the console. -->
+            <Rectangle Width="1920" Height="1080" Fill="#1F000000" />
+        </Canvas>
+
+        <!-- ===== Page indicator (top left) =====
+             One dot per section of the product page; the lit one is where we are. TWO, because the
+             page has two sections. The console has four (Ratings and reviews, Screenshots follow) -
+             drawing four here would promise two pages that do not exist.
+
+             Measured on the console: all share x = 67.5 and sit 12 px apart, so the centres are y
+             51.5 / 63.5. The current one is 10 px across, the rest 8 - a real size difference, not
+             just a colour one. The unlit ones are the SAME tone as each other (79..80), not a fade.
+             The lit one measures 242 rather than pure white. -->
+        <!-- 63/47, not 63.5/47.5: at a half pixel the renderer rounds to even and the dot lands one
+             px past the other. -->
+        <!-- Two sizes/positions per dot: the lit one is 10 px and 1 px up and left of where an 8 px
+             one would sit, so each has BOTH states pre-placed and only the opacity swaps. Sizing a
+             single ellipse instead would move its top-left and make it jump. -->
+        <Ellipse x:Name="Dot0On"  Canvas.Left="63"   Canvas.Top="47"   Width="10" Height="10" Fill="#F2F2F2" />
+        <Ellipse x:Name="Dot1On"  Canvas.Left="63"   Canvas.Top="59"   Width="10" Height="10" Fill="#F2F2F2" Opacity="0" />
+        <Ellipse x:Name="Dot0Off" Canvas.Left="63.5" Canvas.Top="47.5" Width="8" Height="8" Fill="#4F4F4F" Opacity="0" />
+        <Ellipse x:Name="Dot1Off" Canvas.Left="63.5" Canvas.Top="59.5" Width="8" Height="8" Fill="#4F4F4F" />
+
+        <!-- ============================================================
+             SECTION 1 (Overview). Everything from here to the marker at the end of the block.
+             Same two transitions as section 2: coming BACK is animated too, not just going forward. -->
+        <Canvas x:Name="Section1" Width="1920" Height="1080">
+            <Canvas.Transitions>
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.79">
+                        <TransformOperationsTransition.Easing>
+                            <pf:ConsoleSettleEasing />
+                        </TransformOperationsTransition.Easing>
+                    </TransformOperationsTransition>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.6">
+                        <DoubleTransition.Easing>
+                            <pf:ConsoleSettleEasing />
+                        </DoubleTransition.Easing>
+                    </DoubleTransition>
+                </Transitions>
+            </Canvas.Transitions>
 
         <!-- ===== ART BOX (right) =====
              Perfect 701x701 square at (1109,91). Its right edge lands on x=1810, the same content
              margin used by the Store and the category page. -->
-        <Border Canvas.Left="1109" Canvas.Top="91" Width="701" Height="701" Background="White" ClipToBounds="True">
+        <Border x:Name="ArtBox" Canvas.Left="1109" Canvas.Top="91" Width="701" Height="701"
+                Background="White" ClipToBounds="True">
             <!-- HighQuality: Avalonia upscales with the fast method by default, and the art is shown
                  at 701 px while the file is smaller, so the pixels showed up as squares. This makes
                  the upscale actually interpolate. -->
@@ -115,8 +237,18 @@
              heights line up. (The first version came from a theoretical formula and left every text
              3 to 8 px too high.) -->
 
-        <!-- Title. Cap height measured at y=424.5; cap height 46.3 -> 64 px font size. -->
-        <TextBlock x:Name="TitleText" Canvas.Left="110" Canvas.Top="408.5"
+        <!-- Title. Cap height measured at y=424.5; cap height 46.3 -> 64 px font size.
+
+             ANCHORED BY ITS BOTTOM, not its top: a title that needs two lines grows UPWARDS and the
+             last line stays where a one-line title sits. Measured on a two-line title: ink tops at
+             348 and 424, so 76 px per line, and 424 is where the one-line title already was.
+             Canvas.Bottom 595.5 = 1080 - (408.5 + 76).
+
+             Width is the one number here that is NOT measured. Any value from about 830 to 965 wraps
+             the reference title in the same place, so it cannot be pinned down from that screen alone;
+             it needs a second title that wraps somewhere else. -->
+        <TextBlock x:Name="TitleText" Canvas.Left="110" Canvas.Bottom="595.5"
+                   Width="900" TextWrapping="Wrap" LineHeight="76"
                    FontSize="64" FontWeight="SemiBold" Foreground="White" />
 
         <!-- Publisher + genre ("Google LLC ▪ Entertainment"). Cap top at 503.5; grey measured #A4A09E. -->
@@ -128,63 +260,59 @@
                    FontSize="22" Foreground="#EBEDED" />
 
         <!-- ===== BUTTONS =====
-             Primary button: FLAT green fill #007533 (sampled inside the button; this is not the theme
-             colour - in the Store this button is fixed green), 208x97 at (110,694).
-             Wishlist button: 99x97 square at (336,694), grey #212424. -->
-        <Border Canvas.Left="112" Canvas.Top="695" Width="206" Height="96"
-                CornerRadius="4" Background="#007533" />
-        <!-- The button's two lines, absolutely positioned to hit the measured cap tops (715.7 and
-             752.5) and the 31 px inset from the button edge. -->
-        <TextBlock x:Name="ActionText" Canvas.Left="141" Canvas.Top="710.9"
+             BOTH buttons are the SAME dark grey #212325 - the primary one is NOT green. An earlier
+             pass had it filled #007533; re-measured against the console in both focus states and the
+             fill never changes: 33,35,37 whether focused or not. Only the ring is green, and it is
+             what makes the button read as primary.
+
+             Primary  100 tall at (112,692), corner 8. Its WIDTH follows the label and is set in code:
+                      191 for "GET / Free", 220 for "LAUNCH APP / You own this", both measured.
+             Wishlist 100 x 100, same fill and corner, 17 px after the primary - so it moves too. -->
+        <Border x:Name="ActionBg" Canvas.Left="112" Canvas.Top="692" Width="191" Height="100"
+                CornerRadius="8" Background="#212325" />
+        <!-- The button's two lines, absolutely positioned to hit the measured ink bands (715..732 and
+             751..769) and the 34 px inset from the button's left edge, which puts the ink on 146. -->
+        <TextBlock x:Name="ActionText" Canvas.Left="143.5" Canvas.Top="709.9"
                    FontSize="25" FontWeight="SemiBold" Foreground="White" />
-        <TextBlock x:Name="ActionSubText" Canvas.Left="141" Canvas.Top="746.5"
+        <TextBlock x:Name="ActionSubText" Canvas.Left="143.5" Canvas.Top="746.5"
                    FontSize="25" Foreground="White" />
 
-        <Border Canvas.Left="336" Canvas.Top="695" Width="99" Height="96"
-                CornerRadius="4" Background="#212424" />
-        <!-- Heart with a "+" (add to a list). Stroked inside a 34x32 box; the whole glyph occupies
-             31x28, which is what the reference measures (x 370..401, y 729..758). -->
-        <Canvas Canvas.Left="369" Canvas.Top="728" Width="34" Height="32">
-            <Path Stroke="#E8E8E8" StrokeThickness="1.9" StrokeJoin="Round" Fill="Transparent"
-                  Data="M11.5,29 C11.5,29 1,21.5 1,13.8 C1,10 3.7,7 7.2,7 C9.4,7 11,8.2 11.5,9.8 C12,8.2 13.6,7 15.8,7 C19.3,7 22,10 22,13.8 C22,21.5 11.5,29 11.5,29 Z" />
-            <Path Stroke="#E8E8E8" StrokeThickness="1.9" StrokeLineCap="Round"
-                  Data="M28,4 L28,14 M23,9 L33,9" />
-        </Canvas>
+        <Border x:Name="WishBg" Canvas.Left="320" Canvas.Top="692" Width="100" Height="100"
+                CornerRadius="8" Background="#212325" />
+        <!-- Wishlist heart. This is the console's own glyph, not a drawing: E734 of the Xbox MDL2
+             font, an outline heart with its lower-right lobe cut away and a "+" filling the notch.
+             The hand-drawn version this replaces had a whole heart with a small "+" floating at the
+             top right, which is a different icon.
+             FontSize 32 gives exactly the 32 x 30 ink the reference measures. E735 is the same heart
+             with an "x", for when the item is already on the list. -->
+        <TextBlock x:Name="WishIcon" Text="&#xE734;" FontFamily="{StaticResource XboxMdl2Font}"
+                   FontSize="32" Foreground="#E8E8E8" Canvas.Left="354" Canvas.Top="726" />
 
-        <!-- Focus rings (inflated by 8 px, as everywhere else in the app). -->
-        <Border Classes="appRing" x:Name="ActionRing" Canvas.Left="104" Canvas.Top="687"
-                Width="222" Height="112" CornerRadius="9" />
-        <Border Classes="appRingInner" x:Name="ActionRingInner" Canvas.Left="110" Canvas.Top="693"
-                Width="210" Height="100" CornerRadius="5" />
-        <Border Classes="appRing" x:Name="WishRing" Canvas.Left="328" Canvas.Top="687"
-                Width="115" Height="112" CornerRadius="9" />
-        <Border Classes="appRingInner" x:Name="WishRingInner" Canvas.Left="334" Canvas.Top="693"
-                Width="103" Height="100" CornerRadius="5" />
+        <!-- Focus rings. Measured on the console: a 4 px accent stroke, then a 4 px BLACK band, then
+             the button - so the ring sits 8 px outside the button on every side. Corner 10 outside,
+             and the black band has to be dark, not transparent, or the button's own corner shows
+             through it. -->
+        <Border Classes="appRing" x:Name="ActionRing" Canvas.Left="104" Canvas.Top="684"
+                Width="207" Height="116" CornerRadius="10" />
+        <Border Classes="appRingInner" x:Name="ActionRingInner" Canvas.Left="108" Canvas.Top="688"
+                Width="199" Height="108" CornerRadius="7" />
+        <Border Classes="appRing" x:Name="WishRing" Canvas.Left="312" Canvas.Top="684"
+                Width="116" Height="116" CornerRadius="10" />
+        <Border Classes="appRingInner" x:Name="WishRingInner" Canvas.Left="316" Canvas.Top="688"
+                Width="108" Height="108" CornerRadius="7" />
 
-        <!-- ===== BOTTOM SECTIONS =====
-             "Details" and "Ratings and reviews" head the content further down the page (at this
-             scroll position they are already clipped by the screen edge). The second is dimmer than
-             the first: #818181 and #565656 measured. -->
-        <TextBlock Text="Details" Canvas.Left="110" Canvas.Top="946" FontSize="32" Foreground="#818181" />
-        <TextBlock Text="Ratings and reviews" Canvas.Left="110" Canvas.Top="1005.6" FontSize="32" Foreground="#565656" />
+        <!-- ===== BOTTOM SECTION =====
+             Heads the content further down the page (at this scroll position it is already clipped
+             by the screen edge). Tone #818181 measured.
 
-        <!-- Bottom-left gamepad hint: the VIEW button glyph (ring with two overlapping rectangles)
-             plus a chevron. This is the REAL Xbox app SVG
-             (@gaming/xds-foundation/svg/ButtonView2.svg), the same one the Store rail's CLOSE row
-             already uses. Measured here: 24.5 px ring at (36.7 , 981.1), grey #7D7D7D. -->
-        <Viewbox Canvas.Left="36.7" Canvas.Top="981.1" Width="24.5" Height="24.5">
-            <Canvas Width="32" Height="32">
-                <Path Fill="#7D7D7D" Data="M10 12H18C18 10.8954 17.1046 10 16 10H10C8.89543 10 8 10.8954 8 12V16C8 17.1046 8.89543 18 10 18H12V16H10V12Z" />
-                <!-- "F0" = even-odd fill (the SVG carries fill-rule="evenodd"): it is what leaves
-                     the rectangle and the ring HOLLOW inside. In Avalonia this goes inside the path
-                     data, not as a Path property. -->
-                <Path Fill="#7D7D7D" Data="F0 M16 14C14.8954 14 14 14.8954 14 16V20C14 21.1046 14.8954 22 16 22H22C23.1046 22 24 21.1046 24 20V16C24 14.8954 23.1046 14 22 14H16ZM22 16H16V20H22V16Z" />
-                <Path Fill="#7D7D7D" Data="F0 M32 16C32 24.8366 24.8366 32 16 32C7.16344 32 0 24.8366 0 16C0 7.16344 7.16344 0 16 0C24.8366 0 32 7.16344 32 16ZM30 16C30 23.732 23.732 30 16 30C8.26801 30 2 23.732 2 16C2 8.26801 8.26801 2 16 2C23.732 2 30 8.26801 30 16Z" />
-            </Canvas>
-        </Viewbox>
-        <!-- Chevron: measured x 68.0..74.8, y 987.9..998.8. -->
-        <Path Canvas.Left="68" Canvas.Top="987.9" Stroke="#7D7D7D" StrokeThickness="1.7"
-              StrokeLineCap="Round" StrokeJoin="Round" Data="M0,0 L6.8,5.45 L0,10.9" />
+             The console lists "Ratings and reviews" under it, dimmer again (#565656), at Top 1005.6.
+             Not drawn: only Details exists here, and naming a section that cannot be reached is a
+             promise the page does not keep.
+
+             Top 975, not the console's 946: alone in the band, one line at the pair's own top edge
+             leaves the whole gap underneath it. 975 puts its ink across the pair's optical centre
+             (~995), so the band still reads as balanced with half the text gone. -->
+        <TextBlock Text="Details" Canvas.Left="110" Canvas.Top="975" FontSize="32" Foreground="#818181" />
 
         <!-- ===== AGE RATING BLOCK (bottom right) =====
              The three texts are RIGHT-aligned on x=1696 (measured: the label, the rule and the
@@ -207,6 +335,284 @@
              Ownership, as with the other icons: Microsoft/ESRB material, see THIRD-PARTY.md. -->
         <Image x:Name="RatingSeal" Canvas.Left="1727" Canvas.Top="903.8" Width="86.75" Height="86.75"
                RenderOptions.BitmapInterpolationMode="HighQuality" />
+
+        </Canvas><!-- end Section1 -->
+
+        <!-- ============================================================
+             SECTION 2 (Details). Slides up into place while the background lightens; both use the
+             console's settle curve. Measured: cards 688 x 648 at y=240, x = 112 / 832 / 1552 (step
+             720, so a 32 px gutter), fill 59,64,65.
+
+             THE THIRD CARD ("More info") IS DELIBERATELY NOT HERE. It is a list of links out to the
+             publisher's own pages plus a "report this product" flow, none of which Playfront has;
+             drawing it would be five rows of decoration that do nothing.
+
+             The console also puts XBOX SERIES X|S / XBOX ONE badges bottom right. Not copied either:
+             on a PC they would be a plain lie about what the machine is. -->
+        <Canvas x:Name="Section2" Width="1920" Height="1080" IsVisible="False" Opacity="0">
+            <Canvas.Transitions>
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.79">
+                        <TransformOperationsTransition.Easing>
+                            <pf:ConsoleSettleEasing />
+                        </TransformOperationsTransition.Easing>
+                    </TransformOperationsTransition>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.6">
+                        <DoubleTransition.Easing>
+                            <pf:ConsoleSettleEasing />
+                        </DoubleTransition.Easing>
+                    </DoubleTransition>
+                </Transitions>
+            </Canvas.Transitions>
+
+            <!-- Section headings. The one above is the section we came from, dimmed; the current one
+                 is white. Ink measured at y 70..95 and y 153..180, both starting on x=115. -->
+            <TextBlock Text="Overview" Canvas.Left="110" Canvas.Top="62" FontSize="35" Foreground="#8E9190" />
+            <TextBlock Text="Details" Canvas.Left="110" Canvas.Top="145" FontSize="36" Foreground="White" />
+
+            <!-- Product name + icon, top right. Icon 48x48 at (1760,32); the name is right-aligned so
+                 it ends 20 px before it. Size from the ink width: "YouTube" spans 92 px, which is 23,
+                 not the 25 a first pass used. -->
+            <TextBlock x:Name="S2Title" Canvas.Left="1135" Canvas.Top="43" Width="600"
+                       TextAlignment="Right" FontSize="23" Foreground="#E8E8E8" />
+            <Border Canvas.Left="1760" Canvas.Top="32" Width="48" Height="48" Background="White" ClipToBounds="True">
+                <Image x:Name="S2Icon" Stretch="UniformToFill"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" />
+            </Border>
+
+            <!-- ===== THE ROW OF CARDS =====
+                 They move, the selection does not. On the console the focused card always sits at the
+                 left position and the whole row slides 720 px per step to bring the next one into it -
+                 which is why the same card appears at x=112 in one capture and x=832 in another.
+                 The ring below stays put at the left slot for exactly that reason. -->
+            <Canvas x:Name="S2Row" Width="1920" Height="1080">
+                <Canvas.Transitions>
+                    <Transitions>
+                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.79">
+                            <TransformOperationsTransition.Easing>
+                                <pf:ConsoleSettleEasing />
+                            </TransformOperationsTransition.Easing>
+                        </TransformOperationsTransition>
+                    </Transitions>
+                </Canvas.Transitions>
+
+            <!-- ABOUT card.
+                 The fill is NOT flat. Sampled across the card at y=432 the console gives
+                 58,63,64 / 59,55,56 / 59,45,46 / 59,45,48 / 54,56,58 - red and blue drop by up to 18
+                 towards the middle while red stays put. That is the product artwork bleeding through,
+                 the same blurred blob section 1 has, and it is CLIPPED TO THE CARD: outside the cards
+                 the background is a flat 90,93,92 everywhere, so it cannot be a layer under both. -->
+            <Border Canvas.Left="112" Canvas.Top="240" Width="688" Height="648"
+                    CornerRadius="8" Background="#3A3F40" ClipToBounds="True">
+                <Canvas>
+                    <!-- The same blurred artwork as the page behind, pulled back to screen coordinates
+                         so it lines up through the card instead of restarting inside it. This used to
+                         be a hardcoded dark-red blob, which was YouTube's logo bleeding through - on
+                         every other product it painted a red glow that had nothing to do with it. -->
+                    <Image x:Name="S2ArtAbout" Canvas.Left="-112" Canvas.Top="-240"
+                           Width="1920" Height="1080" Stretch="UniformToFill" Opacity="0.28">
+                        <Image.Effect>
+                            <BlurEffect Radius="120" />
+                        </Image.Effect>
+                    </Image>
+                </Canvas>
+            </Border>
+            <TextBlock Text="About" Canvas.Left="144" Canvas.Top="264" FontSize="44" Foreground="White" />
+
+            <!-- Labels and values are NOT the same size on the console: label ink 26, value ink 24 on
+                 the same rows. Ours had both at 27 and the values came out taller than the labels,
+                 which is the wrong way round. -->
+            <TextBlock Text="Published by" Canvas.Left="144" Canvas.Top="331.5" FontSize="28" FontWeight="SemiBold" Foreground="White" />
+            <TextBlock x:Name="S2Publisher" Canvas.Left="144" Canvas.Top="366" FontSize="24" Foreground="#E4E4E4" />
+            <TextBlock Text="Release date" Canvas.Left="456" Canvas.Top="331.5" FontSize="28" FontWeight="SemiBold" Foreground="White" />
+            <TextBlock x:Name="S2Release" Canvas.Left="456" Canvas.Top="366" FontSize="24" Foreground="#E4E4E4" />
+
+            <TextBlock Text="Category" Canvas.Left="144" Canvas.Top="461.5" FontSize="28" FontWeight="SemiBold" Foreground="White" />
+            <TextBlock x:Name="S2Category" Canvas.Left="144" Canvas.Top="495" FontSize="24" Foreground="#E4E4E4" />
+            <TextBlock Text="Age rating" Canvas.Left="456" Canvas.Top="461.5" FontSize="28" FontWeight="SemiBold" Foreground="White" />
+            <TextBlock x:Name="S2Rating" Canvas.Left="456" Canvas.Top="495" Width="300" TextWrapping="Wrap"
+                       FontSize="24" LineHeight="34" Foreground="#E4E4E4" />
+            <TextBlock x:Name="S2RatingNotes" Canvas.Left="456" Canvas.Top="561" Width="300" TextWrapping="Wrap"
+                       FontSize="14" Foreground="#BFC1C1" />
+
+            <TextBlock Text="Approximate size" Canvas.Left="144" Canvas.Top="592.5" FontSize="28" FontWeight="SemiBold" Foreground="White" />
+            <!-- Real number, not the console's. What it says depends on what Playfront would actually
+                 bring down for this product; a web app brings down nothing and says so. -->
+            <TextBlock x:Name="S2Size" Canvas.Left="144" Canvas.Top="626" Width="290" TextWrapping="Wrap"
+                       FontSize="24" Foreground="#E4E4E4" />
+
+            <!-- DESCRIPTION card. Same fill and the same clipped artwork, offset to its own position
+                 so the picture runs on across the two cards instead of restarting in each. -->
+            <Border Canvas.Left="832" Canvas.Top="240" Width="688" Height="648"
+                    CornerRadius="8" Background="#3A3F40" ClipToBounds="True">
+                <Canvas>
+                    <Image x:Name="S2ArtDesc" Canvas.Left="-832" Canvas.Top="-240"
+                           Width="1920" Height="1080" Stretch="UniformToFill" Opacity="0.28">
+                        <Image.Effect>
+                            <BlurEffect Radius="120" />
+                        </Image.Effect>
+                    </Image>
+                </Canvas>
+            </Border>
+            <TextBlock Text="Description" Canvas.Left="863" Canvas.Top="265" FontSize="44" Foreground="White" />
+
+            <!-- The text is CLIPPED to the card and scrolls, the way the console does it: with this
+                 card selected the right stick runs the text up and down. Without the clip a longer
+                 description just spills out of the card and over the page, because the block is a
+                 sibling of the card, not a child of it. -->
+            <Canvas x:Name="S2DescClip" Canvas.Left="864" Canvas.Top="338" Width="616" Height="520"
+                    ClipToBounds="True">
+                <!-- The shift is applied from code: a transform named in XAML gets no field, so it
+                     cannot be reached from here. -->
+                <TextBlock x:Name="S2Description" Canvas.Left="0" Canvas.Top="0" Width="616"
+                           TextWrapping="Wrap" LineHeight="36" FontSize="24" Foreground="#E4E4E4" />
+            </Canvas>
+
+            <!-- Scrollbar, shown only while this card HAS THE FOCUS and holds more than it shows -
+                 the console hides it on the unfocused card, and the R below only means anything when
+                 the stick is pointed at this one.
+
+                 Measured on the console, card at the same y as ours: the rail is 4 px wide (x 754..757
+                 with the card at 112, so its centre is 643.5 in from the card's left edge) and runs
+                 y 336..817 in grey 79,80,85, with the thumb over it in near-white 228,230,231. Then
+                 the hint, in three pieces: a triangle pointing up at y 820..823, a 20 px circle at
+                 826..845 with an R in it, and a triangle pointing down at 848..851. -->
+            <Canvas x:Name="S2DescBar" IsVisible="False">
+                <Rectangle Canvas.Left="1473.5" Canvas.Top="336" Width="4" Height="482"
+                           RadiusX="2" RadiusY="2" Fill="#4F5055" />
+                <Rectangle x:Name="S2DescThumb" Canvas.Left="1473.5" Canvas.Top="336" Width="4" Height="120"
+                           RadiusX="2" RadiusY="2" Fill="#E4E6E7" />
+                <!-- The hint RIDES THE THUMB: it hangs off its bottom edge and travels with it, so it
+                     is only level with the end of the rail when the text is scrolled all the way
+                     down. Measured in that state, which is why it first looked like a fixed footer:
+                     thumb ending at 817, triangle 820..823, circle 826..845, triangle 848..851 - so
+                     the group starts where the thumb ends and its own coordinates run 0..33 from
+                     there. Its Top is set in code. -->
+                <Canvas x:Name="S2DescHint">
+                    <Path Data="M 1475.5,1.5 L 1479.5,5.5 L 1471.5,5.5 Z" Fill="#E4E6E7" />
+                    <Ellipse Canvas.Left="1465.5" Canvas.Top="8" Width="20" Height="20" Fill="#FDFEFE" />
+                    <TextBlock Text="R" Canvas.Left="1470.5" Canvas.Top="10.5" Width="10"
+                               TextAlignment="Center" FontSize="14" FontWeight="Bold" Foreground="#16191A" />
+                    <Path Data="M 1475.5,33.5 L 1479.5,29.5 L 1471.5,29.5 Z" Fill="#E4E6E7" />
+                </Canvas>
+            </Canvas>
+
+            <!-- FEATURES card. Third in the row, and at rest the console leaves it hanging off the
+                 right edge exactly here - it only comes fully into view once the row scrolls.
+                 Only drawn for products whose catalogue entry lists any, so nothing invents a card.
+
+                 Measured on the console with the row scrolled so the card sat at x=832: title ink at
+                 y 275..308; first row's accent bar at x+32, y=336, 8 wide and 36 tall, in near-white
+                 (242,242,244); its text starts at x+60 with the cap top at y=346 and a cap height of
+                 19, so a 26 px font; rows every 66 px, checked across all seven (336 + 6x66 = 732,
+                 which is where the last one measures). -->
+            <Border x:Name="S2FeatCard" Canvas.Left="1552" Canvas.Top="240" Width="688" Height="648"
+                    CornerRadius="8" Background="#3A3F40" ClipToBounds="True" IsVisible="False">
+                <Canvas>
+                    <Image x:Name="S2ArtFeat" Canvas.Left="-1552" Canvas.Top="-240"
+                           Width="1920" Height="1080" Stretch="UniformToFill" Opacity="0.28">
+                        <Image.Effect>
+                            <BlurEffect Radius="120" />
+                        </Image.Effect>
+                    </Image>
+                </Canvas>
+            </Border>
+            <TextBlock x:Name="S2FeatTitle" Text="Features" Canvas.Left="1584" Canvas.Top="265"
+                       FontSize="44" Foreground="White" IsVisible="False" />
+            <!-- Rows are built in code because how many there are depends on the product. -->
+            <Canvas x:Name="S2FeatList" Canvas.Left="1552" Canvas.Top="0" />
+
+            </Canvas><!-- end S2Row -->
+
+            <!-- The console's footer here ("Ratings and reviews", "Screenshots") is not drawn: this
+                 is the last section, so there is nothing below to announce. -->
+
+            <!-- Focus ring, same build as the buttons: 4 px accent, 4 px black band, 8 px outside.
+                 ONE of them, and it never moves: the row slides underneath it. -->
+            <Border Classes="appRing" x:Name="S2Ring" Canvas.Left="104" Canvas.Top="232"
+                    Width="704" Height="664" CornerRadius="10" />
+            <Border Classes="appRingInner" x:Name="S2RingInner" Canvas.Left="108" Canvas.Top="236"
+                    Width="696" Height="656" CornerRadius="7" />
+        </Canvas><!-- end Section2 -->
+
+        <!-- The console puts a VIEW-button glyph + chevron bottom left (24.5 px ring at 36.7 , 981.1,
+             chevron x 68.0..74.8, grey #7D7D7D). Not drawn here: it opens a menu this page does not
+             have. The glyph itself is Assets\Icons\ButtonView2.svg, already used elsewhere. -->
+
+        <!-- ============================================================
+             ACQUIRED DIALOG. Full-screen takeover shown after the primary button; it replaces the
+             product page rather than dimming it (the console shows none of the page behind).
+
+             Last in the canvas so it covers the page indicator too, which the console also hides. -->
+        <Canvas x:Name="GetDialog" Width="1920" Height="1080" IsVisible="False">
+            <!-- Background. Measured away from the artwork: 19,18,20 at the sides, 15,15,16 just
+                 under the top band, and the band itself (y 0..127) 18,24,25. The console's is the
+                 shell's own patterned backdrop; a flat pair of tones is as close as this gets
+                 without inventing a pattern. -->
+            <Rectangle Width="1920" Height="1080" Fill="#131214" />
+            <Rectangle Width="1920" Height="128" Fill="#121819" />
+
+            <!-- The artwork blown up and blurred, same treatment the category page uses (the
+                 *-ambient.png file is the pre-darkened copy). Measured on the console: the blurred
+                 glyph is 3.5x the one inside the 600 px box, centred on the screen, so 600 x 3.5 =
+                 2100 centred at 960,540.
+
+                 CAUTION: how much of this shows depends entirely on the app's own art. The
+                 reference app's art is black with a white icon, so only the icon glows; YouTube's
+                 is a white square, which covers the whole screen. Hence the opacity - at 1 the page
+                 stops being dark. -->
+            <Canvas Width="1920" Height="1080" ClipToBounds="True">
+                <Image x:Name="DlgAmbient" Canvas.Left="-90" Canvas.Top="-510" Width="2100" Height="2100"
+                       Opacity="0.12" RenderOptions.BitmapInterpolationMode="HighQuality">
+                    <!-- The *-ambient.png file is darkened but NOT blurred; scaling 300 px up to 2100
+                         softens it but leaves the logo readable, and on the console it is not. -->
+                    <Image.Effect>
+                        <BlurEffect Radius="140" />
+                    </Image.Effect>
+                </Image>
+            </Canvas>
+
+            <!-- Artwork box: 600x600 at (112,240), measured edge to edge. -->
+            <Border Canvas.Left="112" Canvas.Top="240" Width="600" Height="600" Background="Black" ClipToBounds="True">
+                <Image x:Name="DlgArt" Width="600" Height="600"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" />
+            </Border>
+
+            <!-- Heading. Ink measured at x 762..948, y 245..278; 45 reproduces both to within 1 px. -->
+            <TextBlock Text="Success!" Canvas.Left="760" Canvas.Top="234.5" FontSize="45" Foreground="White" />
+
+            <!-- Body. Two lines on the reference, ink 340..364 and 374..398 - a 34 px pitch - and
+                 the first line ends on x=1327, which is what sets the wrap width. -->
+            <TextBlock x:Name="DlgBody" Canvas.Left="759" Canvas.Top="334" Width="600"
+                       TextWrapping="Wrap" LineHeight="34" FontSize="26" Foreground="#E8E8E8" />
+
+            <!-- Buttons: fills 122 / 373 wide, 62 tall, top 776, 19 px apart, corner 4.
+                 The FILL changes with focus here (55,59,60 vs 44,49,50), unlike the product page's
+                 buttons where only the label does. Both effects are present, so both are applied.
+
+                 The console has a third, 80 px wide at x=1295, holding E582 of the Xbox MDL2 font (a
+                 person with a speech bubble) as 32 x 32 ink at 1319,791. It sends feedback, which
+                 there is nowhere to send. -->
+            <Border x:Name="DlgBtn0Bg" Canvas.Left="762"  Canvas.Top="776" Width="122" Height="62" CornerRadius="4" Background="#373B3C" />
+            <Border x:Name="DlgBtn1Bg" Canvas.Left="903"  Canvas.Top="776" Width="373" Height="62" CornerRadius="4" Background="#2C3132" />
+
+            <!-- Label size 24: the reference's two labels do not agree on one (its "GOT IT" is 72 px
+                 of ink and its "CHECK INSTALL PROGRESS" 321, which our face renders at 78 and 318 -
+                 the letterforms differ, not the size). 24 splits it, favouring the long label. -->
+            <TextBlock x:Name="DlgBtn0Text" Text="GOT IT" Canvas.Left="762" Canvas.Top="792.7" Width="122"
+                       TextAlignment="Center" FontSize="24" Foreground="White" />
+            <TextBlock x:Name="DlgBtn1Text" Text="CHECK INSTALL PROGRESS" Canvas.Left="903" Canvas.Top="792.7" Width="373"
+                       TextAlignment="Center" FontSize="24" Foreground="#BABCBE" />
+
+            <!-- Focus ring. NOT the product page's offsets: measured across the reference button,
+                 the accent runs 753..756, the black band 757..761 and the fill starts on 762, so the
+                 ring box is the fill grown by 9 and the black band by 5 (the page's buttons are 8
+                 and 4). Using the page's numbers eats a pixel of fill on each side. -->
+            <Border Classes="appRing" x:Name="DlgRing0" Canvas.Left="753" Canvas.Top="767" Width="140" Height="80" CornerRadius="8" />
+            <Border Classes="appRingInner" x:Name="DlgRing0In" Canvas.Left="757" Canvas.Top="771" Width="132" Height="72" CornerRadius="6" />
+            <Border Classes="appRing" x:Name="DlgRing1" Canvas.Left="894" Canvas.Top="767" Width="391" Height="80" CornerRadius="8" />
+            <Border Classes="appRingInner" x:Name="DlgRing1In" Canvas.Left="898" Canvas.Top="771" Width="383" Height="72" CornerRadius="6" />
+        </Canvas>
 
     </Canvas>
 </UserControl>

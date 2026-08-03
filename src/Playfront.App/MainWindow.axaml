@@ -81,17 +81,50 @@
             <Setter Property="LineHeight" Value="28" />
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
-        <Style Selector="Image.navIcon">
-            <Setter Property="Width" Value="27" />
-            <Setter Property="Height" Value="27" />
+        <!-- The nav icons carry NO size here, and that is deliberate: each one sets its own next to
+             its Image. On the console every icon inks 22-24 across inside its 56 circle, but our five
+             files are drawn with different amounts of empty margin inside them - Game Pass and
+             Settings fill their canvas, Library, Store and Search leave about 15% - so one shared box
+             renders them at visibly different sizes. Sizing them individually is what makes all five
+             land on the console's, and on each other. See each Image for its measured number. -->
+        <Style Selector="Image.navIcon, Image.navIconOn">
+            <Setter Property="Stretch" Value="Uniform" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <!-- No nudge: the icon is centred in its circle, full stop. There WAS a 2 px top margin
+                 here to copy the console, whose icons sit about half a pixel low, but it reads as
+                 uneven padding - and it was worse than that, because a margin moves the image half
+                 its value when the Image is the Border's direct child and its FULL value inside a
+                 Panel, so the two circles that gained a Panel drifted a pixel below the other three. -->
         </Style>
         <Style Selector="Border.navcircle">
             <Setter Property="Background" Value="#40000000" />
             <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="BorderThickness" Value="3" />
         </Style>
+        <!-- Selecting a nav icon does not just light the circle up: the icon swaps to the SOLID
+             variant of the same glyph and grows. Measured on the gear, ink 22x24 outline against
+             30x31 filled - 1.29x. The two images sit stacked in the circle and only their opacity
+             is switched, so the swap costs nothing at runtime and cannot shift the layout. -->
+        <Style Selector="Image.navIconOn">
+            <Setter Property="Opacity" Value="0" />
+        </Style>
+        <!-- The swap is keyed on hasOn, a marker on the circles that actually carry a filled icon,
+             NOT on .selected alone. Without it, selecting one of the circles that has no filled
+             variant yet hides its outline icon and replaces it with nothing: the circle goes empty.
+             Drop hasOn from a circle the moment its filled icon is added, not before. -->
+        <Style Selector="Border.navcircle.hasOn.selected Image.navIcon">
+            <Setter Property="Opacity" Value="0" />
+        </Style>
+        <Style Selector="Border.navcircle.hasOn.selected Image.navIconOn">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+
         <Style Selector="Border.navcircle.selected">
-            <Setter Property="Background" Value="#99000000" />
+            <!-- Pure black, not a translucent veil: measured R0 G0 B0 inside the console's selected
+                 circle. The unselected one IS translucent (#40000000), so the wallpaper shows through
+                 there and not here. -->
+            <Setter Property="Background" Value="Black" />
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
             <!-- The halo is the accent at half opacity. BoxShadow needs a colour, not a brush, and
                  it cannot be pulled from a resource via XAML, so it is generated in code in
@@ -566,12 +599,26 @@
     <Viewbox Stretch="Uniform">
         <Grid Width="1920" Height="1080" ClipToBounds="True">
 
-            <!-- Extra dark gradient hugging the top edge (same as the Xbox original), so the top
-                 bar's icons and text stay readable whatever the background is doing at that moment.
-                 It only makes sense while focus is on that row (avatar/nav) - with focus on the games
-                 below there is no need to darken up there, so it fades in and out based on _row (see
-                 UpdateSelection in the code-behind). Starts at Opacity=1 because the app starts with
-                 focus on that row (see the comment in the constructor). -->
+            <!-- Two layers darken the top edge, because the console has two states.
+                 This lower one is ALWAYS on: even with focus down on the games the top edge is
+                 darkened, which is what keeps the avatar, the nav icons and the clock readable
+                 over any wallpaper. Measured off the console with focus on a game tile: 74.5%
+                 black at y=0 falling linearly to nothing at y=392.
+                 The global veil over the whole window does not affect these numbers - it is the
+                 same at every y, so it cancels out of the top-to-bottom ratio this was measured
+                 as. -->
+            <Rectangle Width="1920" Height="392" VerticalAlignment="Top">
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#BE000000" Offset="0" />
+                        <GradientStop Color="#00000000" Offset="1" />
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+
+            <!-- The extra darkening on top of that, which only appears with focus on the top row
+                 (avatar/nav). Fades in and out on _row (see UpdateSelection in the code-behind).
+                 Starts at Opacity=1 because the app starts with focus on that row. -->
             <Rectangle x:Name="TopBarGradient" Width="1920" Height="230" VerticalAlignment="Top" Opacity="1">
                 <Rectangle.Transitions>
                     <Transitions>
@@ -600,27 +647,82 @@
                 <TextBlock x:Name="UserNameText" Canvas.Left="181" Canvas.Top="97" Foreground="White" FontSize="20"
                            FontFamily="{StaticResource XboxFontFamily}" />
 
-                <!-- Centre navigation cluster. The selection circle is noticeably larger than the
-                     avatar (not the same size) and the 5 icons sit much closer together -->
-                <Border Classes="navcircle" x:Name="Nav0" Canvas.Left="739" Canvas.Top="73" Width="71" Height="71" CornerRadius="36">
-                    <Image Source="/Assets/Icons/nav-home.png" Classes="navIcon" Stretch="Uniform"
-                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <!-- Centre navigation cluster, measured 1:1 on the console.
+                     Circles 56 across as rendered, centres 76 apart at 805.5 / 881.5 / 957.5 /
+                     1033.5 / 1109.5, all on y=114.5. The whole cluster is centred on 957.5, which is
+                     where it already was - what was wrong was the size (68) and the spacing (92).
+                     Declared 58 rather than 56 because the antialiased edge reads ~1 px in on each
+                     side; 58 is what renders as the measured 56. -->
+                <Border Classes="navcircle hasOn" x:Name="Nav0" Canvas.Left="776" Canvas.Top="84.5" Width="60" Height="60" CornerRadius="30">
+                    <Panel>
+                        <!-- Two different glyphs, not one resized: on the console the unselected
+                             library is HOLLOW books (EA88) and the selected one is SOLID (E791).
+                             Measured ink 24x18 / 210 square px against 31x23 / 501.
+                             The hollow one is dilated 7 (thin strokes lose weight when a big bitmap
+                             is shrunk to 24 px); the solid one is not, same as the gear - a
+                             rasterizer only fattens thin stems. -->
+                        <Image Source="/Assets/Icons/nav-home.png" Classes="navIcon" Width="24" Height="24"
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
+                        <Image Source="/Assets/Icons/nav-home-on.png" Classes="navIconOn" Width="31" Height="31"
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
+                    </Panel>
                 </Border>
-                <Border Classes="navcircle" x:Name="Nav1" Canvas.Left="831" Canvas.Top="73" Width="71" Height="71" CornerRadius="36">
-                    <Image Source="/Assets/Icons/nav-store.png" Classes="navIcon" Stretch="Uniform"
-                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Border Classes="navcircle hasOn" x:Name="Nav1" Canvas.Left="852" Canvas.Top="84.5" Width="60" Height="60" CornerRadius="30">
+                    <Panel>
+                        <!-- Hollow bag (E8B1) unselected, solid bag with the four panes knocked out
+                             (EA06) selected. Measured 24x24 / 281 square px against 30x29 / 649.
+                             Outline dilated 6, solid one left alone. -->
+                        <Image Source="/Assets/Icons/nav-store.png" Classes="navIcon" Width="24" Height="24"
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
+                        <Image Source="/Assets/Icons/nav-store-on.png" Classes="navIconOn" Width="30" Height="30"
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
+                    </Panel>
                 </Border>
-                <Border Classes="navcircle" x:Name="Nav2" Canvas.Left="923" Canvas.Top="73" Width="71" Height="71" CornerRadius="36">
-                    <Image Source="/Assets/Icons/nav-gamepass.png" Classes="navIcon" Stretch="Uniform"
-                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Border Classes="navcircle hasOn" x:Name="Nav2" Canvas.Left="928" Canvas.Top="84.5" Width="60" Height="60" CornerRadius="30">
+                    <Panel>
+                        <!-- Same pattern as the library: hollow box (E8C9) unselected, solid box with
+                             the wordmark knocked out (E7A5) selected. Measured 24x18 / 280 square px
+                             against 32x23 / 562. Outline dilated 9, solid one left alone. -->
+                        <Image Source="/Assets/Icons/nav-gamepass.png" Classes="navIcon" Width="24" Height="24"
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
+                        <Image Source="/Assets/Icons/nav-gamepass-on.png" Classes="navIconOn" Width="31" Height="31"
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
+                    </Panel>
                 </Border>
-                <Border Classes="navcircle" x:Name="Nav3" Canvas.Left="1015" Canvas.Top="73" Width="71" Height="71" CornerRadius="36">
-                    <Image Source="/Assets/Icons/nav-search.png" Classes="navIcon" Stretch="Uniform"
-                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Border Classes="navcircle hasOn" x:Name="Nav3" Canvas.Left="1004" Canvas.Top="84.5" Width="60" Height="60" CornerRadius="30">
+                    <Panel>
+                        <!-- Both magnifiers are the same drawing thickened by different amounts, not
+                             two icons. Selecting it does not change the shape on the console, it
+                             grows it AND weights it: measured ink 118.8 square px at a 22 box
+                             against 252.6 at 27, so 1.23x the size but 2.13x the ink.
+                             24.8 rather than 26 because thickening also grew the file's ink box. -->
+                        <Image Source="/Assets/Icons/nav-search.png" Classes="navIcon" Width="24.3" Height="24.3"
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
+                        <Image Source="/Assets/Icons/nav-search-on.png" Classes="navIconOn" Width="28.7" Height="28.7"
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
+                    </Panel>
                 </Border>
-                <Border Classes="navcircle" x:Name="Nav4" Canvas.Left="1107" Canvas.Top="73" Width="71" Height="71" CornerRadius="36">
-                    <Image Source="/Assets/Icons/nav-settings.png" Classes="navIcon" Stretch="Uniform"
-                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Border Classes="navcircle hasOn" x:Name="Nav4" Canvas.Left="1080" Canvas.Top="84.5" Width="60" Height="60" CornerRadius="30">
+                    <!-- This PNG is glyph E9BF of XboxFluent2 deliberately dilated by 23%, and the
+                         extra weight is not a mistake. A font rasterizer fattens thin stems at
+                         small sizes; a bitmap rasterized large and then shrunk to 24 px does not,
+                         so the plain glyph rendered a quarter lighter than the console's. 23% is
+                         the measured ink-area gap (165 against 203 square px). Regenerate it from
+                         the font if it ever needs redoing - do not sharpen or redraw it.
+                         HighQuality averages the 256 px source down to 24 instead of sampling it,
+                         which is what smooths the diagonals. It only works once the glyph is this
+                         heavy: on the plain one it just looked washed out. Set inline and not in
+                         the style because as a Setter the compiler cannot resolve it (AVLN2000). -->
+                    <Panel>
+                        <Image Source="/Assets/Icons/nav-settings.png" Classes="navIcon" Width="24" Height="24"
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
+                        <!-- Selected state: glyph EACD, the solid gear. Plain, NOT dilated like the
+                             outline above - a rasterizer only fattens thin stems, and on a solid
+                             shape the measured gap was 4%, inside the compression margin.
+                             31 is the ink height measured on the console. -->
+                        <Image Source="/Assets/Icons/nav-settings-on.png" Classes="navIconOn" Width="31" Height="31"
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
+                    </Panel>
                 </Border>
                 <!-- Name of the selected navigation icon. Visible (Opacity 1) only while focus is on
                      the navigation row (row 0); moving down to the games fades it out, like the
@@ -680,12 +782,8 @@
                      its bottom edge moves a single pixel). With Canvas.Bottom, changing the height
                      makes it grow upwards on its own. The sideways push on the following tiles is
                      done by the code-behind with translateX. -->
-                <!-- TEMPORARY: the "Game 1" slot currently holds the install-Steam button (it moves to
-                     its proper place when the library screen is built). The label is forced visible
-                     (IsVisible=True) so it always reads, not only when selected. Reuses the existing
-                     tile look. -->
                 <Border Classes="tile" x:Name="Tile0" Canvas.Left="110" Canvas.Bottom="291" Width="154" Height="154">
-                    <Border Classes="tileLabel" IsVisible="True"><TextBlock x:Name="SteamButtonLabel" Text="Install Steam" /></Border>
+                    <Border Classes="tileLabel"><TextBlock Text="Game 1" /></Border>
                 </Border>
                 <Border Classes="selectionRing homeRing" x:Name="Ring0" Canvas.Left="101" Canvas.Bottom="282" Width="172" Height="172" />
                 <Border Classes="tile" x:Name="Tile1" Canvas.Left="305" Canvas.Bottom="291" Width="154" Height="154">
@@ -1614,6 +1712,12 @@
                 <TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="180" Foreground="White"
                            HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Grid>
+
+            <!-- The gamepad pointer is NOT here. It is only ever needed over a window Playfront
+                 cannot draw on (Spotify), so it is installed as the Windows system cursor instead -
+                 see Input/SystemCursor.cs, which draws it itself. A control here would be drawn by
+                 nobody: Avalonia renders nothing for a hidden control, and nothing for one that is
+                 not attached either, which is how this was tried first. -->
         </Grid>
     </Viewbox>
 

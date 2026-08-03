@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:pf="clr-namespace:Playfront.App"
              x:Class="Playfront.App.Views.LibraryView"
              Width="1920" Height="1080">
     <!-- "My games & apps" screen (library), traced 1:1 from the reference capture of a real Xbox.
@@ -24,10 +25,26 @@
             <Setter Property="FontSize" Value="22" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
+        <!-- Icon of each category. These are the console's OWN glyphs, out of XboxFluent2, which
+             ships with the app - not hand-traced shapes. Drawn as text rather than as images on
+             purpose: the whole screen is scaled by a Viewbox, so a 26 px bitmap would go soft on a
+             1440p or 4K panel, and a text rasterizer also fattens thin stems at small sizes exactly
+             the way the console's does.
+             32 is the size at which the six inked the same as the console's, measured one by one. -->
+        <Style Selector="TextBlock.menuIcon">
+            <Setter Property="FontFamily" Value="{StaticResource XboxIconFont}" />
+            <Setter Property="FontSize" Value="26.2" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <!-- The glyphs carry a left side bearing, so the ink landed on 75 instead of 80. -->
+            <Setter Property="Margin" Value="4.5,0,0,0" />
+        </Style>
         <!-- Grey count to the right of a category (10 / 29 / 5) -->
         <Style Selector="TextBlock.menuCount">
             <Setter Property="Foreground" Value="#9A9A9A" />
-            <Setter Property="FontSize" Value="22" />
+            <!-- 24.75: the digits measured 16 tall against the console's 18. -->
+            <Setter Property="FontSize" Value="24.75" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="HorizontalAlignment" Value="Right" />
         </Style>
@@ -68,29 +85,36 @@
     </UserControl.Styles>
 
     <Canvas Width="1920" Height="1080">
-        <!-- Background (measured from the reference: #272626, same for sidebar and content) -->
-        <Rectangle Width="1920" Height="1080" Fill="#272626" />
+        <!-- Background, same for sidebar and content. Re-measured against a fresh console capture:
+             32,31,31, not the 39,38,38 that was here. The console's white was verified at 255 in the
+             same capture, so this is a real difference and not the stream sitting at a lower level. -->
+        <Rectangle Width="1920" Height="1080" Fill="#202020" />
 
-        <!-- Thin vertical divider between the side menu and the content (same pattern and colour as
-             Settings). Measured at x=445, full height. Sits BEHIND the accent highlight so that its
-             glow covers the divider as it passes the selected row. -->
-        <Rectangle Canvas.Left="445" Canvas.Top="0" Width="1" Height="1080" Fill="#3A3A3A" />
+        <!-- Thin vertical divider between the side menu and the content. Sits BEHIND the accent
+             highlight so that its glow covers the divider as it passes the selected row.
+             x=443 and luminance ~79: the capture peaks at 69 because a 1 px line gets smeared by the
+             video codec, so the value comes from the ink integral across it, not from the peak. -->
+        <Rectangle Canvas.Left="443" Canvas.Top="0" Width="1" Height="1080" Fill="#4F4F4F" />
 
         <!-- ===================== SIDEBAR ===================== -->
 
         <!-- Avatar + user name. The real Windows account name (Environment.UserName), not the one in
              the capture, same as Home/Settings. Left-aligned with the menu text (x=137). -->
-        <StackPanel Canvas.Left="63" Canvas.Top="83" Orientation="Horizontal" Spacing="24">
-            <Border Width="50" Height="50" CornerRadius="25" ClipToBounds="True" VerticalAlignment="Center">
+        <!-- Avatar 56 across at (75,78) and the name starting at 142, all measured. The gap is 11
+             and not the 24 that was here: the avatar grew and the name did not move. -->
+        <StackPanel Canvas.Left="75" Canvas.Top="78" Orientation="Horizontal" Spacing="11">
+            <Border Width="56" Height="56" CornerRadius="28" ClipToBounds="True" VerticalAlignment="Center">
                 <Image Source="/Assets/Icons/avatar.png" Stretch="UniformToFill" />
             </Border>
-            <TextBlock x:Name="LibraryUserName" Foreground="White" FontSize="26" VerticalAlignment="Center" />
+            <TextBlock x:Name="LibraryUserName" Foreground="#ACACAC" FontSize="24.5" VerticalAlignment="Center" Margin="0,3,0,0" />
         </StackPanel>
 
         <!-- SOLID highlight of the focused category (while focus is on the MENU). Follows the THEME
              accent, like Settings. Sits BEHIND the row content. The code-behind moves it to the
              focused category (translateY) and HIDES it when focus enters the grid. -->
-        <Border x:Name="LMenuHighlight" Canvas.Left="0" Canvas.Top="181" Width="443" Height="70" CornerRadius="0,4,4,0"
+        <!-- 448x66 at y=186, measured. It was 443x70 at 181, so it was too tall and started too
+             high; the rows themselves do not move, only this band. -->
+        <Border x:Name="LMenuHighlight" Canvas.Left="0" Canvas.Top="186" Width="448" Height="66" CornerRadius="0,4,4,0"
                 Background="{DynamicResource AccentBrush}" BoxShadow="{DynamicResource SettingsHighlightShadow}">
             <Border.Transitions>
                 <Transitions>
@@ -103,231 +127,226 @@
              pattern as Settings). Faint grey band + thin accent bar against the right edge (next to
              the divider). Fixed on "Games", the only category with content. Hidden by default; the
              code-behind shows it when entering the grid. -->
-        <Border x:Name="LCategoryIndicator" Canvas.Left="0" Canvas.Top="181" Width="445" Height="70" Background="#303030" IsVisible="False">
-            <Rectangle Width="4" Height="70" Fill="{DynamicResource AccentBrush}" HorizontalAlignment="Right" />
+        <Border x:Name="LCategoryIndicator" Canvas.Left="0" Canvas.Top="186" Width="448" Height="66" Background="#303030" IsVisible="False">
+            <Rectangle Width="4" Height="66" Fill="{DynamicResource AccentBrush}" HorizontalAlignment="Right" />
         </Border>
 
         <!-- == Categories (icon | label | count) == -->
 
         <!-- Games (selected) -->
         <Border Canvas.Left="0" Canvas.Top="181" Width="443" Height="70">
-            <Grid Margin="75,0,30,0" ColumnDefinitions="46,*,Auto" VerticalAlignment="Center">
+            <Grid Margin="75,0,46,0" ColumnDefinitions="46,*,Auto" VerticalAlignment="Center">
                 <!-- Controller: HOLLOW silhouette (outline), traced from the reference. The system
                      glyph (Segoe Fluent E7FC) shows the d-pad and buttons inside; the reference is
                      outline only, so it is stroked by hand. -->
-                <Viewbox Grid.Column="0" Width="33" Height="33" HorizontalAlignment="Left">
-                    <Canvas Width="32" Height="32">
-                        <Path Stroke="White" StrokeThickness="1.7" StrokeJoin="Round"
-                              Data="M10.5,9.2 C8,9.2 6,10 4.8,12.2 C3.8,14 3,16.5 2.6,18.8 C2.2,21.5 3.6,24.2 6.2,24.2 C8.4,24.2 9.6,22.4 10.8,20.8 C12,19.2 13.4,18.6 16,18.6 C18.6,18.6 20,19.2 21.2,20.8 C22.4,22.4 23.6,24.2 25.8,24.2 C28.4,24.2 29.8,21.5 29.4,18.8 C29,16.5 28.2,14 27.2,12.2 C26,10 24,9.2 21.5,9.2 C19,9.2 17.2,9.8 16,10.6 C14.8,9.8 13,9.2 10.5,9.2 Z" />
-                        <Ellipse Canvas.Left="14.6" Canvas.Top="11.6" Width="2.8" Height="2.8" Fill="White" />
-                    </Canvas>
-                </Viewbox>
+                <TextBlock Grid.Column="0" Classes="menuIcon" Text="&#xE9CD;" />
                 <TextBlock Grid.Column="1" Classes="menuLabel" Text="Games" Margin="16,0,0,0" />
-                <TextBlock Grid.Column="2" Classes="menuCount" Text="10" />
+                <TextBlock x:Name="LCount0" Grid.Column="2" Classes="menuCount" Text="10" />
             </Grid>
         </Border>
 
         <!-- Apps -->
         <Border Canvas.Left="0" Canvas.Top="255" Width="443" Height="70">
-            <Grid Margin="75,0,30,0" ColumnDefinitions="46,*,Auto" VerticalAlignment="Center">
-                <Viewbox Grid.Column="0" Width="30" Height="30" HorizontalAlignment="Left">
-                    <Canvas Width="32" Height="32">
-                        <!-- 3 squares + 1 rotated (apps icon) -->
-                        <Rectangle Canvas.Left="4"  Canvas.Top="4"  Width="11" Height="11" RadiusX="2" RadiusY="2" Stroke="White" StrokeThickness="2" />
-                        <Rectangle Canvas.Left="4"  Canvas.Top="17" Width="11" Height="11" RadiusX="2" RadiusY="2" Stroke="White" StrokeThickness="2" />
-                        <Rectangle Canvas.Left="17" Canvas.Top="17" Width="11" Height="11" RadiusX="2" RadiusY="2" Stroke="White" StrokeThickness="2" />
-                        <Rectangle Canvas.Left="18" Canvas.Top="3" Width="10" Height="10" RadiusX="2" RadiusY="2" Stroke="White" StrokeThickness="2"
-                                   RenderTransform="rotate(45deg)" RenderTransformOrigin="50%,50%" />
-                    </Canvas>
-                </Viewbox>
+            <Grid Margin="75,0,46,0" ColumnDefinitions="46,*,Auto" VerticalAlignment="Center">
+                <TextBlock Grid.Column="0" Classes="menuIcon" Text="&#xE773;" />
                 <TextBlock Grid.Column="1" Classes="menuLabel" Text="Apps" Margin="16,0,0,0" />
-                <TextBlock Grid.Column="2" Classes="menuCount" Text="29" />
+                <TextBlock x:Name="LCount1" Grid.Column="2" Classes="menuCount" Text="29" />
             </Grid>
         </Border>
 
         <!-- Groups -->
         <Border Canvas.Left="0" Canvas.Top="328" Width="443" Height="70">
-            <Grid Margin="75,0,30,0" ColumnDefinitions="46,*,Auto" VerticalAlignment="Center">
-                <Viewbox Grid.Column="0" Width="30" Height="30" HorizontalAlignment="Left">
-                    <Canvas Width="32" Height="32">
-                        <!-- two stacked cards (the back one peeks out on the right, slightly tilted) -->
-                        <Rectangle Canvas.Left="13" Canvas.Top="6" Width="14" Height="20" RadiusX="2.5" RadiusY="2.5"
-                                   Fill="#272626" Stroke="White" StrokeThickness="2"
-                                   RenderTransform="rotate(11deg)" RenderTransformOrigin="50%,50%" />
-                        <Rectangle Canvas.Left="6" Canvas.Top="8" Width="14" Height="20" RadiusX="2.5" RadiusY="2.5"
-                                   Fill="#272626" Stroke="White" StrokeThickness="2" />
-                    </Canvas>
-                </Viewbox>
+            <Grid Margin="75,0,46,0" ColumnDefinitions="46,*,Auto" VerticalAlignment="Center">
+                <TextBlock Grid.Column="0" Classes="menuIcon" Text="&#xE7F8;" />
                 <TextBlock Grid.Column="1" Classes="menuLabel" Text="Groups" Margin="16,0,0,0" />
-                <TextBlock Grid.Column="2" Classes="menuCount" Text="5" />
+                <TextBlock x:Name="LCount2" Grid.Column="2" Classes="menuCount" Text="5" />
             </Grid>
         </Border>
 
         <!-- Game history -->
         <Border Canvas.Left="0" Canvas.Top="402" Width="443" Height="70">
-            <Grid Margin="75,0,30,0" ColumnDefinitions="46,*,Auto" VerticalAlignment="Center">
-                <Viewbox Grid.Column="0" Width="30" Height="30" HorizontalAlignment="Left">
-                    <Canvas Width="32" Height="32">
-                        <!-- Clock: real path from Clock.svg (Microsoft.GamingApp) -->
-                        <Path Fill="White" Data="M1.00043402,16 C1.00043402,14.6145833 1.17751479,13.2864583 1.53167634,12.015625 C1.88583788,10.7447917 2.38583064,9.546875 3.03165463,8.421875 C3.67747862,7.296875 4.45871732,6.28645833 5.37537073,5.390625 C6.29202413,4.49479167 7.30763444,3.71354167 8.42220165,3.046875 C9.53676885,2.38020833 10.7294599,1.875 12.0002749,1.53125 C13.2710898,1.1875 14.6044039,1.01041667 16.000217,1 C17.3751971,1 18.6980946,1.17708333 19.9689096,1.53125 C21.2397245,1.88541667 22.4376239,2.390625 23.5626076,3.046875 C24.6875913,3.703125 25.6979934,4.484375 26.5938137,5.390625 C27.4896341,6.296875 28.2708728,7.3125 28.9375298,8.4375 C29.6041869,9.5625 30.1093879,10.7552083 30.4531329,12.015625 C30.7968779,13.2760417 30.979167,14.6041667 31,16 C31,17.3854167 30.8229192,18.7135417 30.4687577,19.984375 C30.1145961,21.2552083 29.6093951,22.4479167 28.9531546,23.5625 C28.2969141,24.6770833 27.5156754,25.6875 26.6094385,26.59375 C25.7032016,27.5 24.6927996,28.28125 23.5782324,28.9375 C22.4636652,29.59375 21.2657658,30.0989583 19.9845344,30.453125 C18.7033029,30.8072917 17.3751971,30.9895833 16.000217,31 C14.6148204,31 13.2815063,30.8229167 12.0002749,30.46875 C10.7190434,30.1145833 9.52635234,29.6145833 8.42220165,28.96875 C7.31805095,28.3229167 6.30764891,27.5416667 5.3909955,26.625 C4.4743421,25.7083333 3.6931034,24.6979167 3.04727941,23.59375 C2.40145542,22.4895833 1.89625439,21.2916667 1.53167634,20 C1.16709828,18.7083333 0.990017506,17.375 1.00043402,16 Z M29.0000289,16 C29.0000289,14.8020833 28.8489895,13.6510417 28.5469105,12.546875 C28.2448315,11.4427083 27.8073379,10.40625 27.2344295,9.4375 C26.6615211,8.46875 25.9844476,7.59375 25.2032089,6.8125 C24.4219702,6.03125 23.5469828,5.35416667 22.5782468,4.78125 C21.6095109,4.20833333 20.5730675,3.77083333 19.4689168,3.46875 C18.3647661,3.16666667 17.2085329,3.01041667 16.000217,3 C14.8023177,3 13.6512927,3.15104167 12.547142,3.453125 C11.4429913,3.75520833 10.4065479,4.19270833 9.43781195,4.765625 C8.46907597,5.33854167 7.59408863,6.015625 6.81284993,6.796875 C6.03161123,7.578125 5.35453769,8.453125 4.78162932,9.421875 C4.20872094,10.390625 3.77122727,11.4270833 3.46914831,12.53125 C3.16706934,13.6354167 3.0108216,14.7916667 3.00040509,16 C3.00040509,17.1979167 3.15144457,18.3489583 3.45352353,19.453125 C3.75560249,20.5572917 4.19309616,21.59375 4.76600454,22.5625 C5.33891292,23.53125 6.01598646,24.4114583 6.79722516,25.203125 C7.57846385,25.9947917 8.45345119,26.671875 9.42218718,27.234375 C10.3909232,27.796875 11.4273665,28.2291667 12.5315172,28.53125 C13.6356679,28.8333333 14.7919012,28.9895833 16.000217,29 C17.1981163,29 18.3491414,28.8489583 19.4532921,28.546875 C20.5574427,28.2447917 21.5938861,27.8072917 22.5626221,27.234375 C23.5313581,26.6614583 24.4115537,25.984375 25.2032089,25.203125 C25.9948641,24.421875 26.6719376,23.546875 27.2344295,22.578125 C27.7969213,21.609375 28.2292068,20.5729167 28.5312857,19.46875 C28.8333647,18.3645833 28.9896124,17.2083333 29.0000289,16 Z M16.000217,17 C15.7293876,17 15.495016,16.9010417 15.2971022,16.703125 C15.0991884,16.5052083 15.0002315,16.2708333 15.0002315,16 L15.0002315,8 C15.0002315,7.72916667 15.0991884,7.49479167 15.2971022,7.296875 C15.495016,7.09895833 15.7293876,7 16.000217,7 C16.2710464,7 16.505418,7.09895833 16.7033318,7.296875 C16.9012456,7.49479167 17.0002025,7.72916667 17.0002025,8 L17.0002025,15 L22.0001302,15 C22.2709596,15 22.5053312,15.0989583 22.703245,15.296875 C22.9011588,15.4947917 23.0001157,15.7291667 23.0001157,16 C23.0001157,16.2708333 22.9011588,16.5052083 22.703245,16.703125 C22.5053312,16.9010417 22.2709596,17 22.0001302,17 L16.000217,17 Z" />
-                    </Canvas>
-                </Viewbox>
-                <TextBlock Grid.Column="1" Classes="menuLabel" Text="Game history" Margin="16,0,0,0" />
+            <Grid Margin="75,0,46,0" ColumnDefinitions="46,*,Auto" VerticalAlignment="Center">
+                <TextBlock Grid.Column="0" Classes="menuIcon" Text="&#xEA18;" />
+                <TextBlock Grid.Column="1" Classes="menuLabel" Text="Play history" Margin="16,0,0,0" />
             </Grid>
         </Border>
 
         <!-- Full library -->
         <Border Canvas.Left="0" Canvas.Top="475" Width="443" Height="70">
-            <Grid Margin="75,0,30,0" ColumnDefinitions="46,*,Auto" VerticalAlignment="Center">
+            <Grid Margin="75,0,46,0" ColumnDefinitions="46,*,Auto" VerticalAlignment="Center">
                 <!-- Books: outline (hollow), like the reference. On the Home the same icon is solid
                      (nav-home.png); here it is stroked to match the library capture. Three spines,
                      the third one tilted. -->
-                <Viewbox Grid.Column="0" Width="30" Height="30" HorizontalAlignment="Left">
-                    <Canvas Width="32" Height="32">
-                        <Rectangle Canvas.Left="6.5" Canvas.Top="8.5" Width="5.4" Height="15.5" RadiusX="1" RadiusY="1" Stroke="White" StrokeThickness="1.7" />
-                        <Rectangle Canvas.Left="12.6" Canvas.Top="8.5" Width="5.4" Height="15.5" RadiusX="1" RadiusY="1" Stroke="White" StrokeThickness="1.7" />
-                        <Rectangle Canvas.Left="18.9" Canvas.Top="8.6" Width="5.2" Height="15.4" RadiusX="1" RadiusY="1" Stroke="White" StrokeThickness="1.7"
-                                   RenderTransform="rotate(15deg)" RenderTransformOrigin="50%,90%" />
-                    </Canvas>
-                </Viewbox>
+                <TextBlock Grid.Column="0" Classes="menuIcon" Text="&#xEA88;" />
                 <TextBlock Grid.Column="1" Classes="menuLabel" Text="Full library" Margin="16,0,0,0" />
             </Grid>
         </Border>
 
         <!-- Divider -->
-        <Rectangle Canvas.Left="35" Canvas.Top="568" Width="375" Height="1" Fill="#3A3A3A" />
+        <Rectangle Canvas.Left="35" Canvas.Top="561" Width="375" Height="1" Fill="#3A3A3A" />
 
         <!-- Manage -->
         <Border Canvas.Left="0" Canvas.Top="592" Width="443" Height="70">
-            <Grid Margin="75,0,30,0" ColumnDefinitions="46,*,Auto" VerticalAlignment="Center">
-                <!-- Briefcase ("Work" glyph from Segoe Fluent Icons) -->
-                <TextBlock Grid.Column="0" Text="&#xE821;" FontFamily="Segoe Fluent Icons" FontSize="26"
-                           Foreground="White" HorizontalAlignment="Left" VerticalAlignment="Center" />
+            <Grid Margin="75,0,46,0" ColumnDefinitions="46,*,Auto" VerticalAlignment="Center">
+                <TextBlock Grid.Column="0" Classes="menuIcon" Text="&#xE88C;" />
                 <TextBlock Grid.Column="1" Classes="menuLabel" Text="Manage" Margin="16,0,0,0" />
             </Grid>
         </Border>
 
         <!-- == Storage meter (bottom left) == -->
-        <!-- The block's baseline (last line, "available") is aligned with the baseline of the
-             SEE FULL LIBRARY button and of the pill on the right, at y=1046. -->
-        <!-- "Total / {free} / available": the code-behind fills the middle line with the system
-             drive's FREE space. The "available" baseline stays at y=1046. -->
-        <StackPanel Canvas.Left="78" Canvas.Top="942" Spacing="0">
-            <TextBlock Text="Total" Foreground="White" FontSize="26" />
-            <TextBlock x:Name="LStorageSize" Text="—" Foreground="White" FontSize="26" />
-            <TextBlock Text="available" Foreground="White" FontSize="26" />
+        <!-- TWO lines, not three: the console reads "All storage" / "64.0 GB free". The old wording
+             ("Total / {size} / available") wrapped onto a third line and pushed the whole block down.
+             Measured: first line's cap top at 946, second at 981, so the pitch is 35. -->
+        <StackPanel Canvas.Left="75" Canvas.Top="940" Spacing="4">
+            <TextBlock Text="All storage" Foreground="White" FontSize="26" />
+            <!-- Second line is dimmer than the first: measured 234 against 255 in the same capture,
+                 so it is a real difference and not the codec clipping. -->
+            <TextBlock x:Name="LStorageSize" Text="—" Foreground="#EAEAEA" FontSize="26" />
         </StackPanel>
-        <!-- Storage ring, re-measured from the reference: THIN stroke (5) with an accent GLOW (like
-             the selection rings), and the remaining-% gap is a DARK ACCENT track, not grey. All of
-             it follows the theme. Centre (330,993), radius 42.5. The code-behind fills the arc
-             (LStorageArc) and the percentage (LStoragePercent) with the REAL free %. -->
-        <Ellipse Canvas.Left="287.5" Canvas.Top="950.5" Width="85" Height="85"
-                 Stroke="{DynamicResource AccentTrackBrush}" StrokeThickness="5" />
-        <Path x:Name="LStorageArc" Stroke="{DynamicResource AccentBrush}" StrokeThickness="5" StrokeLineCap="Round"
-              Data="M330,950.5 A42.5,42.5 0 1 1 310.71,955.13">
-            <Path.Effect>
-                <DropShadowEffect Color="{DynamicResource AccentColor}" BlurRadius="9" OffsetX="0" OffsetY="0" />
-            </Path.Effect>
-        </Path>
-        <TextBlock x:Name="LStoragePercent" Canvas.Left="287.5" Canvas.Top="982" Width="85" TextAlignment="Center"
-                   Text="—" Foreground="White" FontSize="20" />
+        <!-- Storage ring. Re-measured against the console and it came out quite different from what
+             was here: 96 across (was 85), centred on (327,968) (was (330,993)), stroke 4 (was 5),
+             and NO glow - the old glow was what made the stroke read 8 px wide instead of 4.
+             The track for the unfilled part is NEUTRAL grey, not a dark tint of the accent: it
+             measures 40,40,40 on a console whose accent is green, so it does not follow the accent.
+             The arc itself and the percentage do follow the theme. -->
+        <Ellipse Canvas.Left="279" Canvas.Top="920" Width="96" Height="96"
+                 Stroke="#282828" StrokeThickness="4" />
+        <Path x:Name="LStorageArc" Stroke="{DynamicResource AccentBrush}" StrokeThickness="4" StrokeLineCap="Round"
+              Data="M327,922 A46,46 0 1 1 306.1,926.9" />
+        <TextBlock x:Name="LStoragePercent" Canvas.Left="279" Canvas.Top="955" Width="96" TextAlignment="Center"
+                   Text="—" Foreground="White" FontSize="25" />
 
         <!-- ===================== CONTENT (RIGHT) ===================== -->
 
         <!-- SHARED title: the code-behind swaps it to the active category name (Games / Manage /
              ...). Moving through the menu switches the content below to the highlighted category. -->
-        <TextBlock x:Name="LContentTitle" Canvas.Left="527" Canvas.Top="74" Text="Games" Foreground="White" FontSize="54" FontWeight="SemiBold" />
+        <!-- Entry animation of the right-hand side when the category changes. Recorded off the
+             console at 60-70 frames per second and measured frame by frame:
+               - the OLD content does not animate out, it just goes;
+               - the NEW one appears offset ~80 px IN THE DIRECTION OF TRAVEL (down in the menu ->
+                 it comes from below and rises) and almost transparent;
+               - it slides into place while fading in, very fast and heavily damped: about 90% of
+                 the travel in the first 80-100 ms, then it settles.
+             Hence CubicEaseOut and not a linear one - linear reads as sluggish next to it.
+             The transitions live here and the code-behind SUSPENDS them to set the starting state,
+             otherwise the jump to the offset would animate too and it would look like a bounce. -->
+        <!-- 43.5 and NOT semibold. Measured against the console: its cap height is 33 against our
+             41, and its ink density over the same box is 0.32 against our 0.42 - so it was both too
+             big and too heavy. Density is what settles the weight; size alone cannot. -->
+        <Canvas x:Name="LContentAnim" Width="1920" Height="1080">
+            <!-- Durations come straight off the frame-by-frame measurement: the slide is visually
+                 settled 770 ms after the press, the fade a bit earlier. Both use the console's
+                 exponential deceleration - see ConsoleSettleEasing for the numbers and for why the
+                 built-in easings land too early. -->
+            <Canvas.Transitions>
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.79">
+                        <TransformOperationsTransition.Easing>
+                            <pf:ConsoleSettleEasing />
+                        </TransformOperationsTransition.Easing>
+                    </TransformOperationsTransition>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.6">
+                        <DoubleTransition.Easing>
+                            <pf:ConsoleSettleEasing />
+                        </DoubleTransition.Easing>
+                    </DoubleTransition>
+                </Transitions>
+            </Canvas.Transitions>
+        <TextBlock x:Name="LContentTitle" Canvas.Left="522.5" Canvas.Top="73" Text="Games" Foreground="White" FontSize="43.5" />
 
         <!-- GAMES content: shown when the active category is Games. Wrapped in a Canvas so it can be
              shown/hidden as one block (Canvas.Left/Top coordinates stay absolute, the Canvas itself
              sits at 0,0). -->
         <Canvas x:Name="LGamesContent" Width="1920" Height="1080">
 
-        <!-- "Group by content type" dropdown (truncated, as in the reference) -->
-        <Border Canvas.Left="527" Canvas.Top="190" Width="383" Height="62" Background="#363636" CornerRadius="6">
-            <Grid Margin="22,0,16,0" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-                <TextBlock Grid.Column="0" Text="Group by content t&#x2026;" Foreground="White" FontSize="22" VerticalAlignment="Center" />
-                <Viewbox Grid.Column="1" Width="18" Height="18" VerticalAlignment="Center">
-                    <Canvas Width="32" Height="32">
-                        <Path Fill="White" Data="M4.29289 10.2929C4.68342 9.90237 5.31658 9.90237 5.70711 10.2929L16 20.5858L26.2929 10.2929C26.6834 9.90237 27.3166 9.90237 27.7071 10.2929C28.0976 10.6834 28.0976 11.3166 27.7071 11.7071L16.7071 22.7071C16.3166 23.0976 15.6834 23.0976 15.2929 22.7071L4.29289 11.7071C3.90237 11.3166 3.90237 10.6834 4.29289 10.2929Z" />
-                    </Canvas>
-                </Viewbox>
+        <!-- Shown when the active category has nothing in it. An empty grid with no explanation
+             reads as broken; this says why it is empty and where to fix it. -->
+        <TextBlock x:Name="LEmptyText" Canvas.Left="523" Canvas.Top="310" Width="900"
+                   Foreground="#9A9A9A" FontSize="26" TextWrapping="Wrap" IsVisible="False" />
+
+        <!-- Sort dropdown. Measured: pill at (524,187), 400x64, fill 48,48,48. The label reads
+             "Sort A-Z" on the console, not the truncated "Group by content t..." that was here. -->
+        <Border Canvas.Left="524" Canvas.Top="187" Width="400" Height="64" Background="#303030" CornerRadius="6">
+            <Grid Margin="22,0,27,0" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                <TextBlock Grid.Column="0" Text="Sort A-Z" Foreground="White" FontSize="22" VerticalAlignment="Center" />
+                <!-- Chevron E7D7 of the console's own icon font, not a traced path. -->
+                <TextBlock Grid.Column="1" Text="&#xE7D7;" FontFamily="{StaticResource XboxIconFont}"
+                           FontSize="21.6" Foreground="White" VerticalAlignment="Center" />
             </Grid>
         </Border>
 
-        <!-- "Filter" button (right) -->
-        <Border Canvas.Left="1635" Canvas.Top="190" Width="210" Height="62" Background="#363636" CornerRadius="6">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="26,0,0,0" Spacing="14">
-                <Viewbox Width="20" Height="20" VerticalAlignment="Center">
-                    <Canvas Width="32" Height="32">
-                        <!-- Filter.svg (Microsoft.GamingApp) -->
-                        <Path Fill="White" Data="M3 6.875C2.37868 6.875 1.875 7.37868 1.875 8C1.875 8.62132 2.37868 9.125 3 9.125H29C29.6213 9.125 30.125 8.62132 30.125 8C30.125 7.37868 29.6213 6.875 29 6.875H3Z" />
-                        <Path Fill="White" Data="M7 14.875C6.37868 14.875 5.875 15.3787 5.875 16C5.875 16.6213 6.37868 17.125 7 17.125H25C25.6213 17.125 26.125 16.6213 26.125 16C26.125 15.3787 25.6213 14.875 25 14.875H7Z" />
-                        <Path Fill="White" Data="M12 22.875C11.3787 22.875 10.875 23.3787 10.875 24C10.875 24.6213 11.3787 25.125 12 25.125H20C20.6213 25.125 21.125 24.6213 21.125 24C21.125 23.3787 20.6213 22.875 20 22.875H12Z" />
-                    </Canvas>
-                </Viewbox>
+        <!-- Item count, right-aligned so its last character lands on 1611 - 23 px clear of the
+             Filter pill. The console shows it and we did not have it at all. -->
+        <TextBlock x:Name="LGamesCount" Canvas.Left="1363" Canvas.Top="211" Width="250" TextAlignment="Right"
+                   Text="—" Foreground="White" FontSize="24" />
+
+        <!-- "Filter" button (right). Measured: pill at (1634,187), 206x64. -->
+        <Border Canvas.Left="1634" Canvas.Top="187" Width="206" Height="64" Background="#303030" CornerRadius="6">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="22,0,0,0" Spacing="14">
+                <!-- Filter glyph EA5B, from the console's font. -->
+                <TextBlock Text="&#xEA5B;" FontFamily="{StaticResource XboxIconFont}"
+                           FontSize="26.5" Foreground="White" VerticalAlignment="Center" Margin="0,5,0,0" />
                 <TextBlock Text="Filter" Foreground="White" FontSize="22" VerticalAlignment="Center" />
             </StackPanel>
         </Border>
 
-        <!-- Section header -->
-        <TextBlock Canvas.Left="527" Canvas.Top="308" Text="Optimized for XBOX Series X|S"
-                   Foreground="White" FontSize="34" FontWeight="SemiBold" />
+        <!-- No section header here: with the console sorted A-Z the grid starts straight after
+             the toolbar. The header belongs to the grouped view, which we do not have. -->
 
         <!-- == Game grid (row 1: 6 / row 2: 4). 202x202, radius 14. GREY placeholder (like the home
              tiles): the real art arrives with the functional part. Gamepad navigable (see
              LibraryView.axaml.cs): the focused game gets the laser ring + its name label. == -->
         <!-- Row 1 -->
-        <Border Canvas.Left="527"  Canvas.Top="378" Width="202" Height="202" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
-            <Border x:Name="LLabel0" Classes="gameLabel"><TextBlock Text="Apex Legends" /></Border>
+        <Border x:Name="LTile0" Canvas.Left="523"  Canvas.Top="302" Width="207" Height="207" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
+            <Panel><Image x:Name="LArt0" Stretch="UniformToFill" RenderOptions.BitmapInterpolationMode="HighQuality" /><Border x:Name="LLabel0" Classes="gameLabel"><TextBlock x:Name="LName0" Text="" /></Border></Panel>
         </Border>
-        <Border Canvas.Left="749"  Canvas.Top="378" Width="202" Height="202" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
-            <Border x:Name="LLabel1" Classes="gameLabel"><TextBlock Text="Call of Duty: Black Ops 6" /></Border>
+        <Border x:Name="LTile1" Canvas.Left="745.2"  Canvas.Top="302" Width="207" Height="207" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
+            <Panel><Image x:Name="LArt1" Stretch="UniformToFill" RenderOptions.BitmapInterpolationMode="HighQuality" /><Border x:Name="LLabel1" Classes="gameLabel"><TextBlock x:Name="LName1" Text="" /></Border></Panel>
         </Border>
-        <Border Canvas.Left="971"  Canvas.Top="378" Width="202" Height="202" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
-            <Border x:Name="LLabel2" Classes="gameLabel"><TextBlock Text="Call of Duty" /></Border>
+        <Border x:Name="LTile2" Canvas.Left="967.4"  Canvas.Top="302" Width="207" Height="207" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
+            <Panel><Image x:Name="LArt2" Stretch="UniformToFill" RenderOptions.BitmapInterpolationMode="HighQuality" /><Border x:Name="LLabel2" Classes="gameLabel"><TextBlock x:Name="LName2" Text="" /></Border></Panel>
         </Border>
-        <Border Canvas.Left="1193" Canvas.Top="378" Width="202" Height="202" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
-            <Border x:Name="LLabel3" Classes="gameLabel"><TextBlock Text="Cyberpunk 2077" /></Border>
+        <Border x:Name="LTile3" Canvas.Left="1189.6" Canvas.Top="302" Width="207" Height="207" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
+            <Panel><Image x:Name="LArt3" Stretch="UniformToFill" RenderOptions.BitmapInterpolationMode="HighQuality" /><Border x:Name="LLabel3" Classes="gameLabel"><TextBlock x:Name="LName3" Text="" /></Border></Panel>
         </Border>
-        <Border Canvas.Left="1415" Canvas.Top="378" Width="202" Height="202" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
-            <Border x:Name="LLabel4" Classes="gameLabel"><TextBlock Text="Forza Horizon 6" /></Border>
+        <Border x:Name="LTile4" Canvas.Left="1411.8" Canvas.Top="302" Width="207" Height="207" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
+            <Panel><Image x:Name="LArt4" Stretch="UniformToFill" RenderOptions.BitmapInterpolationMode="HighQuality" /><Border x:Name="LLabel4" Classes="gameLabel"><TextBlock x:Name="LName4" Text="" /></Border></Panel>
         </Border>
-        <Border Canvas.Left="1637" Canvas.Top="378" Width="202" Height="202" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
-            <Border x:Name="LLabel5" Classes="gameLabel"><TextBlock Text="Gears of War: E-Day" /></Border>
+        <Border x:Name="LTile5" Canvas.Left="1634" Canvas.Top="302" Width="207" Height="207" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
+            <Panel><Image x:Name="LArt5" Stretch="UniformToFill" RenderOptions.BitmapInterpolationMode="HighQuality" /><Border x:Name="LLabel5" Classes="gameLabel"><TextBlock x:Name="LName5" Text="" /></Border></Panel>
         </Border>
 
         <!-- Row 2 -->
-        <Border Canvas.Left="527"  Canvas.Top="602" Width="202" Height="202" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
-            <Border x:Name="LLabel6" Classes="gameLabel"><TextBlock Text="Gears of War: E-Day" /></Border>
+        <Border x:Name="LTile6" Canvas.Left="523"  Canvas.Top="524" Width="207" Height="207" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
+            <Panel><Image x:Name="LArt6" Stretch="UniformToFill" RenderOptions.BitmapInterpolationMode="HighQuality" /><Border x:Name="LLabel6" Classes="gameLabel"><TextBlock x:Name="LName6" Text="" /></Border></Panel>
         </Border>
-        <Border Canvas.Left="749"  Canvas.Top="602" Width="202" Height="202" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
-            <Border x:Name="LLabel7" Classes="gameLabel"><TextBlock Text="Grand Theft Auto VI" /></Border>
+        <Border x:Name="LTile7" Canvas.Left="745.2"  Canvas.Top="524" Width="207" Height="207" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
+            <Panel><Image x:Name="LArt7" Stretch="UniformToFill" RenderOptions.BitmapInterpolationMode="HighQuality" /><Border x:Name="LLabel7" Classes="gameLabel"><TextBlock x:Name="LName7" Text="" /></Border></Panel>
         </Border>
-        <Border Canvas.Left="971"  Canvas.Top="602" Width="202" Height="202" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
-            <Border x:Name="LLabel8" Classes="gameLabel"><TextBlock Text="Halo Infinite" /></Border>
+        <Border x:Name="LTile8" Canvas.Left="967.4"  Canvas.Top="524" Width="207" Height="207" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
+            <Panel><Image x:Name="LArt8" Stretch="UniformToFill" RenderOptions.BitmapInterpolationMode="HighQuality" /><Border x:Name="LLabel8" Classes="gameLabel"><TextBlock x:Name="LName8" Text="" /></Border></Panel>
         </Border>
-        <Border Canvas.Left="1193" Canvas.Top="602" Width="202" Height="202" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
-            <Border x:Name="LLabel9" Classes="gameLabel"><TextBlock Text="Halo: Combat Evolved" /></Border>
+        <Border x:Name="LTile9" Canvas.Left="1189.6" Canvas.Top="524" Width="207" Height="207" CornerRadius="14" Background="#2A2E36" ClipToBounds="True">
+            <Panel><Image x:Name="LArt9" Stretch="UniformToFill" RenderOptions.BitmapInterpolationMode="HighQuality" /><Border x:Name="LLabel9" Classes="gameLabel"><TextBlock x:Name="LName9" Text="" /></Border></Panel>
         </Border>
 
         <!-- Selection rings (laser, home style), inflated by 7 over the tile and declared AFTER it so
              they render on top. The code-behind lights up the focused game's ring. -->
-        <Border Classes="selectionRing homeRing" x:Name="LRing0" Canvas.Left="520"  Canvas.Top="371" Width="216" Height="216" />
-        <Border Classes="selectionRing homeRing" x:Name="LRing1" Canvas.Left="742"  Canvas.Top="371" Width="216" Height="216" />
-        <Border Classes="selectionRing homeRing" x:Name="LRing2" Canvas.Left="964"  Canvas.Top="371" Width="216" Height="216" />
-        <Border Classes="selectionRing homeRing" x:Name="LRing3" Canvas.Left="1186" Canvas.Top="371" Width="216" Height="216" />
-        <Border Classes="selectionRing homeRing" x:Name="LRing4" Canvas.Left="1408" Canvas.Top="371" Width="216" Height="216" />
-        <Border Classes="selectionRing homeRing" x:Name="LRing5" Canvas.Left="1630" Canvas.Top="371" Width="216" Height="216" />
-        <Border Classes="selectionRing homeRing" x:Name="LRing6" Canvas.Left="520"  Canvas.Top="595" Width="216" Height="216" />
-        <Border Classes="selectionRing homeRing" x:Name="LRing7" Canvas.Left="742"  Canvas.Top="595" Width="216" Height="216" />
-        <Border Classes="selectionRing homeRing" x:Name="LRing8" Canvas.Left="964"  Canvas.Top="595" Width="216" Height="216" />
-        <Border Classes="selectionRing homeRing" x:Name="LRing9" Canvas.Left="1186" Canvas.Top="595" Width="216" Height="216" />
+        <Border Classes="selectionRing homeRing" x:Name="LRing0" Canvas.Left="514"  Canvas.Top="293" Width="225" Height="225" />
+        <Border Classes="selectionRing homeRing" x:Name="LRing1" Canvas.Left="736.2"  Canvas.Top="293" Width="225" Height="225" />
+        <Border Classes="selectionRing homeRing" x:Name="LRing2" Canvas.Left="958.4"  Canvas.Top="293" Width="225" Height="225" />
+        <Border Classes="selectionRing homeRing" x:Name="LRing3" Canvas.Left="1180.6" Canvas.Top="293" Width="225" Height="225" />
+        <Border Classes="selectionRing homeRing" x:Name="LRing4" Canvas.Left="1402.8" Canvas.Top="293" Width="225" Height="225" />
+        <Border Classes="selectionRing homeRing" x:Name="LRing5" Canvas.Left="1625" Canvas.Top="293" Width="225" Height="225" />
+        <Border Classes="selectionRing homeRing" x:Name="LRing6" Canvas.Left="514"  Canvas.Top="515" Width="225" Height="225" />
+        <Border Classes="selectionRing homeRing" x:Name="LRing7" Canvas.Left="736.2"  Canvas.Top="515" Width="225" Height="225" />
+        <Border Classes="selectionRing homeRing" x:Name="LRing8" Canvas.Left="958.4"  Canvas.Top="515" Width="225" Height="225" />
+        <Border Classes="selectionRing homeRing" x:Name="LRing9" Canvas.Left="1180.6" Canvas.Top="515" Width="225" Height="225" />
 
         <!-- == Bottom elements (only partly visible in the reference) == -->
-        <TextBlock Canvas.Left="527" Canvas.Top="934" Text="Want more?" Foreground="White" FontSize="26" />
+        <TextBlock Canvas.Left="523" Canvas.Top="885" Text="Looking for more?" Foreground="White" FontSize="26" />
         <!-- Button baseline (y=986+60=1046) aligned with the storage block and the right-hand pill. -->
-        <Border Canvas.Left="527" Canvas.Top="986" Width="433" Height="60" Background="#363636" CornerRadius="6">
+        <Border Canvas.Left="523" Canvas.Top="930" Width="285" Height="64" Background="#303030" CornerRadius="6">
             <TextBlock Text="SEE FULL LIBRARY" Foreground="White" FontSize="21" VerticalAlignment="Center" Margin="28,0,0,0" />
         </Border>
         </Canvas><!-- end LGamesContent -->
@@ -425,17 +444,18 @@
             <Border Classes="selectionRing homeRing" x:Name="MRing7" CornerRadius="10" Canvas.Left="1186" Canvas.Top="765" Width="654" Height="122" />
             <Border Classes="selectionRing homeRing" x:Name="MRing8" CornerRadius="10" Canvas.Left="518"  Canvas.Top="910" Width="654" Height="122" />
         </Canvas><!-- end LManageContent -->
+        </Canvas><!-- end LContentAnim -->
 
         <!-- "Search" (Y) button hint, bottom right. Visible while focus is on the MENU; entering the
              grid swaps it for the game actions (LGridHints). -->
         <!-- Pill baseline (y=994+52=1046) aligned with the button and the storage block. -->
-        <Border x:Name="LSearchHint" Canvas.Left="1716" Canvas.Top="994" Width="134" Height="52" Background="#E60D0D0D" CornerRadius="26">
+        <Border x:Name="LSearchHint" Canvas.Left="1701" Canvas.Top="968" Width="159" Height="62" Background="#E60D0D0D" CornerRadius="14">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="13,0,0,0" Spacing="11">
-                <Grid Width="27" Height="27" VerticalAlignment="Center">
-                    <Ellipse Width="27" Height="27" Stroke="#E9C700" StrokeThickness="2" />
-                    <TextBlock Text="Y" Foreground="#E9C700" FontSize="17" FontWeight="Bold"
-                               HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Grid>
+                <!-- The Y button is glyph E990 of the console's font (circle and letter in one), not
+                     a circle with a letter drawn inside it. Coloured here because a font glyph takes
+                     a Foreground - which is exactly why these are text and not images. -->
+                <TextBlock Text="&#xE990;" FontFamily="{StaticResource XboxIconFont}"
+                           FontSize="36" Foreground="#F8AB39" VerticalAlignment="Center" />
                 <TextBlock Text="Search" Foreground="White" FontSize="22" VerticalAlignment="Center" />
             </StackPanel>
         </Border>

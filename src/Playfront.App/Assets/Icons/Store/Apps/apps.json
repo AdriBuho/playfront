@@ -1,12 +1,27 @@
 [
   {
+    "file": "steam.png",
+    "title": "Steam",
+    "genre": "LAUNCHERS",
+    "price": "Free",
+    "owned": false,
+    "description": "Buy, install and play your PC games, all from one place.",
+    "tint": "#1B2838",
+    "publisher": "Valve Corporation",
+    "releaseDate": "09/12/2003",
+    "esrb": "None",
+    "longDescription": "Valve's storefront and launcher for PC games, running since 2003. Buy a game once and it stays on your account: install it on any machine you sign in to, and it keeps itself updated in the background.\n\nYour saves travel with you through Steam Cloud, so a game picked up on another PC carries on where you left it. Games track achievements, many support mods through the Workshop, and friends, chat and invites are built in.\n\nSteam is free. The games are not, and each is bought separately.\n\nIt is a normal Windows program, so Playfront installs it and hands it the screen with the pointer, the same way it does with any other. Steam's own Big Picture mode is worth turning on here: it is their controller-first interface, made for exactly this kind of screen."
+  },
+  {
     "file": "apple-music.png",
     "title": "Apple Music | Xbox",
+    "publisher": "Apple Inc.",
+    "releaseDate": "11/29/2022",
+    "esrb": "PARENTAL GUIDANCE RECOMMENDED",
+    "esrbNotes": "Parental Guidance Recommended",
     "genre": "MUSIC",
     "price": "Free",
     "owned": false,
-    "rating": 3,
-    "votes": "347",
     "description": "Get unlimited access to millions of songs and thousands of playlists, always ad-free. Listen across all your devices, online or off. Try it free for 1 month.",
     "tint": "#582129"
   },
@@ -16,35 +31,48 @@
     "genre": "ENTERTAINMENT",
     "price": "Free",
     "owned": false,
-    "rating": 2,
-    "votes": "2000",
     "description": "Get the official YouTube app on TV.",
     "tint": "#5A5D5C",
     "publisher": "Google LLC",
     "esrb": "TEEN",
-    "esrbNotes": "Users Interact, In-App Purchases"
+    "esrbNotes": "Users Interact, In-App Purchases",
+    "releaseDate": "08/25/2017",
+    "longDescription": "See what the world is watching -- from the hottest music videos to what's popular in gaming, fitness, movies, shows, news, learning and more. Subscribe to channels you love, browse personal recommendations, and enjoy the largest library of 4K content."
   },
   {
     "file": "dolby-access.png",
     "title": "Dolby Access",
+    "publisher": "Dolby Laboratories",
+    "releaseDate": "02/16/2017",
+    "esrb": "PARENTAL GUIDANCE RECOMMENDED",
+    "esrbNotes": "Parental Guidance Recommended",
     "genre": "ENTERTAINMENT",
     "price": "Free",
     "owned": false,
-    "rating": 4,
-    "votes": "2000",
     "description": "Download Dolby Access to start your free trial of Dolby Atmos for Headphones or set up a Dolby Atmos device. Hear stunning detail, precision, and realism in your game...",
     "tint": "#161A1C"
   },
   {
     "file": "spotify-black.png",
-    "title": "Spotify Xbox – Music and Podcasts",
+    "title": "Spotify – Music and Podcasts",
+    "publisher": "Spotify AB",
     "genre": "MUSIC",
     "price": "Free",
     "owned": false,
-    "rating": 2,
-    "votes": "1524",
-    "friends": "15",
     "description": "Soundtrack your gaming. Listen to music and podcasts for free",
-    "tint": "#242626"
+    "tint": "#242626",
+    "releaseDate": "10/31/2017",
+    "esrb": "PARENTAL GUIDANCE RECOMMENDED",
+    "esrbNotes": "Parental Guidance Recommended",
+    "longDescription": "Take your gaming further with music and podcasts running behind it. Play your own artists, albums, songs and playlists, or pick one of the gaming playlists Spotify puts together. Drive it from the controller, or change the track from your phone or tablet without putting the game down.\n\nListen for free, or drop the ads with Premium.\n\nFeatures\n•  Get your music on the big screen, free\n•  Enjoy podcasts too\n•  Browse artists, albums, songs and playlists\n•  View cover art on-screen\n•  Easy control from your controller\n•  Or with Spotify Connect on your phone or tablet\n•  High quality audio, no ads (Premium only)\n\nLove Spotify?\nLike us on Facebook: facebook.com/spotify\nFollow us on X: x.com/spotify",
+    "features": [
+      "Play music free and on-demand",
+      "Listen in the background",
+      "Control music on your phone",
+      "Enjoy curated gaming playlists",
+      "Search any song",
+      "Listen ad-free and in HQ audio (Premium)",
+      "Enjoy podcasts too"
+    ]
   }
 ]

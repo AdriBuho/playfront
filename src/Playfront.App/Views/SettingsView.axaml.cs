@@ -3,6 +3,7 @@ using System.Globalization;
 using Playfront.App.Input;
 using Avalonia.Controls;
 using Avalonia.Media.Transformation;
+using Avalonia.Threading;
 
 namespace Playfront.App.Views;
 
@@ -248,9 +249,11 @@ public partial class SettingsView : UserControl
 
             case GamepadButton.Up when !_inGrid && _category > 0:
                 _category--;
+                SlideContentIn(-1);
                 break;
             case GamepadButton.Down when !_inGrid && _category < _navItems.Length - 1:
                 _category++;
+                SlideContentIn(1);
                 break;
 
             default:
@@ -258,6 +261,32 @@ public partial class SettingsView : UserControl
         }
 
         UpdateSelection();
+    }
+
+    /// <summary>
+    /// Entrance the console plays when the category changes: the outgoing content is gone at once,
+    /// the new one enters offset in the direction of travel and slides into place while fading in.
+    /// <paramref name="direction"/> is +1 moving down the list (content rises from below), -1 up.
+    /// </summary>
+    private void SlideContentIn(int direction)
+    {
+        const double Offset = 190; // px, from the measured curve
+
+        // The offset state has to land WITHOUT animating, or the jump out is animated too and it
+        // reads as a bounce. Detaching the transitions is what makes it instant.
+        var transitions = SContentAnim.Transitions;
+        SContentAnim.Transitions = null;
+        SContentAnim.RenderTransform = TransformOperations.Parse(
+            $"translateY({(direction * Offset).ToString(CultureInfo.InvariantCulture)}px)");
+        SContentAnim.Opacity = 0;
+        SContentAnim.Transitions = transitions;
+
+        // Next frame, or both states collapse into one and nothing animates.
+        Dispatcher.UIThread.Post(() =>
+        {
+            SContentAnim.RenderTransform = TransformOperations.Parse("translateY(0px)");
+            SContentAnim.Opacity = 1;
+        }, DispatcherPriority.Render);
     }
 
     // Moving rows can land on one with fewer columns (System's last row holds a single card). Without

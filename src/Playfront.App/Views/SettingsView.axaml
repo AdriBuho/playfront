@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:pf="clr-namespace:Playfront.App"
              x:Class="Playfront.App.Views.SettingsView"
              Width="1920" Height="1080">
     <!-- Settings screen (1:1 with Xbox's General). Split out of MainWindow into its own view so it
@@ -142,6 +143,28 @@
              A candidate face must reproduce ALL THREE numbers before it is believed.
 
              Canvas.Top: the TextBlock's box starts ~13 px above the ink at this size. -->
+        <!-- Everything to the right of the category list lives in here so a category change can slide
+             it in as one piece. Must be a Canvas: a Panel ignores the Canvas.Left/Top of its children
+             and the whole grid would collapse into the top-left corner.
+
+             Durations and curve are the console's, measured frame by frame - see ConsoleSettleEasing.
+             The left column stays put, as it does on the console. -->
+        <Canvas x:Name="SContentAnim" Width="1920" Height="1080">
+            <Canvas.Transitions>
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.79">
+                        <TransformOperationsTransition.Easing>
+                            <pf:ConsoleSettleEasing />
+                        </TransformOperationsTransition.Easing>
+                    </TransformOperationsTransition>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.6">
+                        <DoubleTransition.Easing>
+                            <pf:ConsoleSettleEasing />
+                        </DoubleTransition.Easing>
+                    </DoubleTransition>
+                </Transitions>
+            </Canvas.Transitions>
+
         <TextBlock x:Name="SettingsCategoryTitle" Canvas.Left="529" Canvas.Top="58" Text="General"
                    Foreground="White" FontFamily="{StaticResource XboxFontDisplaySemibold}" FontSize="45" />
 
@@ -657,5 +680,6 @@
         <Border Classes="selectionRing" x:Name="PrefRing2" Canvas.Left="562" Canvas.Top="330" Width="454" Height="148" />
         <Border Classes="selectionRing" x:Name="PrefRing3" Canvas.Left="1016" Canvas.Top="330" Width="454" Height="148" />
         <Border Classes="selectionRing" x:Name="PrefRing4" Canvas.Left="562" Canvas.Top="478" Width="454" Height="148" />
+        </Canvas><!-- end SContentAnim -->
     </Canvas>
 </UserControl>

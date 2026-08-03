@@ -246,35 +246,24 @@
              ============================================================ -->
         <Canvas x:Name="DetailLayer" Canvas.Left="0" Canvas.Top="0" IsVisible="False">
             <!-- Category (breadcrumb). Slightly dimmed white over the tinted background. -->
-            <TextBlock x:Name="DetailCategory" Canvas.Left="114" Canvas.Top="46" Text="Best music apps"
+            <!-- Header. NOT the subcategory's name: on the console the two are different texts -
+                 "Entertainment apps" is headed "Top entertainment apps for you", "Apps with trials" is
+                 headed "Start your free trial". Set from the category's own data. -->
+            <TextBlock x:Name="DetailCategory" Canvas.Left="114" Canvas.Top="46" Text=""
                        FontFamily="Segoe UI" FontSize="33" FontWeight="SemiBold" Foreground="White" Opacity="0.82" />
             <!-- App title. -->
             <TextBlock x:Name="DetailTitle" Canvas.Left="114" Canvas.Top="116" Text=""
                        FontFamily="Segoe UI Variable Display" FontSize="47" Foreground="White" />
 
-            <!-- FRIENDS counter for who owns the app (two-person icon + number), right of the title.
-                 Only some entries carry it: the Spotify reference shows "15" while Apple, YouTube
-                 and Dolby show nothing. The code-behind shows or hides it. -->
-            <Canvas x:Name="FriendsRow" Canvas.Left="1031" Canvas.Top="140" IsVisible="False">
-                <Path Fill="White" Stretch="Uniform" Width="26" Height="20"
-                      Data="M9,3 A3,3 0 1,1 9,9 A3,3 0 1,1 9,3 M17,4.5 A2.4,2.4 0 1,1 17,9.3 A2.4,2.4 0 1,1 17,4.5 M9,11 C13,11 15.5,12.6 15.5,14.8 L15.5,16.5 L2.5,16.5 L2.5,14.8 C2.5,12.6 5,11 9,11 M17,11.4 C20.2,11.4 22.2,12.7 22.2,14.5 L22.2,16.5 L17.6,16.5 L17.6,14.8 C17.6,13.6 17,12.5 16,11.6 C16.3,11.5 16.6,11.4 17,11.4" />
-                <TextBlock x:Name="FriendsCount" Canvas.Left="34" Canvas.Top="-3" Text=""
-                           FontFamily="Segoe UI" FontSize="24" FontWeight="SemiBold" Foreground="White" />
-            </Canvas>
+            <!-- The reference puts a "friends who own this" counter right of the title. It is not
+                 drawn, for the same reason as the star rating: Playfront has no friends list, so the
+                 number could only ever be made up. It comes back with a real one behind it.
 
-            <!-- The two pills: rating (5 stars + votes) and genre. Laid out in a row with a measured
-                 gap of 20, sizing themselves to the text, which changes per app (not all have the
-                 same vote count or the same genre). -->
+                 The genre pill, sized to its text. It sits where the reference has two: the star
+                 rating that went beside it is NOT drawn, because we have no real review scores and a
+                 made-up number of stars is worse than no stars. It comes back when the figures do. -->
             <StackPanel x:Name="PillRow" Canvas.Left="115" Canvas.Top="195" Orientation="Horizontal" Spacing="20">
-                <Border Height="45" CornerRadius="7" Padding="8,0,14,0"
-                        Background="#171516" BorderBrush="#58474C" BorderThickness="1">
-                    <StackPanel Orientation="Horizontal" Spacing="12">
-                        <Canvas x:Name="StarHost" Width="119" Height="45" />
-                        <TextBlock x:Name="RatingVotes" Text="" FontFamily="Segoe UI" FontSize="25" FontWeight="SemiBold"
-                                   Foreground="White" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Border>
-                <Border Height="45" CornerRadius="22" Padding="18,0"
+                <Border x:Name="GenrePill" Height="45" CornerRadius="22" Padding="18,0"
                         Background="#171516" BorderBrush="#58474C" BorderThickness="1">
                     <TextBlock x:Name="GenreText" Text="" FontFamily="Segoe UI" FontSize="25" FontWeight="SemiBold"
                                Foreground="White" VerticalAlignment="Center" />
@@ -323,20 +312,31 @@
             </Border>
         </Canvas>
 
-        <!-- Top right hints (detail state only, measured). -->
+        <!-- Top right hints (detail state only).
+             Measured on the console: both glyphs are 24 x 24 at y=65, on x=1470 and x=1597; the
+             labels' ink starts on 1504 and 1630 with the caps between y 69 and 85. The gaps are
+             10 px glyph-to-label and 26 px label-to-next-glyph, and QUICK ACTIONS ends on 1806.
+
+             The glyphs are the OFFICIAL Xbox app SVGs (ButtonX.svg / ButtonMenu.svg), the same
+             files the Home and Library hints use - not a ring with a hand-drawn cross. The X one
+             carries a LETTER x, not two crossed strokes, which the drawn version got wrong. -->
         <Canvas x:Name="TopHints" Canvas.Left="0" Canvas.Top="0" IsVisible="False">
-            <!-- Gamepad X button + FILTER -->
-            <Ellipse Canvas.Left="1471" Canvas.Top="65" Width="26" Height="26" Stroke="White" StrokeThickness="2" />
-            <Path Canvas.Left="1471" Canvas.Top="65" Stroke="White" StrokeThickness="2" StrokeLineCap="Round"
-                  Data="M8,8 L18,18 M18,8 L8,18" />
-            <TextBlock Canvas.Left="1505" Canvas.Top="65" Text="FILTER" FontFamily="Segoe UI" FontSize="26"
-                       Foreground="White" />
-            <!-- Menu button + QUICK ACTIONS -->
-            <Ellipse Canvas.Left="1599" Canvas.Top="65" Width="26" Height="26" Stroke="White" StrokeThickness="2" />
-            <Path Canvas.Left="1599" Canvas.Top="65" Stroke="White" StrokeThickness="2" StrokeLineCap="Round"
-                  Data="M8,9 H18 M8,13 H18 M8,17 H18" />
-            <TextBlock Canvas.Left="1631" Canvas.Top="65" Text="QUICK ACTIONS" FontFamily="Segoe UI" FontSize="26"
-                       Foreground="White" />
+            <Viewbox Canvas.Left="1470" Canvas.Top="65" Width="24" Height="24">
+                <Canvas Width="32" Height="32">
+                    <!-- "F0" = even-odd fill, which is what leaves the ring hollow. -->
+                    <Path Fill="White" Data="F0 M16,0 C24.836556,0 32,7.163444 32,16 C32,24.836556 24.836556,32 16,32 C7.163444,32 0,24.836556 0,16 C0,7.163444 7.163444,0 16,0 Z M16,2 C8.2680135,2 2,8.2680135 2,16 C2,23.7319865 8.2680135,30 16,30 C23.7319865,30 30,23.7319865 30,16 C30,8.2680135 23.7319865,2 16,2 Z M10.688,9.906 L14.031,9.906 L15.75,13.562 C15.833,13.729 15.906,13.901 15.969,14.078 C16.031,14.245 16.083,14.417 16.125,14.594 L16.172,14.594 L16.2173333,14.421963 L16.328,14.047 C16.37525,13.891 16.428125,13.751875 16.486625,13.6308906 L18.484,9.906 L21.531,9.906 L17.891,15.938 L21.641,22.094 L18.375,22.094 L16.297,18.125 C16.234,18 16.182,17.87 16.141,17.734 L16.047,17.312 L16.016,17.312 C15.9946667,17.4026667 15.9693333,17.4977778 15.9394074,17.5973333 L15.891,17.75 C15.849,17.906 15.797,18.042 15.734,18.156 L13.625,22.094 L10.359,22.094 L14.234,16 L10.688,9.906 Z" />
+                </Canvas>
+            </Viewbox>
+            <TextBlock Canvas.Left="1502" Canvas.Top="62" Text="FILTER"
+                       FontFamily="{StaticResource XboxFontSemibold}" FontSize="24" Foreground="White" />
+
+            <Viewbox Canvas.Left="1597" Canvas.Top="65" Width="24" Height="24">
+                <Canvas Width="32" Height="32">
+                    <Path Fill="White" Data="M16,0 C24.836556,0 32,7.163444 32,16 C32,24.836556 24.836556,32 16,32 C7.163444,32 0,24.836556 0,16 C0,7.163444 7.163444,0 16,0 Z M16,2 C8.2680135,2 2,8.2680135 2,16 C2,23.7319865 8.2680135,30 16,30 C23.7319865,30 30,23.7319865 30,16 C30,8.2680135 23.7319865,2 16,2 Z M23,20 C23.2708,20 23.5052,20.1 23.7031,20.3 C23.901,20.49 24,20.73 24,21 C24,21.27 23.901,21.51 23.7031,21.7 C23.5052,21.9 23.2708,22 23,22 L9,22 C8.72917,22 8.49479,21.9 8.29688,21.7 C8.09896,21.51 8,21.27 8,21 C8,20.73 8.09896,20.49 8.29688,20.3 C8.49479,20.1 8.72917,20 9,20 L23,20 Z M23,15 C23.2708,15 23.5052,15.1 23.7031,15.3 C23.901,15.49 24,15.73 24,16 C24,16.27 23.901,16.51 23.7031,16.7 C23.5052,16.9 23.2708,17 23,17 L9,17 C8.72917,17 8.49479,16.9 8.29688,16.7 C8.09896,16.51 8,16.27 8,16 C8,15.73 8.09896,15.49 8.29688,15.3 C8.49479,15.1 8.72917,15 9,15 L23,15 Z M23,10 C23.2708,10 23.5052,10.1 23.7031,10.3 C23.901,10.49 24,10.73 24,11 C24,11.27 23.901,11.51 23.7031,11.7 C23.5052,11.9 23.2708,12 23,12 L9,12 C8.72917,12 8.49479,11.9 8.29688,11.7 C8.09896,11.51 8,11.27 8,11 C8,10.73 8.09896,10.49 8.29688,10.3 C8.49479,10.1 8.72917,10 9,10 L23,10 Z" />
+                </Canvas>
+            </Viewbox>
+            <TextBlock Canvas.Left="1629" Canvas.Top="62" Text="QUICK ACTIONS"
+                       FontFamily="{StaticResource XboxFontSemibold}" FontSize="24" Foreground="White" />
         </Canvas>
 
         <!-- ============================================================
